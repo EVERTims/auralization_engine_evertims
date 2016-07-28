@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="1.0.0"
+              bundleIdentifier="com.yourcompany.EvertSE" includeBinaryInAppConfig="1"
+              jucerVersion="4.2.3">
+  <MAINGROUP id="aSpPbd" name="EvertSE">
+    <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
+      <GROUP id="{E03E531B-FABC-9912-666B-A003EB5B2320}" name="AmbixEncode">
+        <GROUP id="{EDF2B084-533D-09F3-BC07-4C7E81DA4739}" name="SphericalHarmonic">
+          <FILE id="eTl9Wq" name="ch_cs.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ch_cs.h"/>
+          <FILE id="mjKMPl" name="ch_sequence.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ch_sequence.h"/>
+          <FILE id="EYB8yI" name="normalization.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/normalization.h"/>
+          <FILE id="AKDxd1" name="ShChebyshev.cpp" compile="1" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ShChebyshev.cpp"/>
+          <FILE id="X0C1NE" name="ShChebyshev.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ShChebyshev.h"/>
+          <FILE id="cpkpLY" name="ShLegendre.cpp" compile="1" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ShLegendre.cpp"/>
+          <FILE id="wHKteu" name="ShLegendre.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ShLegendre.h"/>
+          <FILE id="Nci2XO" name="ShNorm.cpp" compile="1" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ShNorm.cpp"/>
+          <FILE id="DjHr8J" name="ShNorm.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/ShNorm.h"/>
+          <FILE id="D2kaV2" name="SphericalHarmonic.cpp" compile="1" resource="0"
+                file="Source/AmbixEncode/SphericalHarmonic/SphericalHarmonic.cpp"/>
+          <FILE id="E3Ovdx" name="SphericalHarmonic.h" compile="0" resource="0"
+                file="Source/AmbixEncode/SphericalHarmonic/SphericalHarmonic.h"/>
+          <FILE id="sfREJR" name="tools.h" compile="0" resource="0" file="Source/AmbixEncode/SphericalHarmonic/tools.h"/>
+        </GROUP>
+        <FILE id="GCld3a" name="ambi_weight_lookup.h" compile="0" resource="0"
+              file="Source/AmbixEncode/ambi_weight_lookup.h"/>
+        <FILE id="CgRajB" name="AmbixEncoder.cpp" compile="1" resource="0"
+              file="Source/AmbixEncode/AmbixEncoder.cpp"/>
+        <FILE id="YX7pz0" name="AmbixEncoder.h" compile="0" resource="0" file="Source/AmbixEncode/AmbixEncoder.h"/>
+      </GROUP>
+      <FILE id="uRyck4" name="AudioLiveScrollingDisplay.h" compile="0" resource="0"
+            file="Source/AudioLiveScrollingDisplay.h"/>
+      <FILE id="hF6kuS" name="AudioFileReader.cpp" compile="1" resource="0"
+            file="Source/AudioFileReader.cpp"/>
+      <FILE id="yLTJ3y" name="AudioFileReader.h" compile="0" resource="0"
+            file="Source/AudioFileReader.h"/>
+      <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
+      <FILE id="l9hY4R" name="MainComponent.cpp" compile="1" resource="0"
+            file="Source/MainComponent.cpp"/>
+      <FILE id="XxG6iJ" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
+      <FILE id="sdbpD7" name="OSCHandler.cpp" compile="1" resource="0" file="Source/OSCHandler.cpp"/>
+      <FILE id="AycOjY" name="OSCHandler.h" compile="0" resource="0" file="Source/OSCHandler.h"/>
+      <FILE id="QoD7yh" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
+    </GROUP>
+  </MAINGROUP>
+  <EXPORTFORMATS>
+    <XCODE_MAC targetFolder="Builds/MacOSX">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="EvertSE"
+                       headerPath="../../libs/eigen-eigen-7403112d5871"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="EvertSE"
+                       headerPath="../../libs/eigen-eigen-7403112d5871&#10;"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_core" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_events" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_cryptography" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_video" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_opengl" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+        <MODULEPATH id="juce_osc" path="../../../../WorkSpace/Juce_Workspace/juce-grapefruit-osx/modules"/>
+      </MODULEPATHS>
+    </XCODE_MAC>
+  </EXPORTFORMATS>
+  <MODULES>
+    <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_devices" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_formats" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_processors" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_audio_utils" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_core" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_cryptography" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_data_structures" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_events" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_graphics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_gui_basics" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_gui_extra" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_opengl" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_osc" showAllCode="1" useLocalCopy="0"/>
+    <MODULE id="juce_video" showAllCode="1" useLocalCopy="0"/>
+  </MODULES>
+  <JUCEOPTIONS/>
+  <LIVE_SETTINGS>
+    <OSX/>
+  </LIVE_SETTINGS>
+</JUCERPROJECT>
