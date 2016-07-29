@@ -80,12 +80,15 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     
     // init delay line (define single channel buffer and dummy number of samples)
     // updateSourceImageDelayLineSize(sampleRate);
-    sourceImageDelayLineBuffer.setSize(1, 0);
+    sourceImageDelayLineBuffer.setSize(1, samplesPerBlockExpected*2);
     sourceImageDelayLineBuffer.clear();
-    sourceImageDelayLineBufferReplacement = sourceImageDelayLineBuffer;
+    // sourceImageDelayLineBufferReplacement = sourceImageDelayLineBuffer;
+    sourceImageBufferTemp.clear();
+    sourceImageBuffer.clear();
     
     // keep track of sample rate
     localSampleRate = sampleRate;
+    localSamplePerBlockExpected = samplesPerBlockExpected;
     
     vectorBufferOut[0].resize(samplesPerBlockExpected);
     vectorBufferOut[1].resize(samplesPerBlockExpected);
@@ -126,15 +129,92 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     
     //==========================================================================
     // init delay lines (for sourceImages)
-    if (updateSourceImageDelayLineReady)
+    sourceImageBuffer = localAudioBuffer; // only need a mono version of this
+    sourceImageBuffer.clear();
+    sourceImageBufferTemp = sourceImageBuffer;
+    
+    if ( sourceImageDelaysInSeconds.size() > 0 )
     {
-        // sourceImageDelayLineBuffer.setSize(1, needToResizeSourceImageDelayLineWithThis, true, true);
-        sourceImageDelayLineBuffer = sourceImageDelayLineBufferReplacement;
-        updateSourceImageDelayLineReady = false;
+        
+        // update delay line size if need be (TODO: MOVE THIS .SIZE() OUTSIDE OF AUDIO PROCESSING LOOP
+        if (requireSourceImageDelayLineSizeUpdate)
+        {
+            // get maximum required delay line duration
+            float maxDelay = *std::max_element(std::begin(sourceImageDelaysInSeconds), std::end(sourceImageDelaysInSeconds)); // in sec
+            
+            // get associated required delay line buffer length
+            int updatedDelayLineLength = (int)( maxDelay * localSampleRate);
+            
+            // update delay line size if need be (no shrinking delay line for now)
+            if (updatedDelayLineLength > sourceImageDelayLineBuffer.getNumSamples())
+                sourceImageDelayLineBuffer.setSize(1, updatedDelayLineLength, true, true);
+            
+            // unflag update required
+            requireSourceImageDelayLineSizeUpdate = false;
+        }
+        
+        
+        // update delay line with current buffer samples
+        if ( sourceImageDelayLineWriteIndex + localAudioBuffer.getNumSamples() <= sourceImageDelayLineBuffer.getNumSamples() )
+        { // simple copy
+            sourceImageDelayLineBuffer.copyFrom(0, sourceImageDelayLineWriteIndex, localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
+        }
+        else // circular copy (last samples of audio buffer will go at delay line buffer begining)
+        {
+            int numSamplesTail = sourceImageDelayLineBuffer.getNumSamples() - sourceImageDelayLineWriteIndex;
+            sourceImageDelayLineBuffer.copyFrom(0, sourceImageDelayLineWriteIndex, localAudioBuffer, 0, 0, numSamplesTail );
+            sourceImageDelayLineBuffer.copyFrom(0, 0, localAudioBuffer, 0, numSamplesTail, localAudioBuffer.getNumSamples() - numSamplesTail);
+        }
+        
+        
+        // loop over source images to apply delay + room coloration
+        for (int j = 0; j < sourceImageDelaysInSeconds.size(); j++)
+        {
+            
+            // get delayed buffer corresponding to current source image out of delay line
+            int writePos = sourceImageDelayLineWriteIndex - (int) (sourceImageDelaysInSeconds[j] * localSampleRate);
+            
+            if ( writePos < 0 )
+                writePos = sourceImageDelayLineBuffer.getNumSamples() + writePos;
+            
+            if ( ( writePos + localAudioBuffer.getNumSamples() ) < sourceImageDelayLineBuffer.getNumSamples() )
+            { // simple copy
+                sourceImageBufferTemp.copyFrom(0, 0, sourceImageDelayLineBuffer, 0, writePos, localAudioBuffer.getNumSamples());
+            }
+            else
+            { // circular loop
+                int numSamplesTail = sourceImageDelayLineBuffer.getNumSamples() - writePos;
+                sourceImageBufferTemp.copyFrom(0, 0, sourceImageDelayLineBuffer, 0, writePos, numSamplesTail );
+                sourceImageBufferTemp.copyFrom(0, numSamplesTail, sourceImageDelayLineBuffer, 0, 0, localAudioBuffer.getNumSamples() - numSamplesTail);
+            }
+            
+            
+            // apply gain based on source image path length
+            float gainDelayLine = fmin(1.0, fmax(0.0, 1.0 / sourceImagePathLengthsInMeter[j] ) );
+            sourceImageBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), gainDelayLine);
+            
+            // DEBUG
+            sourceImageBuffer.addFrom(0, 0, sourceImageBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
+            
+            
+            // apply room coloration
+            // Ambisonic Encode
+            // sum to output ambisonic channels
+            
+            sourceImageBufferTemp.clear();
+            
+        }
+        
+        // increment write position, apply circular shift if needed
+        
+        
+        sourceImageDelayLineWriteIndex += localAudioBuffer.getNumSamples();
+        if (sourceImageDelayLineWriteIndex >= sourceImageDelayLineBuffer.getNumSamples())
+            sourceImageDelayLineWriteIndex = sourceImageDelayLineWriteIndex - sourceImageDelayLineBuffer.getNumSamples();
     }
-    auto sourceImagePathLengthsInMeter = oscHandler.getSourceImagePathsLength();
-    auto sourceImageDelaysInSeconds = oscHandler.getSourceImageDelays();
-    auto sourceImageDelayLineWritePointer = sourceImageDelayLineBuffer.getWritePointer(0);
+
+    // DEBUG: add delay to output
+    localAudioBuffer.addFrom(0, 0, sourceImageBuffer, 0, 0, localAudioBuffer.getNumSamples());
     
     //==========================================================================
     // get write pointer to output
@@ -143,55 +223,9 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     // Loop over samples
     for (int i = 0; i < bufferLength; i++)
     {
-        //==========================================================================
-        // DELAY LINES
-        float delayLineOut = 0.0;
-        float gainDelayLine = 0.0;
-        
-
-        // apply circular shift on write position if needed
-        if ( sourceImageDelaysInSeconds.size() > 0 )
-            if (++sourceImageDelayLineWriteIndex >= sourceImageDelayLineBuffer.getNumSamples())
-                sourceImageDelayLineWriteIndex = 0;
-        
-        for (int j = 0; j < sourceImageDelaysInSeconds.size(); j++)
-        {
-    
-            // write current sample in delay line (to be played later)
-            sourceImageDelayLineWritePointer[sourceImageDelayLineWriteIndex] = vectorBufferOut[0][i];
-            
-            // get current read position
-            int readPos = (sourceImageDelayLineWriteIndex - (int)(sourceImageDelaysInSeconds[j] * localSampleRate));
-            
-//            DBG(String(sourceImageDelayLineWritePositions[j]) + String(" ")
-//                + String((int) (sourceImageDelaysInSeconds[j] * localSampleRate)) + String(" ")
-//                + String(readPos) + String(" ")
-//                + String(sourceImageDelayLineBuffer.getNumSamples())
-//                );
-            
-            // apply circular shift on read position if needed
-            if (readPos < 0) readPos = sourceImageDelayLineBuffer.getNumSamples() + readPos;
-            
-            // get current delay line gain based on source image path length
-            gainDelayLine = fmin(1.0, fmax(0.0, 1/sourceImagePathLengthsInMeter[j]));
-            
-            // sum delay lines outputs
-            delayLineOut += gainDelayLine * sourceImageDelayLineWritePointer[readPos];
-        }
-        
-
-        
-
-        
-        //==========================================================================
-        
-        // copy to output
-        outL[i] = vectorBufferOut[0][i] + delayLineOut;
-        outR[i] = outL[i];
-        
         // DEBUG PRECAUTION
         outL[i] = clipOutput(outL[i]);
-        outR[i] = clipOutput(outR[i]);
+        outR[i] = clipOutput(outL[i]);
     }
     
 }
@@ -224,43 +258,13 @@ float MainContentComponent::clipOutput(float input)
 
 void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
 {
-    // DBG("START TO RESIZE");
-//    updateSourceImageDelayLineRequested = true;
+    // save source image data here, that way even if they change between now nd the next audio loop
+    // these will be used
+    sourceImageDelaysInSeconds = oscHandler.getSourceImageDelays();
+    sourceImagePathLengthsInMeter = oscHandler.getSourceImagePathsLength();
     
-    // get maximum required delay line duration
-    double maxDelay = 1.0;
-    auto sourceImageDelays = oscHandler.getSourceImageDelays();
-    if (sourceImageDelays.size() > 0)
-        maxDelay = *std::max_element(std::begin(sourceImageDelays), std::end(sourceImageDelays)); // in sec
-    
-    // get associated required delay line buffer length
-    int delayBufferLength = fmax( 1, (int)( maxDelay * sampleRate) );
-    needToResizeSourceImageDelayLineWithThis = delayBufferLength;
-    
-    // copy current delay line in temporary buffer
-    sourceImageDelayLineBufferReplacement = sourceImageDelayLineBuffer;
-    // sourceImageDelayLineBufferReplacement.copyFrom(0, 0, sourceImageDelayLineBuffer, 0, 0, sourceImageDelayLineBuffer.getNumSamples());
-    
-    // resize temporary buffer
-    sourceImageDelayLineBufferReplacement.setSize(1, delayBufferLength, true, true);
-    
-    // notify audio loop that temporary buffer is ready to use
-    updateSourceImageDelayLineReady = true;
-    
-//    // get total number of source image, to define number of required delay line buffers
-//    int numDelayLines = sourceImageDelays.size();
-//    
-    // update delay line buffers duration
-    // sourceImageDelayLineBuffer.setSize(1, delayBufferLength, true, true);
-
-    // update associated attributes
-    // sourceImageDelayLineWritePositions.resize(numDelayLines, (int)(delayBufferLength/2));
-    
-//    DBG("FINISHIED TO RESIZE");
-    
-    
-    
-//    updateSourceImageDelayLineRequested = false;
+    // flag update for next audio loop run to eventually resize delay line
+    requireSourceImageDelayLineSizeUpdate = true;
 }
 
 //==============================================================================
@@ -309,18 +313,6 @@ void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaste
                 changeState (Stopped);
         }
     }
-//    else if (broadcaster == &audioFileReader)
-//    {
-//        AudioFileReader::TransportState state = audioFileReader.getState();
-//        if ( state == AudioFileReader::Loaded ) audioFilePlayButton.setEnabled (true);
-//        if ( state == AudioFileReader::Starting ) audioFilePlayButton.setEnabled (false);
-//        if ( state == AudioFileReader::Stopped )
-//        {
-//            audioFileStopButton.setEnabled (false);
-//            audioFilePlayButton.setEnabled (true);
-//        }
-//        if ( state == AudioFileReader::Playing ) audioFileStopButton.setEnabled (true);
-//    }
 }
 
 //==============================================================================

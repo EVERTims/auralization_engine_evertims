@@ -82,17 +82,25 @@ private:
     // AUDIO DELAY LINE
     AudioSampleBuffer sourceImageDelayLineBuffer; // (used as circular buffer)
     AudioSampleBuffer sourceImageDelayLineBufferReplacement;
+    AudioSampleBuffer sourceImageBufferTemp;
+    AudioSampleBuffer sourceImageBuffer;
     int sourceImageDelayLineWriteIndex = 0;
 //    std::vector<int> sourceImageDelayLineWritePositions;
     void updateSourceImageDelayLineSize(int sampleRate);
     bool updateSourceImageDelayLineReady = false;
-    int needToResizeSourceImageDelayLineWithThis = 0;
+    // int needToResizeSourceImageDelayLineWithThis = 0;
+    bool requireSourceImageDelayLineSizeUpdate = false;
     
+    int localSamplePerBlockExpected;
+    int localSampleRate;
+    
+    std::vector<float> sourceImageDelaysInSeconds;
+    std::vector<float> sourceImagePathLengthsInMeter;
     //==========================================================================
     // AUDIO MANIPULATIONS
     float clipOutput(float input);
     std::vector<float> vectorBufferOut[2]; // buffer for input data
-    int localSampleRate;
+    
     //==========================================================================
     // AMBISONIC
     AmbixEncoder ambisonicEncoder;
