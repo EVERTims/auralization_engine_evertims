@@ -38,10 +38,12 @@ MainContentComponent::MainContentComponent()
     
     addAndMakeVisible (&audioFileLoopToogle);
     audioFileLoopToogle.setButtonText ("Loop");
+    audioFileLoopToogle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
     audioFileLoopToogle.addListener (this);
     
     addAndMakeVisible (&audioFileCurrentPositionLabel);
     audioFileCurrentPositionLabel.setText ("Stopped", dontSendNotification);
+    audioFileCurrentPositionLabel.setColour(Label::textColourId, Colours::whitesmoke);
     
     addAndMakeVisible (logTextBox);
     logTextBox.setMultiLine (true);
@@ -50,14 +52,17 @@ MainContentComponent::MainContentComponent()
     logTextBox.setScrollbarsShown (true);
     logTextBox.setCaretVisible (false);
     logTextBox.setPopupMenuEnabled (true);
-    logTextBox.setColour (TextEditor::backgroundColourId, Colour (0x32ffffff));
-    logTextBox.setColour (TextEditor::outlineColourId, Colour (0x1c000000));
-    logTextBox.setColour (TextEditor::shadowColourId, Colour (0x16000000));
+    logTextBox.setColour (TextEditor::textColourId, Colours::whitesmoke);
+    logTextBox.setColour (TextEditor::backgroundColourId, Colour(PixelARGB(240,30,30,30)));
+    logTextBox.setColour (TextEditor::outlineColourId, Colours::grey);
+    logTextBox.setColour (TextEditor::shadowColourId, Colours::darkorange);
     
     // addAndMakeVisible (liveAudioScroller); // = new LiveScrollingAudioDisplay());
     // MainAppWindow::getSharedAudioDeviceManager().addAudioCallback (liveAudioScroller);
     
+    
     //==========================================================================
+    
 }
 
 MainContentComponent::~MainContentComponent()
@@ -89,7 +94,23 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     // keep track of sample rate
     localSampleRate = sampleRate;
     localSamplePerBlockExpected = samplesPerBlockExpected;
+
+    //==========================================================================
+    // INIT FILTER BANK
+    double f0 = 31.5;
+    double Q = sqrt(2) / (2 - 1);
+    float gainFactor = 1.0;
+    for (int i = 0; i < NUM_OCTAVE_BANDS; i++)
+    {
+        f0 *= 2;
+        octaveFilterBank[i].setCoefficients(IIRCoefficients::makePeakFilter(sampleRate, f0, Q, gainFactor));
+    }
     
+    // INIT AMBISONIC
+    ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
+    
+
+    // USEFULL ???
     vectorBufferOut[0].resize(samplesPerBlockExpected);
     vectorBufferOut[1].resize(samplesPerBlockExpected);
 }
@@ -128,10 +149,22 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     // memcpy(vectorBufferOut[1].data(), monoInBufferPointer, bufferLength * sizeof(float));
     
     //==========================================================================
+    // init filter bank
+    octaveFilterBuffer = localAudioBuffer;  // set size
+    octaveFilterBuffer.clear();
+    octaveFilterBufferTemp = octaveFilterBuffer;
+    
+    //==========================================================================
     // init delay lines (for sourceImages)
     sourceImageBuffer = localAudioBuffer; // only need a mono version of this
     sourceImageBuffer.clear();
     sourceImageBufferTemp = sourceImageBuffer;
+    
+    //==========================================================================
+    // init ambisonic
+    // ambisonicBuffer = localAudioBuffer; // set size
+    ambisonicBuffer.setSize(N_AMBI_CH, localAudioBuffer.getNumSamples()); // to make sure correct number of samples
+    ambisonicBuffer.clear();
     
     if ( sourceImageDelaysInSeconds.size() > 0 )
     {
@@ -167,7 +200,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         }
         
         
-        // loop over source images to apply delay + room coloration
+        // loop over source images to apply delay + room coloration + spatialization
         for (int j = 0; j < sourceImageDelaysInSeconds.size(); j++)
         {
             
@@ -193,13 +226,55 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             float gainDelayLine = fmin(1.0, fmax(0.0, 1.0 / sourceImagePathLengthsInMeter[j] ) );
             sourceImageBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), gainDelayLine);
             
-            // DEBUG
-            sourceImageBuffer.addFrom(0, 0, sourceImageBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
+            
+            // octave filer bank decomposition
+            
+            octaveFilterBuffer.clear();
+            auto sourceImageabsorption = oscHandler.getSourceImageAbsorbtion(sourceImageIDs[j]);
+            
+            for (int k = 0; k < NUM_OCTAVE_BANDS; k++)
+            {
+                
+                // duplicate to get working copy
+                octaveFilterBufferTemp = sourceImageBufferTemp;
+                
+                // decompose
+                octaveFilterBank[k].processSamples(octaveFilterBufferTemp.getWritePointer(0), localAudioBuffer.getNumSamples());
+                
+                // get gain
+                float octaveFreqGain = sourceImageabsorption[k] / NUM_OCTAVE_BANDS; // DUMMY
+                
+                // apply frequency specific absorption gains
+                octaveFilterBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), octaveFreqGain);
+                
+                // sum to output (recompose)
+                octaveFilterBuffer.addFrom(0, 0, octaveFilterBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
+            }
+            
+            // DEBUG: sum sources images signals (with filter bank)
+            sourceImageBuffer.addFrom(0, 0, octaveFilterBuffer, 0, 0, localAudioBuffer.getNumSamples());
             
             
-            // apply room coloration
-            // Ambisonic Encode
-            // sum to output ambisonic channels
+            // DEBUG: sum sources images signals (without filter bank)
+            // sourceImageBuffer.addFrom(0, 0, sourceImageBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
+            
+            
+            // Spatialization: Ambisonic encoding
+            for (int k = 0; k < N_AMBI_CH; k++)
+            {
+                // create working copy
+                ambisonicBufferTemp = octaveFilterBuffer;
+                
+                // apply ambisonic gain
+                ambisonicBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), sourceImageAmbisonicGains[j][k]);
+                
+                // fill in general ambisonic buffer
+                ambisonicBuffer.addFrom(k, 0, ambisonicBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
+            }
+            
+            // Spatialization: Ambisonic decoding + virtual speaker approach + binaural
+            
+            
             
             sourceImageBufferTemp.clear();
             
@@ -260,8 +335,17 @@ void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
 {
     // save source image data here, that way even if they change between now nd the next audio loop
     // these will be used
+    sourceImageIDs = oscHandler.getSourceImageIDs();
     sourceImageDelaysInSeconds = oscHandler.getSourceImageDelays();
     sourceImagePathLengthsInMeter = oscHandler.getSourceImagePathsLength();
+    
+    // compute new ambisonic gains
+    auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
+    sourceImageAmbisonicGains.resize(sourceImageDOAs.size());
+    for (int i = 0; i < sourceImageDOAs.size(); i++)
+    {
+        sourceImageAmbisonicGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i].azimuth, sourceImageDOAs[i].elevation);
+    }
     
     // flag update for next audio loop run to eventually resize delay line
     requireSourceImageDelayLineSizeUpdate = true;
@@ -271,7 +355,7 @@ void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
 void MainContentComponent::paint (Graphics& g)
 {
     // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (Colours::darkgrey);
+    g.fillAll (Colour(PixelARGB(240,30,30,30)));
     
     
     // You can add your drawing code here!

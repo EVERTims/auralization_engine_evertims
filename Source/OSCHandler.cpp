@@ -29,7 +29,7 @@ void OSCHandler::oscMessageReceived (const OSCMessage& msg)
     
     // DBG(String("osc msg: ") + msg.getAddressPattern().toString() + String(" size: ") + String(msg.size()) + String(" id: ") + String(msg[0].getInt32()));
     
-    if ( (pIn.matches(msgAdress) || pUpd.matches(msgAdress) ) && msg.size() == 18){
+    if ( (pIn.matches(msgAdress) || pUpd.matches(msgAdress) ) && msg.size() == 19){
         // format: [ /in pathID order r1x r1y r1z rNx rNy rNz dist abs1 .. abs9 ]
         
         EL_ImageSource source;
@@ -50,7 +50,7 @@ void OSCHandler::oscMessageReceived (const OSCMessage& msg)
 
         source.totalPathDistance = msg[8].getFloat32();
 
-        for (int i = 1; i < 9; i++)
+        for (int i = 0; i < 10; i++)
             source.absorption[i] = msg[9+i].getFloat32();
         
         // insert or update
@@ -137,6 +137,20 @@ void OSCHandler::showConnectionErrorMessage (const String& messageText)
 }
 
 // TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
+std::vector<float> OSCHandler::getSourceImageIDs()
+{
+    std::vector<float> IDs;
+    IDs.resize(sourceImageMap.size());
+    int i = 0;
+    for(auto const &ent1 : sourceImageMap) {
+        
+        IDs[i] = ent1.first;
+        i ++;
+    }
+    return IDs;
+}
+
+// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
 std::vector<float> OSCHandler::getSourceImageDelays()
 {
     std::vector<float> delays;
@@ -181,6 +195,12 @@ std::vector<Point3Spherical<float>> OSCHandler::getSourceImageDOAs()
     return doas;
 }
 
+// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
+float* OSCHandler::getSourceImageAbsorbtion(int sourceID)
+{
+    return sourceImageMap.find(sourceID)->second.absorption;
+
+}
 String OSCHandler::getMapContent()
 {
     String output;

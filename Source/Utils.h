@@ -4,6 +4,7 @@
 #include <math.h>
 
 #define SOUND_SPEED 343 // speed of sound in m.s-1
+#define NUM_OCTAVE_BANDS 10 // number of octave bands used in filter bank for room absorption
 #define AMBI_ORDER 2 // Ambisonic order
 #define N_AMBI_CH 9 // Associated number of Ambisonic channels [pow(AMBI_ORDER+1,2)]
 
@@ -54,7 +55,7 @@ struct EL_ImageSource
     Point3Cartesian<float> positionRelectionFirst;
     Point3Cartesian<float> positionRelectionLast;
     float totalPathDistance;
-    float absorption[9];
+    float absorption[10];
 };
 
 struct EL_Source

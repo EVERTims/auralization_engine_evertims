@@ -38,8 +38,8 @@ _elevation(0.1f),
 _size(0.1f)
 {
     // reset size
-    ambi_gain.resize(N_AMBI_CH);
-    _ambi_gain.resize(N_AMBI_CH);
+//    ambi_gain.resize(N_AMBI_CH);
+//    _ambi_gain.resize(N_AMBI_CH);
 
     sph_h.Init(AMBI_ORDER);
 
@@ -51,7 +51,7 @@ AmbixEncoder::~AmbixEncoder()
 
 }
 
-void AmbixEncoder::calcParams(double azimuth, double elevation)
+Array<float> AmbixEncoder::calcParams(double azimuth, double elevation)
 {
   // save last status
   _ambi_gain = ambi_gain;
@@ -103,5 +103,7 @@ void AmbixEncoder::calcParams(double azimuth, double elevation)
   _azimuth = azimuth;
   _elevation = elevation;
   _size = size;
+    
+    return ambi_gain;
 
 }

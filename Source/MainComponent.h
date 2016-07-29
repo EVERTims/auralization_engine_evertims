@@ -6,6 +6,7 @@
 //#include "AudioFileReader.h"
 // #include "AudioLiveScrollingDisplay.h"
 #include "AmbixEncode/AmbixEncoder.h"
+#include "Utils.h" // used to define constants
 
 #include <vector>
 
@@ -94,8 +95,18 @@ private:
     int localSamplePerBlockExpected;
     int localSampleRate;
     
+    std::vector<float> sourceImageIDs;
     std::vector<float> sourceImageDelaysInSeconds;
     std::vector<float> sourceImagePathLengthsInMeter;
+    //==========================================================================
+    // AUDIO FILTER BANK
+    IIRFilter octaveFilterBank[NUM_OCTAVE_BANDS];
+    std::vector<float> octaveFilterData[NUM_OCTAVE_BANDS];
+    AudioSampleBuffer octaveFilterBufferTemp;
+    AudioSampleBuffer octaveFilterBuffer;
+//    float octaveBandFrequencies[NUM_OCTAVE_BANDS];
+
+    
     //==========================================================================
     // AUDIO MANIPULATIONS
     float clipOutput(float input);
@@ -104,6 +115,10 @@ private:
     //==========================================================================
     // AMBISONIC
     AmbixEncoder ambisonicEncoder;
+    std::vector< Array<float> > sourceImageAmbisonicGains; // buffer for input data
+    AudioSampleBuffer ambisonicBufferTemp;
+    AudioSampleBuffer ambisonicBuffer;
+
     //==========================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };

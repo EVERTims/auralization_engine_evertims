@@ -22,9 +22,11 @@ public:
     ~OSCHandler();
 
     String getMapContent();
+    std::vector<float> getSourceImageIDs();
     std::vector<float> getSourceImageDelays();
     std::vector<float> getSourceImagePathsLength();
     std::vector<Point3Spherical<float>> getSourceImageDOAs();
+    float* getSourceImageAbsorbtion(int sourceID);
     
     
 private:

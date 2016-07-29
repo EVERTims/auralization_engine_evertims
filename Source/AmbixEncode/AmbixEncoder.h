@@ -26,6 +26,8 @@
 
 #include "SphericalHarmonic/SphericalHarmonic.h"
 
+#include "Utils.h"
+
 #include <Eigen/Eigen>
 
 class AmbixEncoder {
@@ -36,7 +38,8 @@ public:
     
     
 //    void calcParams();
-    void calcParams(double azimuth, double elevation);
+    // void calcParams(double azimuth, double elevation);
+     Array<float> calcParams(double azimuth, double elevation);
     
     
     // from 0.0 ..... 1.0   .... -180 -> +180
@@ -48,7 +51,9 @@ public:
 	
     Array<float> ambi_gain;  // actual gain
     Array<float> _ambi_gain; // buffer for gain ramp (last status)
-  
+//    float ambi_gain[N_AMBI_CH];
+//    float _ambi_gain[N_AMBI_CH];
+    
     SphericalHarmonic sph_h;
     
 private:
