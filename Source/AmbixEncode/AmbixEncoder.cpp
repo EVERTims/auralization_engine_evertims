@@ -43,7 +43,7 @@ _size(0.1f)
 
     sph_h.Init(AMBI_ORDER);
 
-    calcParams(_azimuth, _elevation);
+    // calcParams(_azimuth, _elevation);
 }
 
 AmbixEncoder::~AmbixEncoder()

@@ -28,6 +28,16 @@
               file="Source/AmbixEncode/AmbixEncoder.cpp"/>
         <FILE id="YX7pz0" name="AmbixEncoder.h" compile="0" resource="0" file="Source/AmbixEncode/AmbixEncoder.h"/>
       </GROUP>
+      <GROUP id="{AC31FDF4-EC6C-03AA-31EA-A0907EDE24BC}" name="FIRFilter">
+        <FILE id="DHDJLE" name="FIRFilter.cpp" compile="1" resource="0" file="Source/FIRFilter/FIRFilter.cpp"/>
+        <FILE id="x28ViX" name="FIRFilter.h" compile="0" resource="0" file="Source/FIRFilter/FIRFilter.h"/>
+        <FILE id="N0XpeZ" name="OouraFFT.cpp" compile="1" resource="0" file="Source/FIRFilter/OouraFFT.cpp"/>
+        <FILE id="mnnlnj" name="OouraFFT.h" compile="0" resource="0" file="Source/FIRFilter/OouraFFT.h"/>
+      </GROUP>
+      <FILE id="dsfWZS" name="Ambi2binIRContainer.cpp" compile="1" resource="0"
+            file="Source/Ambi2binIRContainer.cpp"/>
+      <FILE id="sSNWxe" name="Ambi2binIRContainer.h" compile="0" resource="0"
+            file="Source/Ambi2binIRContainer.h"/>
       <FILE id="uRyck4" name="AudioLiveScrollingDisplay.h" compile="0" resource="0"
             file="Source/AudioLiveScrollingDisplay.h"/>
       <FILE id="hF6kuS" name="AudioFileReader.cpp" compile="1" resource="0"
@@ -41,6 +51,13 @@
       <FILE id="sdbpD7" name="OSCHandler.cpp" compile="1" resource="0" file="Source/OSCHandler.cpp"/>
       <FILE id="AycOjY" name="OSCHandler.h" compile="0" resource="0" file="Source/OSCHandler.h"/>
       <FILE id="QoD7yh" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
+    </GROUP>
+    <GROUP id="{F473110D-BA5F-16DB-4E0C-8A8135AFEAFF}" name="data">
+      <GROUP id="{56365D76-25CB-B471-56CB-C42E443B0B0E}" name="hoa2binIRs">
+        <FILE id="XTgkkU" name="hoa2bin_order2_ClubFritz1.bin" compile="0"
+              resource="0" file="data/hoa2binIRs/hoa2bin_order2_ClubFritz1.bin"
+              xcodeResource="1"/>
+      </GROUP>
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>

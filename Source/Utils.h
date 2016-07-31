@@ -2,11 +2,15 @@
 
 #include <vector>
 #include <math.h>
+#include <cmath>
+
+#include "../JuceLibraryCode/JuceHeader.h"
 
 #define SOUND_SPEED 343 // speed of sound in m.s-1
 #define NUM_OCTAVE_BANDS 10 // number of octave bands used in filter bank for room absorption
 #define AMBI_ORDER 2 // Ambisonic order
 #define N_AMBI_CH 9 // Associated number of Ambisonic channels [pow(AMBI_ORDER+1,2)]
+#define AMBI2BIN_IR_LENGTH 200 // length of loaded filters (in time samples)
 
 //==========================================================================
 // GEOMETRY STRUCTURES AND ROUTINES
@@ -70,6 +74,33 @@ struct EL_Listener
     Point3Cartesian<float> position;
     float rotationEuler[3];
 };
+
+//==========================================================================
+// FIR and OouraFFT routines
+
+#include <complex>
+
+template <typename T>
+using ComplexVector = std::vector<std::complex<T>>;
+
+
+inline bool isPowerOf2(size_t val)
+{
+    return (val == 1 || (val & (val - 1)) == 0);
+}
+
+inline int nextPowerOf2(int x)
+{
+    if (x < 0)
+        return 0;
+    --x;
+    x |= x >> 1;
+    x |= x >> 2;
+    x |= x >> 4;
+    x |= x >> 8;
+    x |= x >> 16;
+    return x + 1;
+}
 //==========================================================================
 template <typename Type>
 inline Type sign(Type x)

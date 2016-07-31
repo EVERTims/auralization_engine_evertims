@@ -6,9 +6,12 @@
 //#include "AudioFileReader.h"
 // #include "AudioLiveScrollingDisplay.h"
 #include "AmbixEncode/AmbixEncoder.h"
+#include "Ambi2binIRContainer.h"
+#include "FIRFilter/FIRFilter.h"
 #include "Utils.h" // used to define constants
 
 #include <vector>
+#include <array>
 
 //==============================================================================
 /*
@@ -59,11 +62,12 @@ private:
     ToggleButton audioFileLoopToogle;
     Label audioFileCurrentPositionLabel;
     TextEditor logTextBox;
+    Slider gainMasterSlider;
     
     // ScopedPointer<LiveScrollingAudioDisplay> liveAudioScroller;
     
     //==========================================================================
-    // AUDIO FILER PLAYER
+    // AUDIO FILE PLAYER
     bool shouldLoopAudioFile = false;
     AudioFormatManager formatManager;
     ScopedPointer<AudioFormatReaderSource> readerSource;
@@ -79,6 +83,8 @@ private:
     TransportState audioPlayerState;
     void changeState (TransportState newState);
     bool openAudioFile();
+    AudioSampleBuffer localAudioBuffer;
+    
     //==========================================================================
     // AUDIO DELAY LINE
     AudioSampleBuffer sourceImageDelayLineBuffer; // (used as circular buffer)
@@ -118,7 +124,15 @@ private:
     std::vector< Array<float> > sourceImageAmbisonicGains; // buffer for input data
     AudioSampleBuffer ambisonicBufferTemp;
     AudioSampleBuffer ambisonicBuffer;
-
+    AudioSampleBuffer ambisonicBuffer2ndEar;
+    std::array<int, N_AMBI_CH> ambiChannelProcessingOrder_;
+    
+    
+    //==========================================================================
+    // AMBI2BIN
+    Ambi2binIRContainer ambi2binContainer;
+    FIRFilter ambi2binFilters[2*N_AMBI_CH]; // holds current ABIR (room reverb) filters
+    
     //==========================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };
