@@ -273,7 +273,6 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             // octave filer bank decomposition
             octaveFilterBuffer.clear();
             auto sourceImageabsorption = oscHandler.getSourceImageAbsorbtion(sourceImageIDs[j]);
-            // DBG("----");
             
             for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
             {
@@ -327,14 +326,13 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         
         //==========================================================================
         // Spatialization: Ambisonic decoding + virtual speaker approach + binaural
-
+        
         // DEBUG: check Ambisonic gains
-         String debugLog = "";
-         for (int k = 0; k < N_AMBI_CH; k++) {// N_AMBI_CH
-             debugLog += String(k) + String(": ") + String(round2(sourceImageAmbisonicGains[0][k], 2)) + String("\t ");
-         }
-         DBG(debugLog);
-
+        // String debugLog = "";
+        // for (int k = 0; k < N_AMBI_CH; k++) {// N_AMBI_CH
+        //     debugLog += String(k) + String(": ") + String(round2(sourceImageAmbisonicGains[0][k], 2)) + String("\t ");
+        // }
+        // DBG(debugLog);
         
         // duplicate channel before filtering for two ears
         ambisonicBuffer2ndEar = ambisonicBuffer;
@@ -446,7 +444,7 @@ void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
     sourceImageAmbisonicGains.resize(sourceImageDOAs.size());
     for (int i = 0; i < sourceImageDOAs.size(); i++)
     {
-        sourceImageAmbisonicGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i].azimuth, sourceImageDOAs[i].elevation);
+        sourceImageAmbisonicGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
     }
     
     // flag update for next audio loop run to eventually resize delay line

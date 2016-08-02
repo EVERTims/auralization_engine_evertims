@@ -1,10 +1,7 @@
 #include "OSCHandler.h"
 
-#include "Utils.h"
-
 #include <math.h>
 #include <vector>
-
 
 OSCHandler::OSCHandler()
 {
@@ -38,15 +35,15 @@ void OSCHandler::oscMessageReceived (const OSCMessage& msg)
         
 //        for (int i = 1; i < 3; i++)
 //            source.positionRelectionFirst[i] = msg[2+i].getFloat32();
-        source.positionRelectionFirst.x = msg[2].getFloat32();
-        source.positionRelectionFirst.y = msg[3].getFloat32();
-        source.positionRelectionFirst.z = msg[4].getFloat32();
+        source.positionRelectionFirst(0) = msg[2].getFloat32();
+        source.positionRelectionFirst(1) = msg[3].getFloat32();
+        source.positionRelectionFirst(2) = msg[4].getFloat32();
         
 //        for (int i = 1; i < 3; i++)
 //            source.positionRelectionLast[i] = msg[5+i].getFloat32();
-        source.positionRelectionLast.x = msg[5].getFloat32();
-        source.positionRelectionLast.y = msg[6].getFloat32();
-        source.positionRelectionLast.z = msg[7].getFloat32();
+        source.positionRelectionLast(0) = msg[5].getFloat32();
+        source.positionRelectionLast(1) = msg[6].getFloat32();
+        source.positionRelectionLast(2) = msg[7].getFloat32();
 
         source.totalPathDistance = msg[8].getFloat32();
 
@@ -97,9 +94,9 @@ void OSCHandler::oscBundleReceived (const OSCBundle & bundle)
         {
             EL_Source source;
             source.name = msg[0].getString();
-            source.position.x = msg[1].getFloat32();
-            source.position.y = msg[2].getFloat32();
-            source.position.z = msg[3].getFloat32();
+            source.position(0) = msg[1].getFloat32();
+            source.position(1) = msg[2].getFloat32();
+            source.position(2) = msg[3].getFloat32();
             
             // insert or update
             sourceMap[source.name] = source;
@@ -108,12 +105,17 @@ void OSCHandler::oscBundleReceived (const OSCBundle & bundle)
         {
             EL_Listener listener;
             listener.name = msg[0].getString();
-            listener.position.x = msg[1].getFloat32();
-            listener.position.y = msg[2].getFloat32();
-            listener.position.z = msg[3].getFloat32();
+            listener.position(0) = msg[1].getFloat32();
+            listener.position(1) = msg[2].getFloat32();
+            listener.position(2) = msg[3].getFloat32();
             
             for (int j = 0; j < 3; j++)
-                listener.rotationEuler[j] = msg[4+j].getFloat32();
+            {
+                for (int k = 0; k < 3; k++)
+                {
+                    listener.rotationMatrix(j,k) = msg[4+ (3*j + k)].getFloat32();
+                }
+            }
             
             // insert or update
             listenerMap[listener.name] = listener;
@@ -179,16 +181,17 @@ std::vector<float> OSCHandler::getSourceImagePathsLength()
 }
 
 // TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
-std::vector<Point3Spherical<float>> OSCHandler::getSourceImageDOAs()
+std::vector<Eigen::Vector3f> OSCHandler::getSourceImageDOAs()
 {
-    Point3Cartesian<float> listenerPos = listenerMap.begin()->second.position;
+    Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
+    Eigen::Matrix3f listenerRotationMatrix = listenerMap.begin()->second.rotationMatrix;
     
-    std::vector<Point3Spherical<float>> doas;
+    std::vector<Eigen::Vector3f> doas;
     doas.resize(sourceImageMap.size());
     
     int i = 0;
     for(auto const &ent1 : sourceImageMap) {
-        Point3Spherical<float> posSph = cartesianToSpherical(ent1.second.positionRelectionLast - listenerPos);
+        Eigen::Vector3f posSph = cartesianToSpherical( listenerRotationMatrix * ( ent1.second.positionRelectionLast - listenerPos ) );
         doas[i] = posSph;
         i ++;
     }
@@ -209,34 +212,37 @@ String OSCHandler::getMapContent()
     for(auto const &ent1 : listenerMap) {
         // ent1.first is the first key
         output += String("Listener: \t") + String(ent1.first) + String(", pos: [ ") +
-        String(round2(ent1.second.position.x, nDecimals)) + String(", ") +
-        String(round2(ent1.second.position.y, nDecimals)) + String(", ") +
-        String(round2(ent1.second.position.z, nDecimals)) + String(" ]\n");
+        String(round2(ent1.second.position(0), nDecimals)) + String(", ") +
+        String(round2(ent1.second.position(1), nDecimals)) + String(", ") +
+        String(round2(ent1.second.position(2), nDecimals)) + String(" ]\n");
     }
     output += String("\n");
     
     for(auto const &ent1 : sourceMap) {
         // ent1.first is the first key
         output += String("Source:  \t") + String(ent1.first) + String(", pos: [ ") +
-        String(round2(ent1.second.position.x, nDecimals)) + String(", ") +
-        String(round2(ent1.second.position.y, nDecimals)) + String(", ") +
-        String(round2(ent1.second.position.z, nDecimals)) + String(" ]\n");
+        String(round2(ent1.second.position(0), nDecimals)) + String(", ") +
+        String(round2(ent1.second.position(1), nDecimals)) + String(", ") +
+        String(round2(ent1.second.position(2), nDecimals)) + String(" ]\n");
     }
     output += String("\n");
     
-    Point3Cartesian<float> listenerPos = listenerMap.begin()->second.position;
+    Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
+    std::vector<Eigen::Vector3f> posSph = getSourceImageDOAs();
+    int i = 0;
     for(auto const &ent1 : sourceImageMap) {
         // ent1.first is the first key
-        Point3Spherical<float> posSph = cartesianToSpherical(ent1.second.positionRelectionLast - listenerPos);
+        // Eigen::Vector3f posSph = cartesianToSpherical(ent1.second.positionRelectionLast - listenerPos);
         
         output += String("Source Image: ") + String(ent1.first) + String(", posLast: \t [ ") +
-        String(round2(ent1.second.positionRelectionLast.x, nDecimals)) + String(", ") +
-        String(round2(ent1.second.positionRelectionLast.y, nDecimals)) + String(", ") +
-        String(round2(ent1.second.positionRelectionLast.z, nDecimals)) + String(" ]");
+        String(round2(ent1.second.positionRelectionLast(0), nDecimals)) + String(", ") +
+        String(round2(ent1.second.positionRelectionLast(1), nDecimals)) + String(", ") +
+        String(round2(ent1.second.positionRelectionLast(2), nDecimals)) + String(" ]");
         
         output += String(", \t DOA: [ ") +
-        String(round2(rad2deg(posSph.azimuth), nDecimals)) + String(", ") +
-        String(round2(rad2deg(posSph.elevation), nDecimals)) + String(" ]");
+        String(round2(rad2deg(posSph[i](0)), nDecimals)) + String(", ") +
+        String(round2(rad2deg(posSph[i](1)), nDecimals)) + String(" ]");
+        i++;
         
         output += String(", \t path length: ") + String(round(ent1.second.totalPathDistance*100)/100) + String("m\n");
     }

@@ -25,7 +25,7 @@ public:
     std::vector<float> getSourceImageIDs();
     std::vector<float> getSourceImageDelays();
     std::vector<float> getSourceImagePathsLength();
-    std::vector<Point3Spherical<float>> getSourceImageDOAs();
+    std::vector<Eigen::Vector3f> getSourceImageDOAs();
     float* getSourceImageAbsorbtion(int sourceID);
     
     

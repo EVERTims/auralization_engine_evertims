@@ -6,6 +6,8 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 
+#include <Eigen/Eigen>
+
 #define SOUND_SPEED 343 // speed of sound in m.s-1
 #define NUM_OCTAVE_BANDS 10 // number of octave bands used in filter bank for room absorption
 #define AMBI_ORDER 2 // Ambisonic order
@@ -14,40 +16,39 @@
 
 //==========================================================================
 // GEOMETRY STRUCTURES AND ROUTINES
-template <typename Type>
-struct Point3Cartesian
-{
-    Type x;
-    Type y;
-    Type z;
-};
+//template <typename Type>
+//struct Point3Cartesian
+//{
+//    Type x;
+//    Type y;
+//    Type z;
+//};
+//
+//template <typename Type>
+//struct Point3Spherical
+//{
+//    Type azimuth;
+//    Type elevation;
+//    Type radius;
+//};
 
-template <typename Type>
-struct Point3Spherical
-{
-    Type azimuth;
-    Type elevation;
-    Type radius;
-};
-
-template <typename Type>
-Point3Cartesian<Type> operator -(const Point3Cartesian<Type>& p1, const Point3Cartesian<Type>& p2) {
-    return Point3Cartesian <Type> { p1.x - p2.x, p1.y - p2.y, p1.z - p2.z  };
-}
+//template <typename Type>
+//Point3Cartesian<Type> operator -(const Point3Cartesian<Type>& p1, const Point3Cartesian<Type>& p2) {
+//    return Point3Cartesian <Type> { p1.x - p2.x, p1.y - p2.y, p1.z - p2.z  };
+//}
 
 
 // SPAT convention: azimuth in (xOy) 0° is facing y, clockwise,
 // elevation in (zOx), 0° is on (xOy), 90° on z+, -90° on z-
-template <typename Type>
-inline Point3Spherical<Type> cartesianToSpherical(const Point3Cartesian<Type>& p)
+inline Eigen::Vector3f cartesianToSpherical(const Eigen::Vector3f& p)
 {
-    Type radius = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
-    Type elevation = std::asin(p.z / radius);
-    Type azimuth = std::atan2(p.x, p.y);
-    if (p.x < 0 && p.z < 0)
+    float radius = std::sqrt(p(0) * p(0) + p(1) * p(1) + p(2) * p(2));
+    float elevation = std::asin(p(2) / radius);
+    float azimuth = std::atan2(p(0), p(1));
+    if (p(0) < 0 && p(2) < 0)
         elevation += 2 * M_PI;
     
-    return Point3Spherical < Type > { azimuth, elevation, radius };
+    return Eigen::Vector3f (azimuth, elevation, radius);
 }
 
 
@@ -57,8 +58,8 @@ struct EL_ImageSource
 {
     int ID;
     int reflectionOrder;
-    Point3Cartesian<float> positionRelectionFirst;
-    Point3Cartesian<float> positionRelectionLast;
+    Eigen::Vector3f positionRelectionFirst;
+    Eigen::Vector3f positionRelectionLast;
     float totalPathDistance;
     float absorption[10];
 };
@@ -66,14 +67,14 @@ struct EL_ImageSource
 struct EL_Source
 {
     String name;
-    Point3Cartesian<float> position;
+    Eigen::Vector3f position;
 };
 
 struct EL_Listener
 {
     String name;
-    Point3Cartesian<float> position;
-    float rotationEuler[3];
+    Eigen::Vector3f position;
+    Eigen::Matrix3f rotationMatrix;
 };
 
 //==========================================================================
