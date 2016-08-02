@@ -10,7 +10,7 @@
 #define NUM_OCTAVE_BANDS 10 // number of octave bands used in filter bank for room absorption
 #define AMBI_ORDER 2 // Ambisonic order
 #define N_AMBI_CH 9 // Associated number of Ambisonic channels [pow(AMBI_ORDER+1,2)]
-#define AMBI2BIN_IR_LENGTH 200 // length of loaded filters (in time samples)
+#define AMBI2BIN_IR_LENGTH 161 // length of loaded filters (in time samples)
 
 //==========================================================================
 // GEOMETRY STRUCTURES AND ROUTINES
@@ -36,14 +36,15 @@ Point3Cartesian<Type> operator -(const Point3Cartesian<Type>& p1, const Point3Ca
 }
 
 
-// elevation here is traditional phi but starting on horizontal plane, positive upwards
+// SPAT convention: azimuth in (xOy) 0° is facing y, clockwise,
+// elevation in (zOx), 0° is on (xOy), 90° on z+, -90° on z-
 template <typename Type>
 inline Point3Spherical<Type> cartesianToSpherical(const Point3Cartesian<Type>& p)
 {
     Type radius = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
     Type elevation = std::asin(p.z / radius);
-    Type azimuth = std::atan2(p.y, p.x);
-    if (p.y < 0 && p.z < 0)
+    Type azimuth = std::atan2(p.x, p.y);
+    if (p.x < 0 && p.z < 0)
         elevation += 2 * M_PI;
     
     return Point3Spherical < Type > { azimuth, elevation, radius };

@@ -36,7 +36,7 @@ Ambi2binIRContainer::Ambi2binIRContainer()
     // load HRIR, ITD, ILD, etc.
     try
     {
-        loadIR(resourceDir.getChildFile("hoa2bin_order2_ClubFritz1.bin").getFullPathName());
+        loadIR(resourceDir.getChildFile("hoa2bin_order2_IRC_1008_R_HRIR.bin").getFullPathName());
     }
     catch (std::ios_base::failure&)
     {

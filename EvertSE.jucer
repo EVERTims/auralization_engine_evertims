@@ -54,8 +54,8 @@
     </GROUP>
     <GROUP id="{F473110D-BA5F-16DB-4E0C-8A8135AFEAFF}" name="data">
       <GROUP id="{56365D76-25CB-B471-56CB-C42E443B0B0E}" name="hoa2binIRs">
-        <FILE id="XTgkkU" name="hoa2bin_order2_ClubFritz1.bin" compile="0"
-              resource="0" file="data/hoa2binIRs/hoa2bin_order2_ClubFritz1.bin"
+        <FILE id="AMEQm9" name="hoa2bin_order2_IRC_1008_R_HRIR.bin" compile="0"
+              resource="0" file="data/hoa2binIRs/hoa2bin_order2_IRC_1008_R_HRIR.bin"
               xcodeResource="1"/>
       </GROUP>
     </GROUP>

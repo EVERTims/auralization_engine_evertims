@@ -21,6 +21,7 @@
 #define __ambix_encoder__AmbixEncoder__
 
 #include <iostream>
+#include <array>
 // #include "JuceHeader.h"
 #include "../JuceLibraryCode/JuceHeader.h"
 
@@ -37,22 +38,22 @@ public:
     ~AmbixEncoder();
     
     
-//    void calcParams();
+    //    void calcParams();
     // void calcParams(double azimuth, double elevation);
-     Array<float> calcParams(double azimuth, double elevation);
-    
-    
+    Array<float> calcParams(double azimuth, double elevation);
+    std::array<double, N_AMBI_CH> ambiWeightUpTo2ndOrder;
+
     // from 0.0 ..... 1.0   .... -180 -> +180
-//    float azimuth;
-//    float elevation;
+    //    float azimuth;
+    //    float elevation;
     
     // from 0.0 .... 1.0   0: no scaling on HOA ...... 1: just W channel
     float size;
-	
+    
     Array<float> ambi_gain;  // actual gain
     Array<float> _ambi_gain; // buffer for gain ramp (last status)
-//    float ambi_gain[N_AMBI_CH];
-//    float _ambi_gain[N_AMBI_CH];
+    //    float ambi_gain[N_AMBI_CH];
+    //    float _ambi_gain[N_AMBI_CH];
     
     SphericalHarmonic sph_h;
     

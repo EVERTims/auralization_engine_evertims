@@ -4,7 +4,8 @@
  This file is part of the ambix Ambisonic plug-in suite.
  Copyright (c) 2013/2014 - Matthias Kronlachner
  www.matthiaskronlachner.com
-
+ from: https://github.com/kronihias/ambix/blob/master/ambix_encoder/Source/AmbixEncoder.cpp
+ 
  Permission is granted to use this software under the terms of:
  the GPL v2 (or any later version)
 
@@ -44,6 +45,9 @@ _size(0.1f)
     sph_h.Init(AMBI_ORDER);
 
     // calcParams(_azimuth, _elevation);
+    
+    // NOT PROUD OF THIS, temporary fix until the ongoing normalization study proposes new normalization gains scheme
+    ambiWeightUpTo2ndOrder = {{ 0.2821, 0.3455, 0.4886, 0.3455, 0.1288, 0.2575, 0.33, 0.2575, 0.1288 }};
 }
 
 AmbixEncoder::~AmbixEncoder()
@@ -59,8 +63,7 @@ Array<float> AmbixEncoder::calcParams(double azimuth, double elevation)
   if (_azimuth != azimuth || _elevation != elevation || _size != size)
   {
 
-//    sph_h.Calc((azimuth-0.5f)*2*(float)M_PI, (elevation-0.5f)*2*(float)M_PI);
-      // sph_h.Calc(deg2rad(azimuth), deg2rad(elevation));
+      // sph_h.Calc((azimuth-0.5f)*2*(float)M_PI, (elevation-0.5f)*2*(float)M_PI);
       sph_h.Calc(azimuth, elevation);
 
 
@@ -68,7 +71,9 @@ Array<float> AmbixEncoder::calcParams(double azimuth, double elevation)
 
 
     for (int i=0; i < N_AMBI_CH; ++i) {
-      ambi_gain.set(i, (float)sph_h.Ymn(i));
+      // ambi_gain.set(i, (float)sph_h.Ymn(i));
+        ambi_gain.set(i, (float)( sph_h.Ymn(i) * ambiWeightUpTo2ndOrder[i] ));
+        
     }
 
 //    ///////////////////////////

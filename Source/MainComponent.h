@@ -83,14 +83,14 @@ private:
     TransportState audioPlayerState;
     void changeState (TransportState newState);
     bool openAudioFile();
-    AudioSampleBuffer localAudioBuffer;
+    AudioBuffer<float> localAudioBuffer;
     
     //==========================================================================
     // AUDIO DELAY LINE
-    AudioSampleBuffer sourceImageDelayLineBuffer; // (used as circular buffer)
-    AudioSampleBuffer sourceImageDelayLineBufferReplacement;
-    AudioSampleBuffer sourceImageBufferTemp;
-    AudioSampleBuffer sourceImageBuffer;
+    AudioBuffer<float> sourceImageDelayLineBuffer; // (used as circular buffer)
+    AudioBuffer<float> sourceImageDelayLineBufferReplacement;
+    AudioBuffer<float> sourceImageBufferTemp;
+    AudioBuffer<float> sourceImageBuffer;
     int sourceImageDelayLineWriteIndex = 0;
 //    std::vector<int> sourceImageDelayLineWritePositions;
     void updateSourceImageDelayLineSize(int sampleRate);
@@ -108,8 +108,8 @@ private:
     // AUDIO FILTER BANK
     IIRFilter octaveFilterBank[NUM_OCTAVE_BANDS];
     std::vector<float> octaveFilterData[NUM_OCTAVE_BANDS];
-    AudioSampleBuffer octaveFilterBufferTemp;
-    AudioSampleBuffer octaveFilterBuffer;
+    AudioBuffer<float> octaveFilterBufferTemp;
+    AudioBuffer<float> octaveFilterBuffer;
 //    float octaveBandFrequencies[NUM_OCTAVE_BANDS];
 
     
@@ -122,10 +122,9 @@ private:
     // AMBISONIC
     AmbixEncoder ambisonicEncoder;
     std::vector< Array<float> > sourceImageAmbisonicGains; // buffer for input data
-    AudioSampleBuffer ambisonicBufferTemp;
-    AudioSampleBuffer ambisonicBuffer;
-    AudioSampleBuffer ambisonicBuffer2ndEar;
-    std::array<int, N_AMBI_CH> ambiChannelProcessingOrder_;
+    AudioBuffer<float> ambisonicBufferTemp;
+    AudioBuffer<float> ambisonicBuffer;
+    AudioBuffer<float> ambisonicBuffer2ndEar;
     
     
     //==========================================================================
