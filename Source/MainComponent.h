@@ -9,6 +9,7 @@
 #include "Ambi2binIRContainer.h"
 #include "FIRFilter/FIRFilter.h"
 #include "Utils.h" // used to define constants
+#include "DelayLine.h"
 
 #include <vector>
 #include <array>
@@ -87,18 +88,17 @@ private:
     
     //==========================================================================
     // AUDIO DELAY LINE
-    AudioBuffer<float> sourceImageDelayLineBuffer; // (used as circular buffer)
-    AudioBuffer<float> sourceImageDelayLineBufferReplacement;
+    DelayLine delayLine;
+    
+    
     AudioBuffer<float> sourceImageBufferTemp;
     AudioBuffer<float> sourceImageBuffer;
-    int sourceImageDelayLineWriteIndex = 0;
-//    std::vector<int> sourceImageDelayLineWritePositions;
+    
+
     void updateSourceImageDelayLineSize(int sampleRate);
-    bool updateSourceImageDelayLineReady = false;
-    // int needToResizeSourceImageDelayLineWithThis = 0;
+    
     bool requireSourceImageDelayLineSizeUpdate = false;
     
-    int localSamplePerBlockExpected;
     int localSampleRate;
     
     std::vector<float> sourceImageIDs;
@@ -110,8 +110,6 @@ private:
     std::vector<float> octaveFilterData[NUM_OCTAVE_BANDS];
     AudioBuffer<float> octaveFilterBufferTemp;
     AudioBuffer<float> octaveFilterBuffer;
-//    float octaveBandFrequencies[NUM_OCTAVE_BANDS];
-
     
     //==========================================================================
     // AUDIO MANIPULATIONS

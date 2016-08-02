@@ -5,6 +5,7 @@
 
 MainContentComponent::MainContentComponent()
 : oscHandler()
+, delayLine()
 , ambi2binContainer()
 // , liveAudioScroller(new LiveScrollingAudioDisplay())
 {
@@ -93,11 +94,11 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     
     localAudioBuffer.setSize(1, samplesPerBlockExpected);
     
-    // init delay line (define single channel buffer and dummy number of samples)
-    // updateSourceImageDelayLineSize(sampleRate);
-    sourceImageDelayLineBuffer.setSize(1, (int)(samplesPerBlockExpected));
-    sourceImageDelayLineBuffer.clear();
-    // sourceImageDelayLineBufferReplacement = sourceImageDelayLineBuffer;
+    // init delay line
+    delayLine.buffer.setSize(1, (int)(samplesPerBlockExpected));
+    delayLine.buffer.clear();
+
+    
     sourceImageBufferTemp.clear();
     sourceImageBuffer.clear();
     
@@ -113,7 +114,6 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     
     // keep track of sample rate
     localSampleRate = sampleRate;
-    localSamplePerBlockExpected = samplesPerBlockExpected;
     
     //==========================================================================
     // INIT FILTER BANK
@@ -207,30 +207,16 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             // get associated required delay line buffer length
             int updatedDelayLineLength = (int)( 1.5 * maxDelay * localSampleRate); // longest delay creates noisy sound if delay line is exactly 1* its duration
             
-            // update delay line size if need be (no shrinking delay line for now)
-            if (updatedDelayLineLength > sourceImageDelayLineBuffer.getNumSamples())
-            {
-                sourceImageDelayLineBuffer.setSize(1, updatedDelayLineLength, true, true);
-            }
+            // update delay line size
+            delayLine.setSize(updatedDelayLineLength);
             
             // unflag update required
             requireSourceImageDelayLineSizeUpdate = false;
         }
         
-        
-        // update delay line with current buffer samples
-        if ( sourceImageDelayLineWriteIndex + localAudioBuffer.getNumSamples() <= sourceImageDelayLineBuffer.getNumSamples() )
-        { // simple copy
-            sourceImageDelayLineBuffer.copyFrom(0, sourceImageDelayLineWriteIndex, localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        }
-        else // circular copy (last samples of audio buffer will go at delay line buffer begining)
-        {
-            int numSamplesTail = sourceImageDelayLineBuffer.getNumSamples() - sourceImageDelayLineWriteIndex;
-            sourceImageDelayLineBuffer.copyFrom(0, sourceImageDelayLineWriteIndex, localAudioBuffer, 0, 0, numSamplesTail );
-            sourceImageDelayLineBuffer.copyFrom(0, 0, localAudioBuffer, 0, numSamplesTail, localAudioBuffer.getNumSamples() - numSamplesTail);
-        }
-        //==========================================================================
-        
+        // add current audio buffer to delay line
+        delayLine.addFrom(localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
+
         //==========================================================================
         // LOOP OVER SOURCE IMAGES (to apply delay + room coloration + spatialization)
         
@@ -240,24 +226,24 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             //==========================================================================
             // get delayed buffer corresponding to current source image out of delay line
             
-            int writePos = sourceImageDelayLineWriteIndex - (int) (sourceImageDelaysInSeconds[j] * localSampleRate);
+            int writePos = delayLine.writeIndex - (int) (sourceImageDelaysInSeconds[j] * localSampleRate);
             
             if ( writePos < 0 )
             {
-                writePos = sourceImageDelayLineBuffer.getNumSamples() + writePos;
+                writePos = delayLine.buffer.getNumSamples() + writePos;
                 if ( writePos < 0 ) // if after an update the first delay force to go fetch far to far: not best option yet (to set write pointer to zero)
                     writePos = 0;
             }
             
-            if ( ( writePos + localAudioBuffer.getNumSamples() ) < sourceImageDelayLineBuffer.getNumSamples() )
+            if ( ( writePos + localAudioBuffer.getNumSamples() ) < delayLine.buffer.getNumSamples() )
             { // simple copy
-                sourceImageBufferTemp.copyFrom(0, 0, sourceImageDelayLineBuffer, 0, writePos, localAudioBuffer.getNumSamples());
+                sourceImageBufferTemp.copyFrom(0, 0, delayLine.buffer, 0, writePos, localAudioBuffer.getNumSamples());
             }
             else
             { // circular loop
-                int numSamplesTail = sourceImageDelayLineBuffer.getNumSamples() - writePos;
-                sourceImageBufferTemp.copyFrom(0, 0, sourceImageDelayLineBuffer, 0, writePos, numSamplesTail );
-                sourceImageBufferTemp.copyFrom(0, numSamplesTail, sourceImageDelayLineBuffer, 0, 0, localAudioBuffer.getNumSamples() - numSamplesTail);
+                int numSamplesTail = delayLine.buffer.getNumSamples() - writePos;
+                sourceImageBufferTemp.copyFrom(0, 0, delayLine.buffer, 0, writePos, numSamplesTail );
+                sourceImageBufferTemp.copyFrom(0, numSamplesTail, delayLine.buffer, 0, 0, localAudioBuffer.getNumSamples() - numSamplesTail);
             }
             
             //==========================================================================
@@ -317,12 +303,10 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             
         }
         
-
-        //==========================================================================
-        // Delay line: increment write position, apply circular shift if needed
-        sourceImageDelayLineWriteIndex += localAudioBuffer.getNumSamples();
-        if (sourceImageDelayLineWriteIndex >= sourceImageDelayLineBuffer.getNumSamples())
-            sourceImageDelayLineWriteIndex = sourceImageDelayLineWriteIndex - sourceImageDelayLineBuffer.getNumSamples();
+        
+        // increment delay line write position
+        delayLine.incrementWritePosition(localAudioBuffer.getNumSamples());
+        
         
         //==========================================================================
         // Spatialization: Ambisonic decoding + virtual speaker approach + binaural
@@ -412,7 +396,7 @@ void MainContentComponent::releaseResources()
     transportSource.releaseResources();
     
     // clear delay line buffer
-    sourceImageDelayLineBuffer.clear();
+    delayLine.buffer.clear();
 }
 
 
