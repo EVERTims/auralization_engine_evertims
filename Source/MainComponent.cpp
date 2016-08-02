@@ -95,9 +95,7 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     localAudioBuffer.setSize(1, samplesPerBlockExpected);
     
     // init delay line
-    delayLine.buffer.setSize(1, (int)(samplesPerBlockExpected));
-    delayLine.buffer.clear();
-
+    delayLine.initBufferSize(samplesPerBlockExpected);
     
     sourceImageBufferTemp.clear();
     sourceImageBuffer.clear();
@@ -223,30 +221,9 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         for (int j = 0; j < sourceImageDelaysInSeconds.size(); j++) // sourceImageDelaysInSeconds.size()
         {
          
-            //==========================================================================
             // get delayed buffer corresponding to current source image out of delay line
-            
-            int writePos = delayLine.writeIndex - (int) (sourceImageDelaysInSeconds[j] * localSampleRate);
-            
-            if ( writePos < 0 )
-            {
-                writePos = delayLine.buffer.getNumSamples() + writePos;
-                if ( writePos < 0 ) // if after an update the first delay force to go fetch far to far: not best option yet (to set write pointer to zero)
-                    writePos = 0;
-            }
-            
-            if ( ( writePos + localAudioBuffer.getNumSamples() ) < delayLine.buffer.getNumSamples() )
-            { // simple copy
-                sourceImageBufferTemp.copyFrom(0, 0, delayLine.buffer, 0, writePos, localAudioBuffer.getNumSamples());
-            }
-            else
-            { // circular loop
-                int numSamplesTail = delayLine.buffer.getNumSamples() - writePos;
-                sourceImageBufferTemp.copyFrom(0, 0, delayLine.buffer, 0, writePos, numSamplesTail );
-                sourceImageBufferTemp.copyFrom(0, numSamplesTail, delayLine.buffer, 0, 0, localAudioBuffer.getNumSamples() - numSamplesTail);
-            }
-            
-            //==========================================================================
+            int delayInSamples = (int) (sourceImageDelaysInSeconds[j] * localSampleRate);
+            sourceImageBufferTemp.copyFrom(0, 0, delayLine.getChunk(localAudioBuffer.getNumSamples(), delayInSamples), 0, 0, localAudioBuffer.getNumSamples());
             
             // apply gain based on source image path length
             float gainDelayLine = fmin(1.0, fmax(0.0, 1.0 / sourceImagePathLengthsInMeter[j] ) );
@@ -395,8 +372,9 @@ void MainContentComponent::releaseResources()
     
     transportSource.releaseResources();
     
-    // clear delay line buffer
+    // clear delay line buffers
     delayLine.buffer.clear();
+    delayLine.chunkBuffer.clear();
 }
 
 
