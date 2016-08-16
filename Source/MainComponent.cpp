@@ -1,17 +1,17 @@
 
 #include "MainComponent.h"
 #include "Utils.h"
-#include <iomanip> // for debug, to remove
 
 MainContentComponent::MainContentComponent()
 : oscHandler()
 , delayLine()
 , ambi2binContainer()
-// , liveAudioScroller(new LiveScrollingAudioDisplay())
+
 {
+    // set window dimensions
     setSize (650, 700);
     
-    // specify the number of input and output channels that we want to open
+    // specify the required number of input and output channels
     setAudioChannels (2, 2);
     
     // specify audio file reader format
@@ -22,7 +22,8 @@ MainContentComponent::MainContentComponent()
     oscHandler.addChangeListener(this);
     
     //==========================================================================
-    // init GUi
+    // INIT GUI ELEMENTS
+    
     addAndMakeVisible (&audioFileOpenButton);
     audioFileOpenButton.setButtonText ("Open...");
     audioFileOpenButton.addListener (this);
@@ -54,8 +55,14 @@ MainContentComponent::MainContentComponent()
     audioFileLoopToogle.setEnabled(true);
     audioFileLoopToogle.addListener (this);
     
+    addAndMakeVisible (&saveIrButton);
+    saveIrButton.setButtonText ("Save IR");
+    saveIrButton.addListener (this);
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::grey);
+    saveIrButton.setEnabled (false); // not yet implemented
+    
     addAndMakeVisible (&audioFileCurrentPositionLabel);
-    audioFileCurrentPositionLabel.setText ("Stopped", dontSendNotification);
+    audioFileCurrentPositionLabel.setText ("Making progress, every day :)", dontSendNotification);
     audioFileCurrentPositionLabel.setColour(Label::textColourId, Colours::whitesmoke);
     
     addAndMakeVisible (logTextBox);
@@ -69,9 +76,6 @@ MainContentComponent::MainContentComponent()
     logTextBox.setColour (TextEditor::backgroundColourId, Colour(PixelARGB(240,30,30,30)));
     logTextBox.setColour (TextEditor::outlineColourId, Colours::grey);
     logTextBox.setColour (TextEditor::shadowColourId, Colours::darkorange);
-    
-    // addAndMakeVisible (liveAudioScroller); // = new LiveScrollingAudioDisplay());
-    // MainAppWindow::getSharedAudioDeviceManager().addAudioCallback (liveAudioScroller);
 }
 
 MainContentComponent::~MainContentComponent()
@@ -88,78 +92,62 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     // You can use this function to initialise any resources you might need,
     // but be careful - it will be called on the audio thread, not the GUI thread.
     
-    // For more details, see the help for AudioProcessor::prepareToPlay()
+    //==========================================================================
+    // INIT MISC.
     
+    // audio file reader
     transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
+    // working buffer
     localAudioBuffer.setSize(1, samplesPerBlockExpected);
     
-    // init delay line
-    delayLine.initBufferSize(samplesPerBlockExpected);
-    
-    sourceImageBufferTemp.clear();
+    // source image buffers
+    sourceImageBuffer.setSize(1, samplesPerBlockExpected);
     sourceImageBuffer.clear();
-    
-    // init ambi 2 bin decoding
-    // fill in data in ABIR filtered and ABIR filter themselves
-    for (int i = 0; i < N_AMBI_CH; i++)
-    {
-        ambi2binFilters[ 2*i ].init(samplesPerBlockExpected, AMBI2BIN_IR_LENGTH);
-        ambi2binFilters[ 2*i ].setImpulseResponse(ambi2binContainer.ambi2binIrDict[i][0].data()); // [ch x ear x sampID]
-        ambi2binFilters[2*i+1].init(samplesPerBlockExpected, AMBI2BIN_IR_LENGTH);
-        ambi2binFilters[2*i+1].setImpulseResponse(ambi2binContainer.ambi2binIrDict[i][1].data()); // [ch x ear x sampID]
-    }
+    sourceImageBufferTemp = sourceImageBuffer;
+    delayLineCrossfadeBuffer = sourceImageBuffer;
     
     // keep track of sample rate
     localSampleRate = sampleRate;
+    
+    //==========================================================================
+    // INIT DELAY LINE
+    delayLine.initBufferSize(samplesPerBlockExpected);
     
     //==========================================================================
     // INIT FILTER BANK
     double f0 = 31.5;
     double Q = sqrt(2) / (2 - 1);
     float gainFactor = 1.0;
-    for (int i = 0; i < NUM_OCTAVE_BANDS; i++)
+    for( int i = 0; i < NUM_OCTAVE_BANDS; i++ )
     {
         f0 *= 2;
         octaveFilterBank[i].setCoefficients(IIRCoefficients::makePeakFilter(sampleRate, f0, Q, gainFactor));
     }
     
-    // INIT AMBISONIC
-    ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
-    ambisonicBuffer2ndEar.setSize(N_AMBI_CH, samplesPerBlockExpected);
-    
-    
-    // USEFULL ???
-    vectorBufferOut[0].resize(samplesPerBlockExpected);
-    vectorBufferOut[1].resize(samplesPerBlockExpected);
-    
-    //==========================================================================
-    // init filter bank
     octaveFilterBuffer.setSize(1, samplesPerBlockExpected);
     octaveFilterBuffer.clear();
     octaveFilterBufferTemp = octaveFilterBuffer;
     
     //==========================================================================
-    // init delay lines (for sourceImages)
-    sourceImageBuffer.setSize(1, samplesPerBlockExpected);
-    sourceImageBuffer.clear();
-    sourceImageBufferTemp = sourceImageBuffer;
+    // INIT AMBISONIC (encoder / decoder)
+    ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
+    ambisonicBuffer2ndEar.setSize(N_AMBI_CH, samplesPerBlockExpected);
     
-    //==========================================================================
-    // init ambisonic
-    // ambisonicBuffer = localAudioBuffer; // set size
-    // ambisonicBuffer.setSize(N_AMBI_CH, localAudioBuffer.getNumSamples()); // to make sure correct number of samples
-    ambisonicBuffer.clear();
+    // init ambi 2 bin decoding
+    // fill in data in ABIR filtered and ABIR filter themselves
+    for( int i = 0; i < N_AMBI_CH; i++ )
+    {
+        ambi2binFilters[ 2*i ].init(samplesPerBlockExpected, AMBI2BIN_IR_LENGTH);
+        ambi2binFilters[ 2*i ].setImpulseResponse(ambi2binContainer.ambi2binIrDict[i][0].data()); // [ch x ear x sampID]
+        ambi2binFilters[2*i+1].init(samplesPerBlockExpected, AMBI2BIN_IR_LENGTH);
+        ambi2binFilters[2*i+1].setImpulseResponse(ambi2binContainer.ambi2binIrDict[i][1].data()); // [ch x ear x sampID]
+    }
 }
 
+// Audio Processing
 void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
-    // Your audio-processing code goes here!
-    
-    // For more details, see the help for AudioProcessor::getNextAudioBlock()
-    
-    // Right now we are not producing any data, in which case we need to clear the buffer
-    // (to prevent the output of random noise)
     
     // check if audiofile loaded
     if (readerSource == nullptr)
@@ -190,17 +178,17 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     sourceImageBuffer.clear();
     ambisonicBuffer.clear();
     
-    if ( sourceImageDelaysInSeconds.size() > 0 )
+    if ( sourceImageIDs.size() > 0 )
     {
         
         //==========================================================================
         // DELAY LINE
         
         // update delay line size if need be (TODO: MOVE THIS .SIZE() OUTSIDE OF AUDIO PROCESSING LOOP
-        if (requireSourceImageDelayLineSizeUpdate)
+        if ( requireSourceImageDelayLineSizeUpdate )
         {
             // get maximum required delay line duration
-            float maxDelay = *std::max_element(std::begin(sourceImageDelaysInSeconds), std::end(sourceImageDelaysInSeconds)); // in sec
+            float maxDelay = *std::max_element(std::begin(sourceImageFutureDelaysInSeconds), std::end(sourceImageFutureDelaysInSeconds)); // in sec
             
             // get associated required delay line buffer length
             int updatedDelayLineLength = (int)( 1.5 * maxDelay * localSampleRate); // longest delay creates noisy sound if delay line is exactly 1* its duration
@@ -214,16 +202,62 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         
         // add current audio buffer to delay line
         delayLine.addFrom(localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
-
+        
+        // handle crossfade gain mecanism
+        if( crossfadeGain < 1.0 )
+        {
+            // either increment delay line crossfade
+            crossfadeGain += 0.1;
+        }
+        else if (!crossfadeOver)
+        {
+            // or stop crossfade mecanism
+            sourceImageDelaysInSeconds = sourceImageFutureDelaysInSeconds;
+            sourceImageAmbisonicGains = sourceImageAmbisonicFutureGains;
+            crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
+            crossfadeOver = true;
+        }
+        
         //==========================================================================
         // LOOP OVER SOURCE IMAGES (to apply delay + room coloration + spatialization)
         
-        for (int j = 0; j < sourceImageDelaysInSeconds.size(); j++) // sourceImageDelaysInSeconds.size()
+        for( int j = 0; j < sourceImageIDs.size(); j++ )
         {
          
-            // get delayed buffer corresponding to current source image out of delay line
-            int delayInSamples = (int) (sourceImageDelaysInSeconds[j] * localSampleRate);
-            sourceImageBufferTemp.copyFrom(0, 0, delayLine.getChunk(localAudioBuffer.getNumSamples(), delayInSamples), 0, 0, localAudioBuffer.getNumSamples());
+            //==========================================================================
+            // CROSSFADE DELAYs
+            float delayInFractionalSamples = 0.0;
+            if( !crossfadeOver ) // TODO: BEware, this could happend in multithread while delay have been updated here and not yet taken into account above
+            {
+                // Add old and new tapped delayed buffers with gain crossfade
+                
+                // old delay
+                delayInFractionalSamples = sourceImageDelaysInSeconds[j] * localSampleRate;
+                
+                sourceImageBufferTemp.copyFrom(0, 0, delayLine.getInterpolatedChunk(localAudioBuffer.getNumSamples(), delayInFractionalSamples), 0, 0, localAudioBuffer.getNumSamples());
+                
+                sourceImageBufferTemp.applyGain(1.0 - crossfadeGain);
+                
+                // new delay
+                delayInFractionalSamples = sourceImageFutureDelaysInSeconds[j] * localSampleRate;
+                
+                delayLineCrossfadeBuffer.copyFrom(0, 0, delayLine.getInterpolatedChunk(localAudioBuffer.getNumSamples(), delayInFractionalSamples), 0, 0, localAudioBuffer.getNumSamples());
+                
+                delayLineCrossfadeBuffer.applyGain(crossfadeGain);
+                
+                // add both
+                sourceImageBufferTemp.addFrom(0, 0, delayLineCrossfadeBuffer, 0, 0, localAudioBuffer.getNumSamples());
+                
+                
+                // if (j==0) DBG(String(j) + String(": ") + String(sourceImageFutureDelaysInSeconds[j] - sourceImageDelaysInSeconds[j] ));
+            }
+            else // simple update
+            {
+                delayInFractionalSamples = (sourceImageDelaysInSeconds[j] * localSampleRate);
+                
+                sourceImageBufferTemp.copyFrom(0, 0, delayLine.getInterpolatedChunk(localAudioBuffer.getNumSamples(), delayInFractionalSamples), 0, 0, localAudioBuffer.getNumSamples());
+            }
+
             
             // apply gain based on source image path length
             float gainDelayLine = fmin(1.0, fmax(0.0, 1.0 / sourceImagePathLengthsInMeter[j] ) );
@@ -266,13 +300,31 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             //==========================================================================
             // Spatialization: Ambisonic encoding
             
-            for (int k = 0; k < N_AMBI_CH; k++)
+            for( int k = 0; k < N_AMBI_CH; k++ )
             {
                 // create working copy
                 ambisonicBufferTemp = octaveFilterBuffer;
                 
-                // apply ambisonic gain
-                ambisonicBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), sourceImageAmbisonicGains[j][k]);
+                if( !crossfadeOver )
+                {
+                    // apply ambisonic gain past
+                    ambisonicBufferTemp.applyGain((1.0 - crossfadeGain)*sourceImageAmbisonicGains[j][k]);
+                    
+                    // create 2nd working copy
+                    ambisonicCrossfadeBufferTemp = octaveFilterBuffer;
+                    
+                    // apply ambisonic gain future
+                    ambisonicCrossfadeBufferTemp.applyGain(crossfadeGain*sourceImageAmbisonicFutureGains[j][k]);
+                    
+                    // add past / future buffers
+                    ambisonicBufferTemp.addFrom(0, 0, ambisonicCrossfadeBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
+//                    if(j==2 && k==2) DBG(String(crossfadeGain) + String(" ") + String(sourceImageAmbisonicGains[j][k]) + String(" ") + String(sourceImageAmbisonicFutureGains[j][k]));
+                }
+                else
+                {
+                    // apply ambisonic gain
+                    ambisonicBufferTemp.applyGain(sourceImageAmbisonicGains[j][k]);
+                }
                 
                 // fill in general ambisonic buffer
                 ambisonicBuffer.addFrom(k, 0, ambisonicBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
@@ -393,34 +445,44 @@ float MainContentComponent::clipOutput(float input)
         return input;
 }
 
+// to rename, not only size but path length update + ambisonic gains.. finally it's an OSC update thingy
 void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
 {
-    // save source image data here, that way even if they change between now nd the next audio loop
-    // these will be used
+    // lame mecanism to avoid changing future gains if crossfade not over yet
+    while(!crossfadeOver) sleep(0.001);
+    
+    // save new source image data, ready to be used in next audio loop
     sourceImageIDs = oscHandler.getSourceImageIDs();
-    sourceImageDelaysInSeconds = oscHandler.getSourceImageDelays();
+    // sourceImageDelaysInSeconds = oscHandler.getSourceImageDelays();
+    sourceImageFutureDelaysInSeconds = oscHandler.getSourceImageDelays();
+    sourceImageDelaysInSeconds.resize(sourceImageFutureDelaysInSeconds.size(), 0.0f);
     sourceImagePathLengthsInMeter = oscHandler.getSourceImagePathsLength();
     
     // compute new ambisonic gains
     auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
     sourceImageAmbisonicGains.resize(sourceImageDOAs.size());
+    sourceImageAmbisonicFutureGains.resize(sourceImageDOAs.size());
     for (int i = 0; i < sourceImageDOAs.size(); i++)
     {
-        sourceImageAmbisonicGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
+        sourceImageAmbisonicFutureGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
     }
     
-    // flag update for next audio loop run to eventually resize delay line
+    // TODO: update absorption coefficients here as well to be consistent
+    
+    // reset crossfade gain
+    crossfadeGain = 0.0;
+    crossfadeOver = false;
+    
+    // now that everything is ready: set update flag, to resize delay line at next audio loop
     requireSourceImageDelayLineSizeUpdate = true;
+    
+    
 }
 
 //==============================================================================
 void MainContentComponent::paint (Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
     g.fillAll (Colour(PixelARGB(240,30,30,30)));
-    
-    
-    // You can add your drawing code here!
 }
 
 void MainContentComponent::resized()
@@ -428,18 +490,19 @@ void MainContentComponent::resized()
     // This is called when the MainContentComponent is resized.
     // If you add any child components, this is where you should
     // update their positions.
+    
     int thirdWidth = (int)(getWidth() / 3) - 20;
     audioFileOpenButton.setBounds (20, 10, thirdWidth, 40);
     audioFilePlayButton.setBounds (30 + thirdWidth, 10, thirdWidth, 40);
     audioFileStopButton.setBounds (40 + 2*thirdWidth, 10, thirdWidth, 40);
-    audioFileLoopToogle.setBounds (10, 60, getWidth() - 20, 20);
-    gainMasterSlider.setBounds    (10, 90, getWidth() - 20, 20);
+    audioFileLoopToogle.setBounds (10, 60, getWidth() - thirdWidth, 30);
+    saveIrButton.setBounds    (getWidth() - thirdWidth - 20, 60, thirdWidth, 30);
     
-    audioFileCurrentPositionLabel.setBounds (10, 120, getWidth() - 20, 20);
+    gainMasterSlider.setBounds    (10, 100, getWidth() - 20, 20);
+
+    audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
     
-    // liveAudioScroller->setBounds (10, 220, getWidth() - 20, 64);
-    
-    logTextBox.setBounds (8, 150, getWidth() - 16, getHeight() - 160);
+    logTextBox.setBounds (8, 160, getWidth() - 16, getHeight() - 170);
     
     
 }
@@ -474,7 +537,6 @@ void MainContentComponent::buttonClicked (Button* button)
         audioFilePlayButton.setEnabled (fileOpenedSucess);
     }
     
-    //    if (button == &audioFilePlayButton) audioFileReader.playAudioFile();
     if (button == &audioFilePlayButton)
     {
         if (readerSource != nullptr)
@@ -483,11 +545,28 @@ void MainContentComponent::buttonClicked (Button* button)
     }
     
     if (button == &audioFileStopButton)
+    {
         changeState (Stopping);
+    }
     
     if (button == &audioFileLoopToogle)
+    {
         if (readerSource != nullptr)
+        {
             readerSource->setLooping (audioFileLoopToogle.getToggleState());
+        }
+    }
+    
+    if (button == &saveIrButton)
+    {
+        saveIR();
+    }
+}
+//==============================================================================
+
+void MainContentComponent::saveIR ()
+{
+    
 }
 
 //==============================================================================

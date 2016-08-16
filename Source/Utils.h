@@ -12,7 +12,8 @@
 #define NUM_OCTAVE_BANDS 10 // number of octave bands used in filter bank for room absorption
 #define AMBI_ORDER 2 // Ambisonic order
 #define N_AMBI_CH 9 // Associated number of Ambisonic channels [pow(AMBI_ORDER+1,2)]
-#define AMBI2BIN_IR_LENGTH 161 // length of loaded filters (in time samples)
+#define AMBI2BIN_IR_LENGTH 221 // length of loaded filters (in time samples)
+// 161
 
 //==========================================================================
 // GEOMETRY STRUCTURES AND ROUTINES

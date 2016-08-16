@@ -48,6 +48,8 @@ void DelayLine::initBufferSize(int newNumSamples)
     buffer.clear();
     chunkBuffer.setSize(1, newNumSamples);
     chunkBuffer.clear();
+    chunkBufferPrev = chunkBuffer;
+    chunkBufferNext = chunkBuffer;
 }
 
 // get delayed buffer out of delay line
@@ -76,3 +78,27 @@ AudioBuffer<float> DelayLine::getChunk(int numSamples, int delayInSamples)
     
     return chunkBuffer;
 }
+
+AudioBuffer<float> DelayLine::getInterpolatedChunk(int numSamples, float delayInSamples)
+{
+    // get previous and next positions in delay line
+    chunkBufferPrev = getChunk(numSamples, ceil(delayInSamples));
+    chunkBufferNext = getChunk(numSamples, floor(delayInSamples));
+    
+    // apply linear interpolation gains
+    chunkBufferPrev.applyGain((float)(delayInSamples-floor(delayInSamples)));
+    chunkBufferNext.applyGain((float)(ceil(delayInSamples)-delayInSamples));
+    // DBG(String(delayInSamples-floor(delayInSamples)) + String(" ") + String(ceil(delayInSamples)-delayInSamples));
+    
+    // sum buffer in output
+    chunkBuffer = chunkBufferPrev;
+    chunkBuffer.addFrom(0, 0, chunkBufferNext, 0, 0, numSamples);
+    
+    return chunkBuffer;
+}
+
+
+
+
+
+

@@ -202,8 +202,8 @@ std::vector<Eigen::Vector3f> OSCHandler::getSourceImageDOAs()
 float* OSCHandler::getSourceImageAbsorbtion(int sourceID)
 {
     return sourceImageMap.find(sourceID)->second.absorption;
-
 }
+
 String OSCHandler::getMapContent()
 {
     String output;

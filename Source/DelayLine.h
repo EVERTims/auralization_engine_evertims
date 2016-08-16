@@ -13,16 +13,13 @@ public:
     
     
     void setSize(int newNumSamples);
-    
-    void addFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples);
-    
     void initBufferSize(int newNumSamples);
-    
-    AudioBuffer<float> getChunk(int numSamples, int delayInSamples);
-    
     void incrementWritePosition(int numSamples);
     
-    
+    void addFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples);
+    AudioBuffer<float> getChunk(int numSamples, int delayInSamples);
+    AudioBuffer<float> getInterpolatedChunk(int numSamples, float delayInSamples);
+
     AudioBuffer<float> buffer;
     
     int writeIndex;
@@ -33,6 +30,8 @@ private:
 
     int chunkReadIndex;
     
+    AudioBuffer<float> chunkBufferPrev;
+    AudioBuffer<float> chunkBufferNext;
     
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayLine)
