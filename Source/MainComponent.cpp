@@ -2,12 +2,11 @@
 #include "MainComponent.h"
 #include "Utils.h"
 
-MainContentComponent::MainContentComponent()
-: oscHandler()
-, delayLine()
-, ambi2binContainer()
-, audioInputComponent()
-
+MainContentComponent::MainContentComponent():
+audioInputComponent(),
+oscHandler(),
+delayLine(),
+ambi2binContainer()
 {
     // set window dimensions
     setSize (650, 700);
@@ -17,7 +16,6 @@ MainContentComponent::MainContentComponent()
     
     // add to change listeners
     oscHandler.addChangeListener(this);
-    
     
     //==========================================================================
     // INIT GUI ELEMENTS
@@ -47,6 +45,10 @@ MainContentComponent::MainContentComponent()
 
 MainContentComponent::~MainContentComponent()
 {
+    // fix denied access at close when sound playing,
+    // see https://forum.juce.com/t/tutorial-playing-sound-files-raises-an-exception-on-2nd-load/15738/2
+    audioInputComponent.transportSource.setSource(nullptr);
+    
     shutdownAudio();
 }
 
