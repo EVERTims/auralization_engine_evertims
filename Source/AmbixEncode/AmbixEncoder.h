@@ -20,46 +20,76 @@
 #ifndef __ambix_encoder__AmbixEncoder__
 #define __ambix_encoder__AmbixEncoder__
 
+#define _USE_MATH_DEFINES
+#include <math.h>
+
 #include <iostream>
 #include <array>
-// #include "JuceHeader.h"
 #include "../JuceLibraryCode/JuceHeader.h"
-
 #include "SphericalHarmonic/SphericalHarmonic.h"
-
 #include "Utils.h"
-
+#include "ambi_weight_lookup.h"
 #include <Eigen/Eigen>
 
 class AmbixEncoder {
+
+//==========================================================================
+// ATTRIBUTES
     
 public:
-    AmbixEncoder();
-    ~AmbixEncoder();
-    
-    
-    //    void calcParams();
-    // void calcParams(double azimuth, double elevation);
-    Array<float> calcParams(double azimuth, double elevation);
-    std::array<double, N_AMBI_CH> ambiWeightUpTo2ndOrder;
 
-    // from 0.0 ..... 1.0   .... -180 -> +180
-    //    float azimuth;
-    //    float elevation;
-    
-    // from 0.0 .... 1.0   0: no scaling on HOA ...... 1: just W channel
-    float size;
-    
-    Array<float> ambi_gain;  // actual gain
-    Array<float> _ambi_gain; // buffer for gain ramp (last status)
-    //    float ambi_gain[N_AMBI_CH];
-    //    float _ambi_gain[N_AMBI_CH];
-    
-    SphericalHarmonic sph_h;
-    
+std::array<double, N_AMBI_CH> ambiWeightUpTo2ndOrder;
+float size;
+Array<float> ambi_gain;  // actual gain
+Array<float> _ambi_gain; // buffer for gain ramp (last status)
+SphericalHarmonic sph_h;
+
 private:
+
+float _azimuth, _elevation, _size; // buffer to realize changes
     
-    float _azimuth, _elevation, _size; // buffer to realize changes
+    
+//==========================================================================
+// METHODS
+    
+public:
+    
+AmbixEncoder() :
+size(0.f),
+_azimuth(0.1f),
+_elevation(0.1f),
+_size(0.1f)
+{
+    sph_h.Init(AMBI_ORDER);
+
+    // NOT PROUD OF THIS, temporary fix until the ongoing normalization study
+    // proposes new normalization gains scheme
+    ambiWeightUpTo2ndOrder = {{ 0.2821, 0.3455, 0.4886, 0.3455, 0.1288, 0.2575, 0.33, 0.2575, 0.1288 }};
+}
+
+~AmbixEncoder() {}
+
+Array<float> calcParams(double azimuth, double elevation)
+{
+    // save last status
+    _ambi_gain = ambi_gain;
+    
+    if (_azimuth != azimuth || _elevation != elevation || _size != size)
+    {
+        sph_h.Calc(azimuth, elevation);
+        
+        for( int i=0; i < N_AMBI_CH; ++i ) {
+            ambi_gain.set(i, (float)( sph_h.Ymn(i) * ambiWeightUpTo2ndOrder[i] ));
+        }
+    }
+    
+    _azimuth = azimuth;
+    _elevation = elevation;
+    _size = size;
+    
+    return ambi_gain;
+}
+
     
 };
 
