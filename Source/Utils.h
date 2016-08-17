@@ -13,48 +13,10 @@
 #define AMBI_ORDER 2 // Ambisonic order
 #define N_AMBI_CH 9 // Associated number of Ambisonic channels [pow(AMBI_ORDER+1,2)]
 #define AMBI2BIN_IR_LENGTH 221 // length of loaded filters (in time samples)
-// 161
-
-//==========================================================================
-// GEOMETRY STRUCTURES AND ROUTINES
-//template <typename Type>
-//struct Point3Cartesian
-//{
-//    Type x;
-//    Type y;
-//    Type z;
-//};
-//
-//template <typename Type>
-//struct Point3Spherical
-//{
-//    Type azimuth;
-//    Type elevation;
-//    Type radius;
-//};
-
-//template <typename Type>
-//Point3Cartesian<Type> operator -(const Point3Cartesian<Type>& p1, const Point3Cartesian<Type>& p2) {
-//    return Point3Cartesian <Type> { p1.x - p2.x, p1.y - p2.y, p1.z - p2.z  };
-//}
-
-
-// SPAT convention: azimuth in (xOy) 0° is facing y, clockwise,
-// elevation in (zOx), 0° is on (xOy), 90° on z+, -90° on z-
-inline Eigen::Vector3f cartesianToSpherical(const Eigen::Vector3f& p)
-{
-    float radius = std::sqrt(p(0) * p(0) + p(1) * p(1) + p(2) * p(2));
-    float elevation = std::asin(p(2) / radius);
-    float azimuth = std::atan2(p(0), p(1));
-    if (p(0) < 0 && p(2) < 0)
-        elevation += 2 * M_PI;
-    
-    return Eigen::Vector3f (azimuth, elevation, radius);
-}
-
 
 //==========================================================================
 // EVERTIMS STRUCTURES
+
 struct EL_ImageSource
 {
     int ID;
@@ -79,7 +41,7 @@ struct EL_Listener
 };
 
 //==========================================================================
-// FIR and OouraFFT routines
+// FIR AND OouraFFT ELEMENTS
 
 #include <complex>
 
@@ -104,11 +66,26 @@ inline int nextPowerOf2(int x)
     x |= x >> 16;
     return x + 1;
 }
+
 //==========================================================================
+// MATHS METHODS
+
+// SPAT convention: azimuth in (xOy) 0° is facing y, clockwise,
+// elevation in (zOx), 0° is on (xOy), 90° on z+, -90° on z-
+inline Eigen::Vector3f cartesianToSpherical(const Eigen::Vector3f& p)
+{
+    float radius = std::sqrt(p(0) * p(0) + p(1) * p(1) + p(2) * p(2));
+    float elevation = std::asin(p(2) / radius);
+    float azimuth = std::atan2(p(0), p(1));
+    if (p(0) < 0 && p(2) < 0)
+        elevation += 2 * M_PI;
+    
+    return Eigen::Vector3f (azimuth, elevation, radius);
+}
+
 template <typename Type>
 inline Type sign(Type x)
 {
-
     if (x >= 0.0)
         return 1.0;
 
@@ -125,4 +102,6 @@ template <typename Type>
 inline Type rad2deg(Type rad) { return rad * 180.0 / M_PI; }
 
 template <typename Type>
-inline Type round2(Type x, int numberOfDecimals) { return round(x * pow(10,numberOfDecimals)) / pow(10,numberOfDecimals); }
+inline Type round2(Type x, int numberOfDecimals){
+    return round(x * pow(10,numberOfDecimals)) / pow(10,numberOfDecimals);
+}

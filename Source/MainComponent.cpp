@@ -24,11 +24,11 @@ ambi2binContainer()
     addAndMakeVisible(audioInputComponent);
     
     // local GUI elements
-    addAndMakeVisible (&saveIrButton);
     saveIrButton.setButtonText ("Save IR");
     saveIrButton.addListener (this);
     saveIrButton.setColour (TextButton::buttonColourId, Colours::grey);
     saveIrButton.setEnabled (false); // not yet implemented
+    // addAndMakeVisible (&saveIrButton);
     
     addAndMakeVisible (logTextBox);
     logTextBox.setMultiLine (true);
@@ -393,8 +393,7 @@ float MainContentComponent::clipOutput(float input)
         return input;
 }
 
-// to rename, not only size but path length update + ambisonic gains.. finally it's an OSC update thingy
-void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
+void MainContentComponent::updateOnOscReveive(int sampleRate)
 {
     // lame mecanism to avoid changing future gains if crossfade not over yet
     while(!crossfadeOver) sleep(0.001);
@@ -447,7 +446,7 @@ void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaste
     if (broadcaster == &oscHandler)
     {
         logTextBox.setText(oscHandler.getMapContent());
-        updateSourceImageDelayLineSize(localSampleRate);
+        updateOnOscReveive(localSampleRate);
     }
 }
 

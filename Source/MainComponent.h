@@ -73,7 +73,7 @@ private:
     AudioBuffer<float> sourceImageBufferTemp;
     AudioBuffer<float> sourceImageBuffer;
     
-    void updateSourceImageDelayLineSize(int sampleRate);
+    void updateOnOscReveive(int sampleRate);
     
     bool requireSourceImageDelayLineSizeUpdate = false;
     AudioBuffer<float> delayLineCrossfadeBuffer;
