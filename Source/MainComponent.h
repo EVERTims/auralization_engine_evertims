@@ -3,8 +3,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "OSCHandler.h"
-//#include "AudioFileReader.h"
-// #include "AudioLiveScrollingDisplay.h"
+#include "AudioInputComponent.h"
 #include "AmbixEncode/AmbixEncoder.h"
 #include "Ambi2binIRContainer.h"
 #include "FIRFilter/FIRFilter.h"
@@ -49,35 +48,19 @@ private:
     
     //==========================================================================
     // GUI ELEMENTS
-    TextButton audioFileOpenButton;
-    TextButton audioFilePlayButton;
-    TextButton audioFileStopButton;
-    ToggleButton audioFileLoopToogle;
-    Label audioFileCurrentPositionLabel;
-    TextEditor logTextBox;
-    Slider gainMasterSlider;
-    
+
     TextButton saveIrButton;
+    TextEditor logTextBox;
     
     //==========================================================================
     // AUDIO FILE PLAYER
-    bool shouldLoopAudioFile = false;
-    AudioFormatManager formatManager;
-    ScopedPointer<AudioFormatReaderSource> readerSource;
-    AudioTransportSource transportSource;
-    enum TransportState
-    {
-        Stopped,
-        Loaded,
-        Starting,
-        Playing,
-        Stopping
-    };
-    TransportState audioPlayerState;
-    void changeState (TransportState newState);
-    bool openAudioFile();
+
     AudioBuffer<float> localAudioBuffer;
 
+    //==========================================================================
+    // SUB COMPONENTS
+    AudioInputComponent audioInputComponent;
+    
     //==========================================================================
     // OSC LISTENER
     OSCHandler oscHandler;

@@ -38,12 +38,10 @@
             file="Source/Ambi2binIRContainer.cpp"/>
       <FILE id="sSNWxe" name="Ambi2binIRContainer.h" compile="0" resource="0"
             file="Source/Ambi2binIRContainer.h"/>
-      <FILE id="uRyck4" name="AudioLiveScrollingDisplay.h" compile="0" resource="0"
-            file="Source/AudioLiveScrollingDisplay.h"/>
-      <FILE id="hF6kuS" name="AudioFileReader.cpp" compile="1" resource="0"
-            file="Source/AudioFileReader.cpp"/>
-      <FILE id="yLTJ3y" name="AudioFileReader.h" compile="0" resource="0"
-            file="Source/AudioFileReader.h"/>
+      <FILE id="Eh1pf3" name="AudioInputComponent.cpp" compile="1" resource="0"
+            file="Source/AudioInputComponent.cpp"/>
+      <FILE id="VFZ1PG" name="AudioInputComponent.h" compile="0" resource="0"
+            file="Source/AudioInputComponent.h"/>
       <FILE id="P1Df9f" name="DelayLine.cpp" compile="1" resource="0" file="Source/DelayLine.cpp"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>

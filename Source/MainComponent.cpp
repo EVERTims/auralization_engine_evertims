@@ -6,6 +6,7 @@ MainContentComponent::MainContentComponent()
 : oscHandler()
 , delayLine()
 , ambi2binContainer()
+, audioInputComponent()
 
 {
     // set window dimensions
@@ -14,56 +15,22 @@ MainContentComponent::MainContentComponent()
     // specify the required number of input and output channels
     setAudioChannels (2, 2);
     
-    // specify audio file reader format
-    formatManager.registerBasicFormats();
-    transportSource.addChangeListener (this);
-    
     // add to change listeners
     oscHandler.addChangeListener(this);
+    
     
     //==========================================================================
     // INIT GUI ELEMENTS
     
-    addAndMakeVisible (&audioFileOpenButton);
-    audioFileOpenButton.setButtonText ("Open...");
-    audioFileOpenButton.addListener (this);
+    // add GUI sub-components
+    addAndMakeVisible(audioInputComponent);
     
-    addAndMakeVisible (&audioFilePlayButton);
-    audioFilePlayButton.setButtonText ("Play");
-    audioFilePlayButton.addListener (this);
-    audioFilePlayButton.setColour (TextButton::buttonColourId, Colours::green);
-    audioFilePlayButton.setEnabled (false);
-    
-    addAndMakeVisible (&audioFileStopButton);
-    audioFileStopButton.setButtonText ("Stop");
-    audioFileStopButton.addListener (this);
-    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::red);
-    audioFileStopButton.setEnabled (false);
-    
-    addAndMakeVisible (&gainMasterSlider);
-    gainMasterSlider.setRange(0.1, 4.0);
-    gainMasterSlider.setValue(1.0);
-    gainMasterSlider.setSliderStyle(Slider::LinearHorizontal);
-    gainMasterSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
-    gainMasterSlider.setColour(Slider::textBoxTextColourId, Colours::white);
-    gainMasterSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
-    gainMasterSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
-    
-    addAndMakeVisible (&audioFileLoopToogle);
-    audioFileLoopToogle.setButtonText ("Loop");
-    audioFileLoopToogle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    audioFileLoopToogle.setEnabled(true);
-    audioFileLoopToogle.addListener (this);
-    
+    // local GUI elements
     addAndMakeVisible (&saveIrButton);
     saveIrButton.setButtonText ("Save IR");
     saveIrButton.addListener (this);
     saveIrButton.setColour (TextButton::buttonColourId, Colours::grey);
     saveIrButton.setEnabled (false); // not yet implemented
-    
-    addAndMakeVisible (&audioFileCurrentPositionLabel);
-    audioFileCurrentPositionLabel.setText ("Making progress, every day :)", dontSendNotification);
-    audioFileCurrentPositionLabel.setColour(Label::textColourId, Colours::whitesmoke);
     
     addAndMakeVisible (logTextBox);
     logTextBox.setMultiLine (true);
@@ -96,7 +63,7 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     // INIT MISC.
     
     // audio file reader
-    transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
+    audioInputComponent.transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
     // working buffer
     localAudioBuffer.setSize(1, samplesPerBlockExpected);
@@ -149,29 +116,10 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
 void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
     
-    // check if audiofile loaded
-    if (readerSource == nullptr)
-    {
-        bufferToFill.clearActiveBufferRegion();
-        return;
-    }
-    
     // fill buffer with audiofile data
-    transportSource.getNextAudioBlock (bufferToFill);
+    audioInputComponent.getNextAudioBlock (bufferToFill);
     
-    //==========================================================================
-    
-    // auto bufferLength = localAudioBuffer.getNumSamples();
-    
-    // get working buffer (stereo downmix to mono)
-    // localAudioBuffer = *bufferToFill.buffer;
     localAudioBuffer.copyFrom(0, 0, bufferToFill.buffer->getWritePointer(0), localAudioBuffer.getNumSamples());
-
-    localAudioBuffer.addFrom(0, 0, bufferToFill.buffer->getWritePointer(1), localAudioBuffer.getNumSamples());
-    localAudioBuffer.applyGain(0.5f);
- 
-    // apply master gain
-    localAudioBuffer.applyGain(0, 0, localAudioBuffer.getNumSamples(), gainMasterSlider.getValue());
     
     //==========================================================================
     // SOURCE IMAGE PROCESSING
@@ -420,9 +368,7 @@ void MainContentComponent::releaseResources()
     // This will be called when the audio device stops, or when it is being
     // restarted due to a setting change.
     
-    // For more details, see the help for AudioProcessor::releaseResources()
-    
-    transportSource.releaseResources();
+    audioInputComponent.transportSource.releaseResources();
     
     // clear delay line buffers
     delayLine.buffer.clear();
@@ -475,8 +421,6 @@ void MainContentComponent::updateSourceImageDelayLineSize(int sampleRate)
     
     // now that everything is ready: set update flag, to resize delay line at next audio loop
     requireSourceImageDelayLineSizeUpdate = true;
-    
-    
 }
 
 //==============================================================================
@@ -487,24 +431,13 @@ void MainContentComponent::paint (Graphics& g)
 
 void MainContentComponent::resized()
 {
-    // This is called when the MainContentComponent is resized.
-    // If you add any child components, this is where you should
-    // update their positions.
+    // resize sub-components
+    audioInputComponent.setBounds(10, 10, getWidth()-20, 160);
     
+    // resize local GUI elements
     int thirdWidth = (int)(getWidth() / 3) - 20;
-    audioFileOpenButton.setBounds (20, 10, thirdWidth, 40);
-    audioFilePlayButton.setBounds (30 + thirdWidth, 10, thirdWidth, 40);
-    audioFileStopButton.setBounds (40 + 2*thirdWidth, 10, thirdWidth, 40);
-    audioFileLoopToogle.setBounds (10, 60, getWidth() - thirdWidth, 30);
-    saveIrButton.setBounds    (getWidth() - thirdWidth - 20, 60, thirdWidth, 30);
-    
-    gainMasterSlider.setBounds    (10, 100, getWidth() - 20, 20);
-
-    audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
-    
-    logTextBox.setBounds (8, 160, getWidth() - 16, getHeight() - 170);
-    
-    
+    saveIrButton.setBounds(getWidth() - thirdWidth - 20, 140, thirdWidth, 30);
+    logTextBox.setBounds (8, 180, getWidth() - 16, getHeight() - 190);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -514,49 +447,12 @@ void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaste
         logTextBox.setText(oscHandler.getMapContent());
         updateSourceImageDelayLineSize(localSampleRate);
     }
-    
-    else if (broadcaster == &transportSource)
-    {
-        if (broadcaster == &transportSource)
-        {
-            if (transportSource.isPlaying())
-                changeState (Playing);
-            else
-                changeState (Stopped);
-        }
-    }
 }
 
 //==============================================================================
 
 void MainContentComponent::buttonClicked (Button* button)
 {
-    if (button == &audioFileOpenButton)
-    {
-        bool fileOpenedSucess = openAudioFile();
-        audioFilePlayButton.setEnabled (fileOpenedSucess);
-    }
-    
-    if (button == &audioFilePlayButton)
-    {
-        if (readerSource != nullptr)
-            readerSource->setLooping (audioFileLoopToogle.getToggleState());
-        changeState(Starting);
-    }
-    
-    if (button == &audioFileStopButton)
-    {
-        changeState (Stopping);
-    }
-    
-    if (button == &audioFileLoopToogle)
-    {
-        if (readerSource != nullptr)
-        {
-            readerSource->setLooping (audioFileLoopToogle.getToggleState());
-        }
-    }
-    
     if (button == &saveIrButton)
     {
         saveIR();
@@ -567,66 +463,6 @@ void MainContentComponent::buttonClicked (Button* button)
 void MainContentComponent::saveIR ()
 {
     
-}
-
-//==============================================================================
-
-void MainContentComponent::changeState (TransportState newState)
-{
-    if (audioPlayerState != newState)
-    {
-        audioPlayerState = newState;
-        
-        switch (audioPlayerState)
-        {
-            case Stopped:
-                audioFileStopButton.setEnabled (false);
-                audioFilePlayButton.setEnabled (true);
-                transportSource.setPosition (0.0);
-                break;
-                
-            case Loaded:
-                break;
-                
-            case Starting:
-                audioFilePlayButton.setEnabled (false);
-                transportSource.start();
-                break;
-                
-            case Playing:
-                audioFileStopButton.setEnabled (true);
-                break;
-                
-            case Stopping:
-                transportSource.stop();
-                break;
-        }
-    }
-}
-
-//==============================================================================
-bool MainContentComponent::openAudioFile()
-{
-    bool fileOpenedSucess = false;
-    
-    FileChooser chooser ("Select a Wave file to play...",
-                         File::nonexistent,
-                         "*.wav");
-    
-    if (chooser.browseForFileToOpen())
-    {
-        File file (chooser.getResult());
-        AudioFormatReader* reader = formatManager.createReaderFor (file);
-        
-        if (reader != nullptr)
-        {
-            ScopedPointer<AudioFormatReaderSource> newSource = new AudioFormatReaderSource (reader, true);
-            transportSource.setSource (newSource, 0, nullptr, reader->sampleRate);
-            readerSource = newSource.release();
-            fileOpenedSucess = true;
-        }
-    }
-    return fileOpenedSucess;
 }
 
 //==============================================================================
