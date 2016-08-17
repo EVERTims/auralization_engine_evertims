@@ -38,8 +38,6 @@
             file="Source/Ambi2binIRContainer.cpp"/>
       <FILE id="sSNWxe" name="Ambi2binIRContainer.h" compile="0" resource="0"
             file="Source/Ambi2binIRContainer.h"/>
-      <FILE id="Eh1pf3" name="AudioInputComponent.cpp" compile="1" resource="0"
-            file="Source/AudioInputComponent.cpp"/>
       <FILE id="VFZ1PG" name="AudioInputComponent.h" compile="0" resource="0"
             file="Source/AudioInputComponent.h"/>
       <FILE id="P1Df9f" name="DelayLine.cpp" compile="1" resource="0" file="Source/DelayLine.cpp"/>
