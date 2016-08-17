@@ -34,19 +34,15 @@
         <FILE id="N0XpeZ" name="OouraFFT.cpp" compile="1" resource="0" file="Source/FIRFilter/OouraFFT.cpp"/>
         <FILE id="mnnlnj" name="OouraFFT.h" compile="0" resource="0" file="Source/FIRFilter/OouraFFT.h"/>
       </GROUP>
-      <FILE id="dsfWZS" name="Ambi2binIRContainer.cpp" compile="1" resource="0"
-            file="Source/Ambi2binIRContainer.cpp"/>
       <FILE id="sSNWxe" name="Ambi2binIRContainer.h" compile="0" resource="0"
             file="Source/Ambi2binIRContainer.h"/>
       <FILE id="VFZ1PG" name="AudioInputComponent.h" compile="0" resource="0"
             file="Source/AudioInputComponent.h"/>
-      <FILE id="P1Df9f" name="DelayLine.cpp" compile="1" resource="0" file="Source/DelayLine.cpp"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="l9hY4R" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
       <FILE id="XxG6iJ" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
-      <FILE id="sdbpD7" name="OSCHandler.cpp" compile="1" resource="0" file="Source/OSCHandler.cpp"/>
       <FILE id="AycOjY" name="OSCHandler.h" compile="0" resource="0" file="Source/OSCHandler.h"/>
       <FILE id="QoD7yh" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
     </GROUP>
