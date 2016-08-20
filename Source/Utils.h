@@ -24,7 +24,7 @@ struct EL_ImageSource
     Eigen::Vector3f positionRelectionFirst;
     Eigen::Vector3f positionRelectionLast;
     float totalPathDistance;
-    float absorption[10];
+    Array<float> absorption;
 };
 
 struct EL_Source

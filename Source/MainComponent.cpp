@@ -6,6 +6,7 @@ MainContentComponent::MainContentComponent():
 audioInputComponent(),
 oscHandler(),
 delayLine(),
+sourceImagesHandler(),
 ambi2binContainer()
 {
     // set window dimensions
@@ -70,39 +71,17 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     // working buffer
     localAudioBuffer.setSize(1, samplesPerBlockExpected);
     
-    // source image buffers
-    sourceImageBuffer.setSize(1, samplesPerBlockExpected);
-    sourceImageBuffer.clear();
-    sourceImageBufferTemp = sourceImageBuffer;
-    delayLineCrossfadeBuffer = sourceImageBuffer;
-    
     // keep track of sample rate
     localSampleRate = sampleRate;
     
     //==========================================================================
     // INIT DELAY LINE
-    delayLine.initBufferSize(samplesPerBlockExpected);
+    delayLine.prepareToPlay(samplesPerBlockExpected, sampleRate);
     
+    sourceImagesHandler.prepareToPlay (samplesPerBlockExpected, sampleRate);
+    
+
     //==========================================================================
-    // INIT FILTER BANK
-    double f0 = 31.5;
-    double Q = sqrt(2) / (2 - 1);
-    float gainFactor = 1.0;
-    for( int i = 0; i < NUM_OCTAVE_BANDS; i++ )
-    {
-        f0 *= 2;
-        octaveFilterBank[i].setCoefficients(IIRCoefficients::makePeakFilter(sampleRate, f0, Q, gainFactor));
-    }
-    
-    octaveFilterBuffer.setSize(1, samplesPerBlockExpected);
-    octaveFilterBuffer.clear();
-    octaveFilterBufferTemp = octaveFilterBuffer;
-    
-    //==========================================================================
-    // INIT AMBISONIC (encoder / decoder)
-    ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
-    ambisonicBuffer2ndEar.setSize(N_AMBI_CH, samplesPerBlockExpected);
-    
     // init ambi 2 bin decoding
     // fill in data in ABIR filtered and ABIR filter themselves
     for( int i = 0; i < N_AMBI_CH; i++ )
@@ -119,26 +98,24 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
 {
     
     // fill buffer with audiofile data
-    audioInputComponent.getNextAudioBlock (bufferToFill);
+    audioInputComponent.getNextAudioBlock(bufferToFill);
     
     localAudioBuffer.copyFrom(0, 0, bufferToFill.buffer->getWritePointer(0), localAudioBuffer.getNumSamples());
     
     //==========================================================================
     // SOURCE IMAGE PROCESSING
-    sourceImageBuffer.clear();
-    ambisonicBuffer.clear();
     
-    if ( sourceImageIDs.size() > 0 )
+    if ( sourceImagesHandler.IDs.size() > 0 )
     {
         
         //==========================================================================
         // DELAY LINE
         
         // update delay line size if need be (TODO: MOVE THIS .SIZE() OUTSIDE OF AUDIO PROCESSING LOOP
-        if ( requireSourceImageDelayLineSizeUpdate )
+        if ( requireDelayLineSizeUpdate )
         {
             // get maximum required delay line duration
-            float maxDelay = *std::max_element(std::begin(sourceImageFutureDelaysInSeconds), std::end(sourceImageFutureDelaysInSeconds)); // in sec
+            float maxDelay = sourceImagesHandler.getMaxDelayFuture();
             
             // get associated required delay line buffer length
             int updatedDelayLineLength = (int)( 1.5 * maxDelay * localSampleRate); // longest delay creates noisy sound if delay line is exactly 1* its duration
@@ -147,140 +124,18 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             delayLine.setSize(updatedDelayLineLength);
             
             // unflag update required
-            requireSourceImageDelayLineSizeUpdate = false;
+            requireDelayLineSizeUpdate = false;
         }
         
         // add current audio buffer to delay line
         delayLine.addFrom(localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
         
-        // handle crossfade gain mecanism
-        if( crossfadeGain < 1.0 )
-        {
-            // either increment delay line crossfade
-            crossfadeGain += 0.1;
-        }
-        else if (!crossfadeOver)
-        {
-            // or stop crossfade mecanism
-            sourceImageDelaysInSeconds = sourceImageFutureDelaysInSeconds;
-            sourceImageAmbisonicGains = sourceImageAmbisonicFutureGains;
-            crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
-            crossfadeOver = true;
-        }
+        // update crossfade mecanism
+        sourceImagesHandler.updateCrossfade();
         
-        //==========================================================================
-        // LOOP OVER SOURCE IMAGES (to apply delay + room coloration + spatialization)
+        // loop over sources images, apply delay + room coloration + spatialization
+        ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
         
-        for( int j = 0; j < sourceImageIDs.size(); j++ )
-        {
-         
-            //==========================================================================
-            // CROSSFADE DELAYs
-            float delayInFractionalSamples = 0.0;
-            if( !crossfadeOver ) // TODO: BEware, this could happend in multithread while delay have been updated here and not yet taken into account above
-            {
-                // Add old and new tapped delayed buffers with gain crossfade
-                
-                // old delay
-                delayInFractionalSamples = sourceImageDelaysInSeconds[j] * localSampleRate;
-                
-                sourceImageBufferTemp.copyFrom(0, 0, delayLine.getInterpolatedChunk(localAudioBuffer.getNumSamples(), delayInFractionalSamples), 0, 0, localAudioBuffer.getNumSamples());
-                
-                sourceImageBufferTemp.applyGain(1.0 - crossfadeGain);
-                
-                // new delay
-                delayInFractionalSamples = sourceImageFutureDelaysInSeconds[j] * localSampleRate;
-                
-                delayLineCrossfadeBuffer.copyFrom(0, 0, delayLine.getInterpolatedChunk(localAudioBuffer.getNumSamples(), delayInFractionalSamples), 0, 0, localAudioBuffer.getNumSamples());
-                
-                delayLineCrossfadeBuffer.applyGain(crossfadeGain);
-                
-                // add both
-                sourceImageBufferTemp.addFrom(0, 0, delayLineCrossfadeBuffer, 0, 0, localAudioBuffer.getNumSamples());
-                
-                
-                // if (j==0) DBG(String(j) + String(": ") + String(sourceImageFutureDelaysInSeconds[j] - sourceImageDelaysInSeconds[j] ));
-            }
-            else // simple update
-            {
-                delayInFractionalSamples = (sourceImageDelaysInSeconds[j] * localSampleRate);
-                
-                sourceImageBufferTemp.copyFrom(0, 0, delayLine.getInterpolatedChunk(localAudioBuffer.getNumSamples(), delayInFractionalSamples), 0, 0, localAudioBuffer.getNumSamples());
-            }
-
-            
-            // apply gain based on source image path length
-            float gainDelayLine = fmin(1.0, fmax(0.0, 1.0 / sourceImagePathLengthsInMeter[j] ) );
-            sourceImageBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), gainDelayLine);
-            
-            // DEBUG: sum sources images signals (without filter bank)
-            // sourceImageBuffer.addFrom(0, 0, sourceImageBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
-            
-            //==========================================================================
-            // octave filer bank decomposition
-            octaveFilterBuffer.clear();
-            auto sourceImageabsorption = oscHandler.getSourceImageAbsorbtion(sourceImageIDs[j]);
-            
-            for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
-            {
-                
-                // duplicate to get working copy
-                octaveFilterBufferTemp.copyFrom(0, 0, sourceImageBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
-                
-                // decompose
-                octaveFilterBank[k].processSamples(octaveFilterBufferTemp.getWritePointer(0), localAudioBuffer.getNumSamples());
-                
-                // get gain
-                float octaveFreqGain = fmin(abs(1.0 - sourceImageabsorption[k]), 1.0);
-                // DBG(octaveFreqGain);
-                
-                // apply frequency specific absorption gains
-                octaveFilterBufferTemp.applyGain(0, 0, localAudioBuffer.getNumSamples(), octaveFreqGain);
-                
-                // sum to output (recompose)
-                octaveFilterBuffer.addFrom(0, 0, octaveFilterBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
-            }
-            
-            
-            // sourceImageBuffer.addFrom(0, 0, octaveFilterBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        
-            // sourceImageBufferTemp.clear(); // no need to clear when using .copyFrom (rather than .addFrom)
-
-            
-            //==========================================================================
-            // Spatialization: Ambisonic encoding
-            
-            for( int k = 0; k < N_AMBI_CH; k++ )
-            {
-                // create working copy
-                ambisonicBufferTemp = octaveFilterBuffer;
-                
-                if( !crossfadeOver )
-                {
-                    // apply ambisonic gain past
-                    ambisonicBufferTemp.applyGain((1.0 - crossfadeGain)*sourceImageAmbisonicGains[j][k]);
-                    
-                    // create 2nd working copy
-                    ambisonicCrossfadeBufferTemp = octaveFilterBuffer;
-                    
-                    // apply ambisonic gain future
-                    ambisonicCrossfadeBufferTemp.applyGain(crossfadeGain*sourceImageAmbisonicFutureGains[j][k]);
-                    
-                    // add past / future buffers
-                    ambisonicBufferTemp.addFrom(0, 0, ambisonicCrossfadeBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
-//                    if(j==2 && k==2) DBG(String(crossfadeGain) + String(" ") + String(sourceImageAmbisonicGains[j][k]) + String(" ") + String(sourceImageAmbisonicFutureGains[j][k]));
-                }
-                else
-                {
-                    // apply ambisonic gain
-                    ambisonicBufferTemp.applyGain(sourceImageAmbisonicGains[j][k]);
-                }
-                
-                // fill in general ambisonic buffer
-                ambisonicBuffer.addFrom(k, 0, ambisonicBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
-            }
-            
-        }
         
         
         // increment delay line write position
@@ -395,33 +250,12 @@ float MainContentComponent::clipOutput(float input)
 
 void MainContentComponent::updateOnOscReveive(int sampleRate)
 {
-    // lame mecanism to avoid changing future gains if crossfade not over yet
-    while(!crossfadeOver) sleep(0.001);
     
-    // save new source image data, ready to be used in next audio loop
-    sourceImageIDs = oscHandler.getSourceImageIDs();
-    // sourceImageDelaysInSeconds = oscHandler.getSourceImageDelays();
-    sourceImageFutureDelaysInSeconds = oscHandler.getSourceImageDelays();
-    sourceImageDelaysInSeconds.resize(sourceImageFutureDelaysInSeconds.size(), 0.0f);
-    sourceImagePathLengthsInMeter = oscHandler.getSourceImagePathsLength();
-    
-    // compute new ambisonic gains
-    auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
-    sourceImageAmbisonicGains.resize(sourceImageDOAs.size());
-    sourceImageAmbisonicFutureGains.resize(sourceImageDOAs.size());
-    for (int i = 0; i < sourceImageDOAs.size(); i++)
-    {
-        sourceImageAmbisonicFutureGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
-    }
-    
-    // TODO: update absorption coefficients here as well to be consistent
-    
-    // reset crossfade gain
-    crossfadeGain = 0.0;
-    crossfadeOver = false;
+    // update source images attributes based on latest received OSC info
+    sourceImagesHandler.updateFromOscHandler(oscHandler);
     
     // now that everything is ready: set update flag, to resize delay line at next audio loop
-    requireSourceImageDelayLineSizeUpdate = true;
+    requireDelayLineSizeUpdate = true;
 }
 
 //==============================================================================

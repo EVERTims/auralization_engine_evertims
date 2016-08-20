@@ -103,7 +103,7 @@ std::vector<Eigen::Vector3f> getSourceImageDOAs()
 }
 
 // TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
-float* getSourceImageAbsorbtion(int sourceID)
+Array<float> getSourceImageAbsorbtion(int sourceID)
 {
     return sourceImageMap.find(sourceID)->second.absorption;
 }
@@ -190,7 +190,7 @@ void oscMessageReceived (const OSCMessage& msg) override
         source.totalPathDistance = msg[8].getFloat32();
         
         for (int i = 0; i < 10; i++)
-            source.absorption[i] = msg[9+i].getFloat32();
+            source.absorption.insert(i, msg[9+i].getFloat32());
         
         // insert or update
         sourceImageMap[source.ID] = source;

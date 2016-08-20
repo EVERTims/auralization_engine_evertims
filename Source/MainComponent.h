@@ -4,11 +4,11 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "OSCHandler.h"
 #include "AudioInputComponent.h"
-#include "AmbixEncode/AmbixEncoder.h"
 #include "Ambi2binIRContainer.h"
 #include "FIRFilter/FIRFilter.h"
 #include "Utils.h" // used to define constants
 #include "DelayLine.h"
+#include "SourceImagesHandler.h"
 
 #include <vector>
 #include <array>
@@ -45,10 +45,13 @@ public:
 private:
     
     void changeListenerCallback (ChangeBroadcaster* source) override;
+
+    //==========================================================================
+    // MISC.
+    int localSampleRate;
     
     //==========================================================================
     // GUI ELEMENTS
-
     TextButton saveIrButton;
     TextEditor logTextBox;
     
@@ -64,51 +67,25 @@ private:
     //==========================================================================
     // OSC LISTENER
     OSCHandler oscHandler;
+    void updateOnOscReveive(int sampleRate);
     
     //==========================================================================
     // AUDIO DELAY LINE
     DelayLine delayLine;
-    
-    
-    AudioBuffer<float> sourceImageBufferTemp;
-    AudioBuffer<float> sourceImageBuffer;
-    
-    void updateOnOscReveive(int sampleRate);
-    
-    bool requireSourceImageDelayLineSizeUpdate = false;
-    AudioBuffer<float> delayLineCrossfadeBuffer;
-    
-    int localSampleRate;
-    
-    std::vector<float> sourceImageIDs;
-    std::vector<float> sourceImageDelaysInSeconds;
-    std::vector<float> sourceImagePathLengthsInMeter;
-    std::vector<float> sourceImageFutureDelaysInSeconds;
+    bool requireDelayLineSizeUpdate = false;
     
     //==========================================================================
-    // CROSSFADE
-    float crossfadeGain = 0.0;
-    bool crossfadeOver = true;
+    // SOURCES IMAGES
+    SourceImagesHandler sourceImagesHandler;
     
-    //==========================================================================
-    // AUDIO FILTER BANK
-    IIRFilter octaveFilterBank[NUM_OCTAVE_BANDS];
-    std::vector<float> octaveFilterData[NUM_OCTAVE_BANDS];
-    AudioBuffer<float> octaveFilterBufferTemp;
-    AudioBuffer<float> octaveFilterBuffer;
+    AudioBuffer<float> ambisonicBuffer;
     
     //==========================================================================
     // AUDIO MANIPULATIONS
     float clipOutput(float input);
     
     //==========================================================================
-    // AMBISONIC
-    AmbixEncoder ambisonicEncoder;
-    std::vector< Array<float> > sourceImageAmbisonicGains; // buffer for input data
-    std::vector< Array<float> > sourceImageAmbisonicFutureGains; // to avoid zipper effect
-    AudioBuffer<float> ambisonicBufferTemp;
-    AudioBuffer<float> ambisonicCrossfadeBufferTemp;
-    AudioBuffer<float> ambisonicBuffer;
+    
     AudioBuffer<float> ambisonicBuffer2ndEar;
     
     //==========================================================================

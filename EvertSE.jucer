@@ -42,6 +42,8 @@
             file="Source/MainComponent.cpp"/>
       <FILE id="XxG6iJ" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="AycOjY" name="OSCHandler.h" compile="0" resource="0" file="Source/OSCHandler.h"/>
+      <FILE id="bz0oni" name="SourceImagesHandler.h" compile="0" resource="0"
+            file="Source/SourceImagesHandler.h"/>
       <FILE id="QoD7yh" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
     </GROUP>
     <GROUP id="{F473110D-BA5F-16DB-4E0C-8A8135AFEAFF}" name="data">

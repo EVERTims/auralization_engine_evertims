@@ -71,11 +71,11 @@ void incrementWritePosition(int numSamples)
 }
 
 // local equivalent of prepareToPlay
-void initBufferSize(int newNumSamples)
+void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    buffer.setSize(1, newNumSamples);
+    buffer.setSize(1, samplesPerBlockExpected);
     buffer.clear();
-    chunkBuffer.setSize(1, newNumSamples);
+    chunkBuffer.setSize(1, samplesPerBlockExpected);
     chunkBuffer.clear();
     chunkBufferPrev = chunkBuffer;
     chunkBufferNext = chunkBuffer;
