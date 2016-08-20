@@ -11,41 +11,44 @@ class SourceImagesHandler
 // ATTRIBUTES
     
 public:
-    AudioBuffer<float> sourceImageBufferTemp;
-    AudioBuffer<float> crossFadeBuffer;
-    
-    double localSampleRate;
-    int localSamplesPerBlockExpected;
     
     // sources images
     std::vector<float> IDs;
     std::vector<float> delaysCurrent; // in seconds
     std::vector<float> delaysFuture; // in seconds
     std::vector<float> pathLengths; // in meters
+    int numSourceImages;
     
-    // ambisonic encoding
-    AmbixEncoder ambisonicEncoder;
+private:
     
-    std::vector< Array<float> > ambisonicGainsCurrent; // buffer for input data
-    std::vector< Array<float> > ambisonicGainsFuture; // to avoid zipper effect
-
-    AudioBuffer<float> ambisonicBufferTemp;
-    AudioBuffer<float> ambisonicCrossfadeBufferTemp;
-    AudioBuffer<float> ambisonicBuffer;
+    // audio buffers
+    AudioBuffer<float> workingBuffer; // working buffer
+    AudioBuffer<float> workingBufferTemp; // 2nd working buffer, e.g. for crossfade mecanism
+    AudioBuffer<float> clipboardBuffer; // to be used as local copy of working buffer when working buffer modified in loops
     
-    // crossfade
+    AudioBuffer<float> irRecWorkingBuffer; // used for IR recording
+    AudioBuffer<float> irRecAmbisonicBuffer; // used for IR recording
+    AudioBuffer<float> irRecClipboardBuffer;
+    
+    // misc.
+    double localSampleRate;
+    int localSamplesPerBlockExpected;
+    
+    // crossfade mecanism
     float crossfadeGain = 0.0;
     bool crossfadeOver = true;
     
     // octave filter bank
     IIRFilter octaveFilterBank[NUM_OCTAVE_BANDS];
     std::vector<float> octaveFilterData[NUM_OCTAVE_BANDS];
-    AudioBuffer<float> octaveFilterBufferTemp;
-    AudioBuffer<float> octaveFilterBuffer;
     std::vector< Array<float> > absorptionCoefs; // buffer for input data
     
-private:
-
+    // ambisonic encoding
+    AmbixEncoder ambisonicEncoder;
+    std::vector< Array<float> > ambisonicGainsCurrent; // buffer for input data
+    std::vector< Array<float> > ambisonicGainsFuture; // to avoid zipper effect
+    AudioBuffer<float> ambisonicBuffer; // output buffer, N (Ambisonic) channels
+    
     
 //==========================================================================
 // METHODS
@@ -62,15 +65,14 @@ SourceImagesHandler()
 // local equivalent of prepareToPlay
 void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    // prepare buffers
-    crossFadeBuffer.setSize(1, samplesPerBlockExpected);
-    crossFadeBuffer.clear();
-    sourceImageBufferTemp = crossFadeBuffer;
-    octaveFilterBuffer = crossFadeBuffer;
-    octaveFilterBufferTemp = crossFadeBuffer;
+    // set number of valid source image
+    numSourceImages = 0;
     
-    ambisonicBufferTemp = crossFadeBuffer;
-    ambisonicCrossfadeBufferTemp = crossFadeBuffer;
+    // prepare buffers
+    workingBuffer.setSize(1, samplesPerBlockExpected);
+    workingBuffer.clear();
+    workingBufferTemp = workingBuffer;
+    clipboardBuffer = workingBuffer;
     
     ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
     
@@ -89,11 +91,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
         octaveFilterBank[i].setCoefficients(IIRCoefficients::makePeakFilter(sampleRate, f0, Q, gainFactor));
     }
     
-    octaveFilterBuffer.setSize(1, samplesPerBlockExpected);
-    octaveFilterBuffer.clear();
-    octaveFilterBufferTemp = octaveFilterBuffer;
 }
-    
     
 // get max source image delay in seconds
 float getMaxDelayFuture()
@@ -102,6 +100,195 @@ float getMaxDelayFuture()
     return maxDelay;
 }
 
+// main: loop over sources images, apply delay + room coloration + spatialization
+AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
+{
+    
+    // update crossfade mecanism
+    updateCrossfade();
+    
+    // clear output buffer (since used as cumulative buffer, iteratively summing sources images buffers)
+    ambisonicBuffer.clear();
+    
+    // loop over sources images
+    for( int j = 0; j < numSourceImages; j++ )
+    {
+        
+        //==========================================================================
+        // GET DELAYED BUFFER
+        float delayInFractionalSamples = 0.0;
+        if( !crossfadeOver ) // Add old and new tapped delayed buffers with gain crossfade
+        {
+            // get old delay, tap from delay line, apply gain=f(delay)
+            delayInFractionalSamples = delaysCurrent[j] * localSampleRate;
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBuffer.applyGain(1.0 - crossfadeGain);
+            
+            // get new delay, tap from delay line, apply gain=f(delay)
+            delayInFractionalSamples = delaysFuture[j] * localSampleRate;
+            workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBufferTemp.applyGain(crossfadeGain);
+            
+            // add both buffers
+            workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
+        }
+        else // simple update
+        {
+            // get delay, tap from delay line
+            delayInFractionalSamples = (delaysCurrent[j] * localSampleRate);
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+        }
+        
+        //==========================================================================
+        // APPLY GAIN BASED ON SOURCE IMAGE PATH LENGTH
+        float gainDelayLine = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
+        workingBuffer.applyGain(gainDelayLine);
+        
+        //==========================================================================
+        // APPLY ABSORPTION COEFFICIENTS (octave filer bank decomposition)
+        
+        // keep local copy since working buffer will be used as cumulative, iteratively receiving octave bands buffers
+        clipboardBuffer = workingBuffer;
+        workingBuffer.clear();
+        
+        for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
+        {
+            // local working copy
+            workingBufferTemp.copyFrom(0, 0, clipboardBuffer, 0, 0, localSamplesPerBlockExpected);
+            
+            // filter bank decomposition
+            octaveFilterBank[k].processSamples(workingBufferTemp.getWritePointer(0), localSamplesPerBlockExpected);
+            
+            // apply frequency specific absorption gains
+            float octaveFreqGain = fmin(abs(1.0 - absorptionCoefs[j][k]), 1.0);
+            workingBufferTemp.applyGain(octaveFreqGain);
+            
+            // sum to output (recompose)
+            workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
+        }
+        
+        
+        //==========================================================================
+        // AMBISONIC ENCODING
+        
+        // keep local copy since working buffer will be used to store ambisonic buffers
+        clipboardBuffer = workingBuffer;
+        
+        for( int k = 0; k < N_AMBI_CH; k++ )
+        {
+            // create working copy
+            workingBuffer = clipboardBuffer;
+            
+            if( !crossfadeOver )
+            {
+                // create 2nd working copy
+                workingBufferTemp = clipboardBuffer;
+                
+                // apply ambisonic gain past
+                workingBuffer.applyGain((1.0 - crossfadeGain)*ambisonicGainsCurrent[j][k]);
+                
+                // apply ambisonic gain future
+                workingBufferTemp.applyGain(crossfadeGain*ambisonicGainsFuture[j][k]);
+                
+                // add past / future buffers
+                workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
+            }
+            else
+            {
+                // apply ambisonic gain
+                workingBuffer.applyGain(ambisonicGainsCurrent[j][k]);
+            }
+            
+            // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
+            ambisonicBuffer.addFrom(k, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+        }
+        
+    }
+    
+    return ambisonicBuffer;
+}
+    
+// update local attributes based on latest received OSC info
+void updateFromOscHandler(OSCHandler& oscHandler)
+{
+    // lame mecanism to avoid changing future gains if crossfade not over yet
+    while(!crossfadeOver) sleep(0.001);
+    
+    // make sure not to use non-valid source image ID in audio thread during update
+    auto IDsTemp = oscHandler.getSourceImageIDs();
+    numSourceImages = min(IDs.size(), IDsTemp.size());
+    
+    // save new source image data, ready to be used in next audio loop
+    IDs = oscHandler.getSourceImageIDs();
+    delaysFuture = oscHandler.getSourceImageDelays();
+    delaysCurrent.resize(delaysFuture.size(), 0.0f);
+    pathLengths = oscHandler.getSourceImagePathsLength();
+    // TODO: add crossfade mecanism to absorption coefficients if zipper effect perceived at material change
+    absorptionCoefs.resize(IDs.size());
+    for (int j = 0; j < IDs.size(); j++)
+    {
+        absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
+    }
+    
+    // save (compute) new Ambisonic gains
+    auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
+    ambisonicGainsCurrent.resize(IDs.size());
+    ambisonicGainsFuture.resize(IDs.size());
+    for (int i = 0; i < IDs.size(); i++)
+    {
+        ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
+    }
+    
+    // update number of valid source images
+    numSourceImages = IDs.size();
+    
+    // trigger crossfade mecanism
+    crossfadeGain = 0.0;
+    crossfadeOver = false;
+}
+
+AudioBuffer<float> getCurrentIR ()
+    {
+        // init buffers
+        float maxDelay = getMaxDelayCurrent();
+        // TODO: acount for impact of absorbtion on maxDelay required (if it does make sense..)
+        int irNumSamples = (int) (maxDelay*1.1 * localSampleRate);
+        irRecWorkingBuffer.setSize(1, irNumSamples);
+        irRecAmbisonicBuffer.setSize(N_AMBI_CH, irNumSamples);
+        irRecAmbisonicBuffer.clear();
+        
+        // loop over sources images
+        for( int j = 0; j < IDs.size(); j++ )
+        {
+            // reset working buffer
+            irRecWorkingBuffer.clear();
+            
+            // write IR taps to buffer
+            int tapSample = (int) (delaysCurrent[j] * localSampleRate);
+            float tapGain = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
+            irRecWorkingBuffer.setSample(0, tapSample, tapGain);
+            
+            // apply material absorbtion
+        
+            // Ambisonic encoding
+            irRecClipboardBuffer = irRecWorkingBuffer;
+            for( int k = 0; k < N_AMBI_CH; k++ )
+            {
+                // get clean (no ambisonic gain applied) input buffer
+                irRecWorkingBuffer = irRecClipboardBuffer;
+                // apply ambisonic gains
+                irRecWorkingBuffer.applyGain(ambisonicGainsCurrent[j][k]);
+                // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
+                irRecAmbisonicBuffer.addFrom(k, 0, irRecWorkingBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
+            }
+            
+        }
+
+        return irRecAmbisonicBuffer;
+    }
+    
+private:
+    
 // update crossfade mecanism (to avoid zipper noise with smooth gains transitions)
 void updateCrossfade()
 {
@@ -121,161 +308,12 @@ void updateCrossfade()
         crossfadeOver = true;
     }
 }
-    
 
-    // main: loop over sources images, apply delay + room coloration + spatialization
-    AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
-    {
-        ambisonicBuffer.clear();
-        
-        for( int j = 0; j < IDs.size(); j++ )
-        {
-            
-            //==========================================================================
-            // CROSSFADE DELAYs
-            float delayInFractionalSamples = 0.0;
-            if( !crossfadeOver ) // TODO: BEware, this could happend in multithread while delay have been updated here and not yet taken into account above
-            {
-                // Add old and new tapped delayed buffers with gain crossfade
-                
-                // old delay
-                delayInFractionalSamples = delaysCurrent[j] * localSampleRate;
-                
-                sourceImageBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
-                
-                sourceImageBufferTemp.applyGain(1.0 - crossfadeGain);
-                
-                // new delay
-                delayInFractionalSamples = delaysFuture[j] * localSampleRate;
-                
-                crossFadeBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
-                
-                crossFadeBuffer.applyGain(crossfadeGain);
-                
-                // add both
-                sourceImageBufferTemp.addFrom(0, 0, crossFadeBuffer, 0, 0, localSamplesPerBlockExpected);
-                
-                
-                // if (j==0) DBG(String(j) + String(": ") + String(sourceImageFutureDelaysInSeconds[j] - sourceImageDelaysInSeconds[j] ));
-            }
-            else // simple update
-            {
-                delayInFractionalSamples = (delaysCurrent[j] * localSampleRate);
-                
-                sourceImageBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
-            }
-            
-            
-            // apply gain based on source image path length
-            float gainDelayLine = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
-            sourceImageBufferTemp.applyGain(gainDelayLine);
-            
-            // DEBUG: sum sources images signals (without filter bank)
-            // sourceImageBuffer.addFrom(0, 0, sourceImageBufferTemp, 0, 0, localAudioBuffer.getNumSamples());
-            
-            //==========================================================================
-            // octave filer bank decomposition
-            octaveFilterBuffer.clear();
-            
-            
-            for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
-            {
-                
-                // duplicate to get working copy
-                octaveFilterBufferTemp.copyFrom(0, 0, sourceImageBufferTemp, 0, 0, localSamplesPerBlockExpected);
-                
-                // decompose
-                octaveFilterBank[k].processSamples(octaveFilterBufferTemp.getWritePointer(0), localSamplesPerBlockExpected);
-                
-                // get gain
-                float octaveFreqGain = fmin(abs(1.0 - absorptionCoefs[j][k]), 1.0);
-                // DBG(octaveFreqGain);
-                
-                // apply frequency specific absorption gains
-                octaveFilterBufferTemp.applyGain(octaveFreqGain);
-                
-                // sum to output (recompose)
-                octaveFilterBuffer.addFrom(0, 0, octaveFilterBufferTemp, 0, 0, localSamplesPerBlockExpected);
-            }
-            
-            
-            // sourceImageBuffer.addFrom(0, 0, octaveFilterBuffer, 0, 0, localAudioBuffer.getNumSamples());
-            
-            // sourceImageBufferTemp.clear(); // no need to clear when using .copyFrom (rather than .addFrom)
-            
-            
-            //==========================================================================
-            // Spatialization: Ambisonic encoding
-            
-            for( int k = 0; k < N_AMBI_CH; k++ )
-            {
-                // create working copy
-                ambisonicBufferTemp = octaveFilterBuffer;
-                
-                if( !crossfadeOver )
-                {
-                    // apply ambisonic gain past
-                    ambisonicBufferTemp.applyGain((1.0 - crossfadeGain)*ambisonicGainsCurrent[j][k]);
-                    
-                    // create 2nd working copy
-                    ambisonicCrossfadeBufferTemp = octaveFilterBuffer;
-                    
-                    // apply ambisonic gain future
-                    ambisonicCrossfadeBufferTemp.applyGain(crossfadeGain*ambisonicGainsFuture[j][k]);
-                    
-                    // add past / future buffers
-                    ambisonicBufferTemp.addFrom(0, 0, ambisonicCrossfadeBufferTemp, 0, 0, localSamplesPerBlockExpected);
-                    
-                    //                    if(j==2 && k==2) DBG(String(crossfadeGain) + String(" ") + String(sourceImageAmbisonicGains[j][k]) + String(" ") + String(sourceImageAmbisonicFutureGains[j][k]));
-                }
-                else
-                {
-                    // apply ambisonic gain
-                    ambisonicBufferTemp.applyGain(ambisonicGainsCurrent[j][k]);
-                }
-                
-                // fill in general ambisonic buffer
-                ambisonicBuffer.addFrom(k, 0, ambisonicBufferTemp, 0, 0, localSamplesPerBlockExpected);
-            }
-            
-        }
-        
-        return ambisonicBuffer;
-    }
-    
-// update local attributes based on latest received OSC info
-void updateFromOscHandler(OSCHandler& oscHandler)
+// get max source image delay in seconds
+float getMaxDelayCurrent()
 {
-    // lame mecanism to avoid changing future gains if crossfade not over yet
-    while(!crossfadeOver) sleep(0.001);
-    
-    // save new source image data, ready to be used in next audio loop
-    IDs = oscHandler.getSourceImageIDs();
-    
-    absorptionCoefs.resize(IDs.size());
-    for (int j = 0; j < IDs.size(); j++)
-    {
-        absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
-    }
-    
-    delaysFuture = oscHandler.getSourceImageDelays();
-    delaysCurrent.resize(delaysFuture.size(), 0.0f);
-    pathLengths = oscHandler.getSourceImagePathsLength();
-    
-    // compute new ambisonic gains
-    auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
-    ambisonicGainsCurrent.resize(sourceImageDOAs.size());
-    ambisonicGainsFuture.resize(sourceImageDOAs.size());
-    for (int i = 0; i < sourceImageDOAs.size(); i++)
-    {
-        ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
-    }
-    
-    // TODO: update absorption coefficients here as well to be consistent
-    
-    // reset crossfade gain
-    crossfadeGain = 0.0;
-    crossfadeOver = false;
+    float maxDelay = *std::max_element(std::begin(delaysCurrent), std::end(delaysCurrent));
+    return maxDelay;
 }
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)

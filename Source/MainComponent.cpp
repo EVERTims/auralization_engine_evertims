@@ -3,8 +3,8 @@
 #include "Utils.h"
 
 MainContentComponent::MainContentComponent():
-audioInputComponent(),
 oscHandler(),
+audioIOComponent(),
 delayLine(),
 sourceImagesHandler(),
 ambi2binContainer()
@@ -22,14 +22,17 @@ ambi2binContainer()
     // INIT GUI ELEMENTS
     
     // add GUI sub-components
-    addAndMakeVisible(audioInputComponent);
+    addAndMakeVisible(audioIOComponent);
+    
+    // setup logo image
+    logoImage = ImageCache::getFromMemory(BinaryData::evertims_logo_png, BinaryData::evertims_logo_pngSize);
     
     // local GUI elements
-    saveIrButton.setButtonText ("Save IR");
+    saveIrButton.setButtonText ("Save IR to Desktop");
     saveIrButton.addListener (this);
-    saveIrButton.setColour (TextButton::buttonColourId, Colours::grey);
-    saveIrButton.setEnabled (false); // not yet implemented
-    // addAndMakeVisible (&saveIrButton);
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
+    saveIrButton.setEnabled (true);
+    addAndMakeVisible (&saveIrButton);
     
     addAndMakeVisible (logTextBox);
     logTextBox.setMultiLine (true);
@@ -39,8 +42,8 @@ ambi2binContainer()
     logTextBox.setCaretVisible (false);
     logTextBox.setPopupMenuEnabled (true);
     logTextBox.setColour (TextEditor::textColourId, Colours::whitesmoke);
-    logTextBox.setColour (TextEditor::backgroundColourId, Colour(PixelARGB(240,30,30,30)));
-    logTextBox.setColour (TextEditor::outlineColourId, Colours::grey);
+    logTextBox.setColour (TextEditor::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
+    logTextBox.setColour (TextEditor::outlineColourId, Colours::whitesmoke);
     logTextBox.setColour (TextEditor::shadowColourId, Colours::darkorange);
 }
 
@@ -48,7 +51,7 @@ MainContentComponent::~MainContentComponent()
 {
     // fix denied access at close when sound playing,
     // see https://forum.juce.com/t/tutorial-playing-sound-files-raises-an-exception-on-2nd-load/15738/2
-    audioInputComponent.transportSource.setSource(nullptr);
+    audioIOComponent.transportSource.setSource(nullptr);
     
     shutdownAudio();
 }
@@ -58,32 +61,22 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
 {
     // This function will be called when the audio device is started, or when
     // its settings (i.e. sample rate, block size, etc) are changed.
-    
-    // You can use this function to initialise any resources you might need,
-    // but be careful - it will be called on the audio thread, not the GUI thread.
-    
-    //==========================================================================
-    // INIT MISC.
+    // Called on the audio thread, not the GUI thread.
     
     // audio file reader
-    audioInputComponent.transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
+    audioIOComponent.transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
     // working buffer
-    localAudioBuffer.setSize(1, samplesPerBlockExpected);
+    workingBuffer.setSize(1, samplesPerBlockExpected);
     
     // keep track of sample rate
     localSampleRate = sampleRate;
     
-    //==========================================================================
-    // INIT DELAY LINE
+    // init delay line
     delayLine.prepareToPlay(samplesPerBlockExpected, sampleRate);
-    
     sourceImagesHandler.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
-
-    //==========================================================================
-    // init ambi 2 bin decoding
-    // fill in data in ABIR filtered and ABIR filter themselves
+    // init ambi 2 bin decoding: fill in data in ABIR filtered and ABIR filter themselves
     for( int i = 0; i < N_AMBI_CH; i++ )
     {
         ambi2binFilters[ 2*i ].init(samplesPerBlockExpected, AMBI2BIN_IR_LENGTH);
@@ -98,9 +91,9 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
 {
     
     // fill buffer with audiofile data
-    audioInputComponent.getNextAudioBlock(bufferToFill);
+    audioIOComponent.getNextAudioBlock(bufferToFill);
     
-    localAudioBuffer.copyFrom(0, 0, bufferToFill.buffer->getWritePointer(0), localAudioBuffer.getNumSamples());
+    workingBuffer.copyFrom(0, 0, bufferToFill.buffer->getWritePointer(0), workingBuffer.getNumSamples());
     
     //==========================================================================
     // SOURCE IMAGE PROCESSING
@@ -128,18 +121,13 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         }
         
         // add current audio buffer to delay line
-        delayLine.addFrom(localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        
-        // update crossfade mecanism
-        sourceImagesHandler.updateCrossfade();
-        
+        delayLine.addFrom(workingBuffer, 0, 0, workingBuffer.getNumSamples());
+                
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
         
-        
-        
         // increment delay line write position
-        delayLine.incrementWritePosition(localAudioBuffer.getNumSamples());
+        delayLine.incrementWritePosition(workingBuffer.getNumSamples());
         
         
         //==========================================================================
@@ -164,46 +152,26 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             // collapse left channel, collapse right channel
             if (k > 0)
             {
-                ambisonicBuffer.addFrom(0, 0, ambisonicBuffer.getWritePointer(k), localAudioBuffer.getNumSamples());
-                ambisonicBuffer2ndEar.addFrom(0, 0, ambisonicBuffer2ndEar.getWritePointer(k), localAudioBuffer.getNumSamples());
+                ambisonicBuffer.addFrom(0, 0, ambisonicBuffer.getWritePointer(k), workingBuffer.getNumSamples());
+                ambisonicBuffer2ndEar.addFrom(0, 0, ambisonicBuffer2ndEar.getWritePointer(k), workingBuffer.getNumSamples());
             }
         }
-
-        
-        //==========================================================================
-
-        
-        // DEBUG: recopy non modified signal
-        // bufferToFill.buffer->copyFrom(0, 0, localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        // bufferToFill.buffer->copyFrom(1, 0, localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        
-        // DEBUG: sum sources images signals (delays)
-        // bufferToFill.buffer->copyFrom(0, 0, sourceImageBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        // bufferToFill.buffer->copyFrom(1, 0, sourceImageBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        
-        // DEBUG: sum sources images signals (delays + absorption filter)
-        // bufferToFill.buffer->copyFrom(0, 0, octaveFilterBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        // bufferToFill.buffer->copyFrom(1, 0, octaveFilterBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        
-        // DEBUG: ouptut ambisonic gains (delay + absorption filter + ambisonic encode + crude downmix to L/R channels)
         
         // final rewrite to output buffer
-        bufferToFill.buffer->copyFrom(0, 0, ambisonicBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        bufferToFill.buffer->copyFrom(1, 0, ambisonicBuffer2ndEar, 0, 0, localAudioBuffer.getNumSamples());
-        
-
+        bufferToFill.buffer->copyFrom(0, 0, ambisonicBuffer, 0, 0, workingBuffer.getNumSamples());
+        bufferToFill.buffer->copyFrom(1, 0, ambisonicBuffer2ndEar, 0, 0, workingBuffer.getNumSamples());
         
     }
     else
     {
         //==========================================================================
         // if no source image, simply rewrite to output buffer (DAMN USELES NO?)
-        bufferToFill.buffer->copyFrom(0, 0, localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
-        bufferToFill.buffer->copyFrom(1, 0, localAudioBuffer, 0, 0, localAudioBuffer.getNumSamples());
+        bufferToFill.buffer->copyFrom(0, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
+        bufferToFill.buffer->copyFrom(1, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
     }
     
     // DEBUG: check output buffer magnitude
-    // auto mag = bufferToFill.buffer->getMagnitude(0, localAudioBuffer.getNumSamples());
+    // auto mag = bufferToFill.buffer->getMagnitude(0, workingBuffer.getNumSamples());
     // if ( mag > 0.5 ) DBG(mag);
     
     //==========================================================================
@@ -211,7 +179,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     auto outL = bufferToFill.buffer->getWritePointer(0);
     auto outR = bufferToFill.buffer->getWritePointer(1);
     // Loop over samples
-    for (int i = 0; i < localAudioBuffer.getNumSamples(); i++)
+    for (int i = 0; i < workingBuffer.getNumSamples(); i++)
     {
         // DEBUG PRECAUTION
         outL[i] = clipOutput(outL[i]);
@@ -225,7 +193,7 @@ void MainContentComponent::releaseResources()
     // This will be called when the audio device stops, or when it is being
     // restarted due to a setting change.
     
-    audioInputComponent.transportSource.releaseResources();
+    audioIOComponent.transportSource.releaseResources();
     
     // clear delay line buffers
     delayLine.buffer.clear();
@@ -261,18 +229,29 @@ void MainContentComponent::updateOnOscReveive(int sampleRate)
 //==============================================================================
 void MainContentComponent::paint (Graphics& g)
 {
+    // background
     g.fillAll (Colour(PixelARGB(240,30,30,30)));
+    
+    // logo image
+    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/1.7) - (logoImage.getHeight()/2) ));
+    
+    // signature
+    g.setColour(Colours::white);
+    g.setFont(11.f);
+    g.drawFittedText("Designed by D. Poirier-Quinot & M. Noisternig, IRCAM, 2016", getWidth() - 285, getHeight()-15, 275, 15, Justification::right, 2);
+    
 }
 
 void MainContentComponent::resized()
 {
     // resize sub-components
-    audioInputComponent.setBounds(10, 10, getWidth()-20, 160);
+    audioIOComponent.setBounds(10, 10, getWidth()-20, 160);
     
     // resize local GUI elements
-    int thirdWidth = (int)(getWidth() / 3) - 20;
-    saveIrButton.setBounds(getWidth() - thirdWidth - 20, 140, thirdWidth, 30);
-    logTextBox.setBounds (8, 180, getWidth() - 16, getHeight() - 190);
+    
+    int thirdWidthIoComponent = (int)((getWidth() - 20)/ 3) - 20; // lazy to change all to add that to audioIOComponent GUI for now
+    saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 80, thirdWidthIoComponent, 40);
+    logTextBox.setBounds (8, 180, getWidth() - 16, getHeight() - 195);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -290,16 +269,9 @@ void MainContentComponent::buttonClicked (Button* button)
 {
     if (button == &saveIrButton)
     {
-        saveIR();
+        audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
     }
 }
-//==============================================================================
-
-void MainContentComponent::saveIR ()
-{
-    
-}
-
 //==============================================================================
 // (This function is called by the app startup code to create our main component)
 Component* createMainContentComponent()     { return new MainContentComponent(); }

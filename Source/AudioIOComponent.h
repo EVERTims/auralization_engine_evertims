@@ -1,6 +1,6 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 
-class AudioInputComponent:
+class AudioIOComponent:
 public Component,
 public Button::Listener,
 public ChangeListener
@@ -29,6 +29,9 @@ enum TransportState
 };
 TransportState audioPlayerState;
 
+// AUDIO FILE WRITER ATTRIBUTES
+
+    
 // GUI ELEMENTS
 TextButton audioFileOpenButton;
 TextButton audioFilePlayButton;
@@ -42,7 +45,7 @@ Slider gainMasterSlider;
     
 public:
     
-AudioInputComponent()
+AudioIOComponent()
 {
     
     // INIT AUDIO READER ELEMENTS
@@ -50,23 +53,25 @@ AudioInputComponent()
     formatManager.registerBasicFormats();
     transportSource.addChangeListener (this);
     
+    // INIT AUDIO WRITE ELEMENTS
     
     // INIT GUI ELEMENTS
     
     addAndMakeVisible (&audioFileOpenButton);
     audioFileOpenButton.setButtonText ("Open...");
     audioFileOpenButton.addListener (this);
+    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
     
     addAndMakeVisible (&audioFilePlayButton);
     audioFilePlayButton.setButtonText ("Play");
     audioFilePlayButton.addListener (this);
-    audioFilePlayButton.setColour (TextButton::buttonColourId, Colours::green);
+    audioFilePlayButton.setColour (TextButton::buttonColourId, Colours::darkgreen);
     audioFilePlayButton.setEnabled (false);
     
     addAndMakeVisible (&audioFileStopButton);
     audioFileStopButton.setButtonText ("Stop");
     audioFileStopButton.addListener (this);
-    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::red);
+    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::darkred);
     audioFileStopButton.setEnabled (false);
     
     addAndMakeVisible (&gainMasterSlider);
@@ -90,10 +95,10 @@ AudioInputComponent()
     
 }
 
-~AudioInputComponent() {}
+~AudioIOComponent() {}
 
 //==========================================================================
-// GUI METHODS
+// AUDIO INPUT METHODS
 
 bool openAudioFile()
 {
@@ -140,7 +145,35 @@ void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
     bufferToFill.buffer->applyGain(gainMasterSlider.getValue());
 }
 
+//==========================================================================
+// AUDIO SAVE METHODS
+
+void saveIR(const AudioBuffer<float> &source, double sampleRate)
+{
+    const File file (File::getSpecialLocation (File::userDesktopDirectory)
+                     .getNonexistentChildFile ("Evertims_IR_Recording", ".wav"));
     
+    // Create an OutputStream to write to our destination file...
+    file.deleteFile();
+    ScopedPointer<FileOutputStream> fileStream (file.createOutputStream());
+    
+    if (fileStream != nullptr)
+    {
+        // Now create a WAV writer object that writes to our output stream...
+        WavAudioFormat wavFormat;
+        AudioFormatWriter* writer = wavFormat.createWriterFor (fileStream, sampleRate, source.getNumChannels(), 24, StringPairArray(), 0);
+        
+        if (writer != nullptr)
+        {
+            fileStream.release(); // (passes responsibility for deleting the stream to the writer object that is now using it)
+            
+            writer->writeFromAudioSampleBuffer(source, 0, source.getNumSamples());
+            delete(writer);
+            
+        }
+    }
+
+}
     
 private:
     
@@ -154,7 +187,8 @@ void paint(Graphics& g) override
     
     g.setOpacity(1.0f);
     g.setColour(Colours::whitesmoke);
-    g.drawRoundedRectangle(0.f, 0.f, w, h, 10.0f, 3.0f);
+    g.drawRoundedRectangle(0.f, 0.f, w, h, 0.0f, 2.0f);
+    
 }
 
 void resized() override
@@ -164,12 +198,12 @@ void resized() override
     DBG(String(pos.getY() + 10));
     
     int thirdWidth = (int)(getWidth() / 3) - 20;
-    audioFileOpenButton.setBounds (20, pos.getY() + 10, thirdWidth, 40);
+    audioFileOpenButton.setBounds (pos.getX() + 10, pos.getY() + 10, thirdWidth, 40);
     audioFilePlayButton.setBounds (30 + thirdWidth, pos.getY() + 10, thirdWidth, 40);
     audioFileStopButton.setBounds (40 + 2*thirdWidth, pos.getY() + 10, thirdWidth, 40);
-    audioFileLoopToogle.setBounds (10, pos.getY() + 60, getWidth() - thirdWidth, 30);
     
-    gainMasterSlider.setBounds    (10, pos.getX() + 100, getWidth() - 20, 20);
+    audioFileLoopToogle.setBounds (pos.getX() + 10, pos.getY() + 60, 60, 20);
+    gainMasterSlider.setBounds    (pos.getX() + 70 + 10, audioFileLoopToogle.getY(), getWidth() - thirdWidth - 120, 20);
     
     audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
 }
@@ -254,6 +288,6 @@ void changeListenerCallback (ChangeBroadcaster* broadcaster) override
     }
 }
 
-JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioInputComponent)
+JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioIOComponent)
 
 };

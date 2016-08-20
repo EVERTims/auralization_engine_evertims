@@ -34,8 +34,8 @@
       </GROUP>
       <FILE id="sSNWxe" name="Ambi2binIRContainer.h" compile="0" resource="0"
             file="Source/Ambi2binIRContainer.h"/>
-      <FILE id="VFZ1PG" name="AudioInputComponent.h" compile="0" resource="0"
-            file="Source/AudioInputComponent.h"/>
+      <FILE id="VFZ1PG" name="AudioIOComponent.h" compile="0" resource="0"
+            file="Source/AudioIOComponent.h"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="l9hY4R" name="MainComponent.cpp" compile="1" resource="0"
@@ -57,6 +57,10 @@
         <FILE id="fqWADe" name="hoa2bin_order2_ClubFritz1.bin" compile="0"
               resource="0" file="data/hoa2binIRs/hoa2bin_order2_ClubFritz1.bin"
               xcodeResource="1"/>
+      </GROUP>
+      <GROUP id="{E6596461-6A75-A89E-D160-2311FACB6112}" name="images">
+        <FILE id="K0yOmn" name="evertims_logo.png" compile="0" resource="1"
+              file="data/images/evertims_logo.png"/>
       </GROUP>
     </GROUP>
   </MAINGROUP>
