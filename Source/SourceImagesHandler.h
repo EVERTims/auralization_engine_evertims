@@ -27,6 +27,7 @@ private:
     AudioBuffer<float> clipboardBuffer; // to be used as local copy of working buffer when working buffer modified in loops
     
     AudioBuffer<float> irRecWorkingBuffer; // used for IR recording
+    AudioBuffer<float> irRecWorkingBufferTemp; // used for IR recording
     AudioBuffer<float> irRecAmbisonicBuffer; // used for IR recording
     AudioBuffer<float> irRecClipboardBuffer;
     
@@ -254,6 +255,7 @@ AudioBuffer<float> getCurrentIR ()
         // TODO: acount for impact of absorbtion on maxDelay required (if it does make sense..)
         int irNumSamples = (int) (maxDelay*1.1 * localSampleRate);
         irRecWorkingBuffer.setSize(1, irNumSamples);
+        irRecWorkingBufferTemp = irRecWorkingBuffer;
         irRecAmbisonicBuffer.setSize(N_AMBI_CH, irNumSamples);
         irRecAmbisonicBuffer.clear();
         
@@ -269,7 +271,25 @@ AudioBuffer<float> getCurrentIR ()
             irRecWorkingBuffer.setSample(0, tapSample, tapGain);
             
             // apply material absorbtion
-        
+            irRecClipboardBuffer = irRecWorkingBuffer;
+            irRecWorkingBuffer.clear();
+            
+            for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
+            {
+                // local working copy
+                irRecWorkingBufferTemp.copyFrom(0, 0, irRecClipboardBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
+                
+                // filter bank decomposition
+                octaveFilterBank[k].processSamples(irRecWorkingBufferTemp.getWritePointer(0), irRecWorkingBuffer.getNumSamples());
+                
+                // apply frequency specific absorption gains
+                float octaveFreqGain = fmin(abs(1.0 - absorptionCoefs[j][k]), 1.0);
+                irRecWorkingBufferTemp.applyGain(octaveFreqGain);
+                
+                // sum to output (recompose)
+                irRecWorkingBuffer.addFrom(0, 0, irRecWorkingBufferTemp, 0, 0, irRecWorkingBuffer.getNumSamples());
+            }
+            
             // Ambisonic encoding
             irRecClipboardBuffer = irRecWorkingBuffer;
             for( int k = 0; k < N_AMBI_CH; k++ )
