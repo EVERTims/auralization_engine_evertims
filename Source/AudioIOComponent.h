@@ -3,7 +3,8 @@
 class AudioIOComponent:
 public Component,
 public Button::Listener,
-public ChangeListener
+public ChangeListener,
+public AudioIODeviceCallback
 {
     
 //==========================================================================
@@ -31,12 +32,15 @@ TransportState audioPlayerState;
 
 // AUDIO FILE WRITER ATTRIBUTES
 
+// ADC INPUT
+AudioBuffer<float> adcBuffer;
     
 // GUI ELEMENTS
 TextButton audioFileOpenButton;
 TextButton audioFilePlayButton;
 TextButton audioFileStopButton;
-ToggleButton audioFileLoopToogle;
+ToggleButton audioFileLoopToggle;
+ToggleButton adcToggle;
 Label audioFileCurrentPositionLabel;
 Slider gainMasterSlider;
     
@@ -52,8 +56,6 @@ AudioIOComponent()
     
     formatManager.registerBasicFormats();
     transportSource.addChangeListener (this);
-    
-    // INIT AUDIO WRITE ELEMENTS
     
     // INIT GUI ELEMENTS
     
@@ -83,11 +85,17 @@ AudioIOComponent()
     gainMasterSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
     gainMasterSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
     
-    addAndMakeVisible (&audioFileLoopToogle);
-    audioFileLoopToogle.setButtonText ("Loop");
-    audioFileLoopToogle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    audioFileLoopToogle.setEnabled(true);
-    audioFileLoopToogle.addListener (this);
+    addAndMakeVisible (&audioFileLoopToggle);
+    audioFileLoopToggle.setButtonText ("Loop");
+    audioFileLoopToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
+    audioFileLoopToggle.setEnabled(true);
+    audioFileLoopToggle.addListener (this);
+    
+    addAndMakeVisible (&adcToggle);
+    adcToggle.setButtonText ("Micro Input");
+    adcToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
+    adcToggle.setEnabled(true);
+    adcToggle.addListener (this);
     
     addAndMakeVisible (&audioFileCurrentPositionLabel);
     audioFileCurrentPositionLabel.setText ("Making progress, every day :)", dontSendNotification);
@@ -124,13 +132,29 @@ bool openAudioFile()
     return fileOpenedSucess;
 }
 
+void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+{
+    transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
+    adcBuffer.setSize(1, samplesPerBlockExpected);
+}
+    
 
 void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
+    
+    bufferToFill.clearActiveBufferRegion();
+    
+    if (adcToggle.getToggleState())
+    {
+        bufferToFill.buffer->copyFrom(0, 0, adcBuffer, 0, 0, bufferToFill.buffer->getNumSamples());
+    }
+    
+    // adcBuffer.addFrom(0, 0, adcBuffer, <#int sourceChannel#>, <#int sourceStartSample#>, <#int numSamples#>)
+                                 
     // check if audiofile loaded
     if (readerSource == nullptr)
     {
-        bufferToFill.clearActiveBufferRegion();
+        
         return;
     }
     
@@ -175,8 +199,33 @@ void saveIR(const AudioBuffer<float> &source, double sampleRate)
 
 }
     
+    
 private:
     
+//==========================================================================
+// ADC INPUT
+
+void audioDeviceAboutToStart (AudioIODevice*) override { adcBuffer.clear(); }
+
+void audioDeviceStopped() override { adcBuffer.clear(); }
+
+void audioDeviceIOCallback (const float** inputChannelData, int numInputChannels,
+                            float** outputChannelData, int numOutputChannels,
+                            int numberOfSamples) override
+{
+    adcBuffer.setDataToReferTo(const_cast<float**> (inputChannelData), numInputChannels, numberOfSamples);
+    
+    /**
+     1) We need to clear the output buffers, in case they're full of junk..
+     2) I actually do not intend to output anything from that method, since
+     outputChannelData will be summed with MainComponent IO device manager output
+     anyway
+     */
+    for (int i = 0; i < numOutputChannels; ++i)
+        if (outputChannelData[i] != nullptr)
+            FloatVectorOperations::clear (outputChannelData[i], numberOfSamples);
+}
+
 //==========================================================================
 // GUI METHODS
 
@@ -202,8 +251,10 @@ void resized() override
     audioFilePlayButton.setBounds (30 + thirdWidth, pos.getY() + 10, thirdWidth, 40);
     audioFileStopButton.setBounds (40 + 2*thirdWidth, pos.getY() + 10, thirdWidth, 40);
     
-    audioFileLoopToogle.setBounds (pos.getX() + 10, pos.getY() + 60, 60, 20);
-    gainMasterSlider.setBounds    (pos.getX() + 70 + 10, audioFileLoopToogle.getY(), getWidth() - thirdWidth - 120, 20);
+    audioFileLoopToggle.setBounds (pos.getX() + 10, pos.getY() + 60, 60, 20);
+    gainMasterSlider.setBounds    (pos.getX() + 70 + 10, audioFileLoopToggle.getY(), getWidth() - thirdWidth - 120, 20);
+    
+    adcToggle.setBounds (pos.getX() + 10, pos.getY() + 90, 120, 20);
     
     audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
 }
@@ -222,7 +273,7 @@ void buttonClicked (Button* button) override
     if (button == &audioFilePlayButton)
     {
         if (readerSource != nullptr)
-            readerSource->setLooping (audioFileLoopToogle.getToggleState());
+            readerSource->setLooping (audioFileLoopToggle.getToggleState());
         changeState(Starting);
     }
     
@@ -231,11 +282,11 @@ void buttonClicked (Button* button) override
         changeState (Stopping);
     }
     
-    if (button == &audioFileLoopToogle)
+    if (button == &audioFileLoopToggle)
     {
         if (readerSource != nullptr)
         {
-            readerSource->setLooping (audioFileLoopToogle.getToggleState());
+            readerSource->setLooping (audioFileLoopToggle.getToggleState());
         }
     }
     

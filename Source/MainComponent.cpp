@@ -2,6 +2,7 @@
 #include "MainComponent.h"
 #include "Utils.h"
 
+
 MainContentComponent::MainContentComponent():
 oscHandler(),
 audioIOComponent(),
@@ -17,6 +18,9 @@ ambi2binContainer()
     
     // add to change listeners
     oscHandler.addChangeListener(this);
+    
+    // add audioIOComponent as addAudioCallback for adc input
+    deviceManager.addAudioCallback(&audioIOComponent);
     
     //==========================================================================
     // INIT GUI ELEMENTS
@@ -63,8 +67,8 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     // its settings (i.e. sample rate, block size, etc) are changed.
     // Called on the audio thread, not the GUI thread.
     
-    // audio file reader
-    audioIOComponent.transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
+    // audio file reader & adc input
+    audioIOComponent.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
     // working buffer
     workingBuffer.setSize(1, samplesPerBlockExpected);
@@ -272,6 +276,7 @@ void MainContentComponent::buttonClicked (Button* button)
         audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
     }
 }
+
 //==============================================================================
 // (This function is called by the app startup code to create our main component)
 Component* createMainContentComponent()     { return new MainContentComponent(); }

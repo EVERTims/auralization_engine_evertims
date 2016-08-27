@@ -63,7 +63,7 @@ private:
     // buffers
     AudioBuffer<float> workingBuffer; // working buffer
     
-    // audio player (GUI + audio reader)
+    // audio player (GUI + audio reader + adc input)
     AudioIOComponent audioIOComponent;
     
     // delay line
@@ -78,8 +78,7 @@ private:
     AudioBuffer<float> ambisonicBuffer2ndEar;
     Ambi2binIRContainer ambi2binContainer;
     FIRFilter ambi2binFilters[2*N_AMBI_CH]; // holds current ABIR (room reverb) filters
-    
-
+   
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };
 
