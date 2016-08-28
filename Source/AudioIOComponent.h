@@ -62,7 +62,7 @@ AudioIOComponent()
     addAndMakeVisible (&audioFileOpenButton);
     audioFileOpenButton.setButtonText ("Open...");
     audioFileOpenButton.addListener (this);
-    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
+    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::grey);
     
     addAndMakeVisible (&audioFilePlayButton);
     audioFilePlayButton.setButtonText ("Play");
@@ -141,32 +141,30 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 
 void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
-    
+    // clear buffer
     bufferToFill.clearActiveBufferRegion();
-    
-    if (adcToggle.getToggleState())
-    {
-        bufferToFill.buffer->copyFrom(0, 0, adcBuffer, 0, 0, bufferToFill.buffer->getNumSamples());
-    }
-    
-    // adcBuffer.addFrom(0, 0, adcBuffer, <#int sourceChannel#>, <#int sourceStartSample#>, <#int numSamples#>)
                                  
     // check if audiofile loaded
-    if (readerSource == nullptr)
+    if (readerSource != nullptr)
     {
+        // fill buffer with audiofile data
+        transportSource.getNextAudioBlock (bufferToFill);
         
-        return;
+        // stereo downmix to mono
+        bufferToFill.buffer->applyGain(0.5f);
+        bufferToFill.buffer->addFrom(0, 0, bufferToFill.buffer->getWritePointer(1), bufferToFill.buffer->getNumSamples());
     }
     
-    // fill buffer with audiofile data
-    transportSource.getNextAudioBlock (bufferToFill);
-    
-    // stereo downmix to mono
-    bufferToFill.buffer->applyGain(0.5f);
-    bufferToFill.buffer->addFrom(0, 0, bufferToFill.buffer->getWritePointer(1), bufferToFill.buffer->getNumSamples());
+    // copy adc inputs (stored in adcBuffer) to output
+    if (adcToggle.getToggleState())
+    {
+        bufferToFill.buffer->addFrom(0, 0, adcBuffer, 0, 0, bufferToFill.buffer->getNumSamples());
+    }
     
     // apply master gain
     bufferToFill.buffer->applyGain(gainMasterSlider.getValue());
+    
+    return;
 }
 
 //==========================================================================

@@ -168,6 +168,14 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
         }
         
+        //==========================================================================
+        // ADD REVERB TAIL (should reverb tail be in sourceImage loop? should have more taps if more sources?)
+        
+        // get T30 estimate
+        // get tap time distribution
+        // create taps as 1st order ambisonic
+        // do not forget zipper effect in all that
+        
         
         //==========================================================================
         // AMBISONIC ENCODING

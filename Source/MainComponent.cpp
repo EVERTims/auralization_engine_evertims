@@ -169,14 +169,11 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     else
     {
         //==========================================================================
-        // if no source image, simply rewrite to output buffer (DAMN USELES NO?)
+        // if no source image, simply rewrite to output buffer (TODO: remove stupid double copy)
         bufferToFill.buffer->copyFrom(0, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
         bufferToFill.buffer->copyFrom(1, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
     }
     
-    // DEBUG: check output buffer magnitude
-    // auto mag = bufferToFill.buffer->getMagnitude(0, workingBuffer.getNumSamples());
-    // if ( mag > 0.5 ) DBG(mag);
     
     //==========================================================================
     // get write pointer to output
