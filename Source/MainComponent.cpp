@@ -270,7 +270,13 @@ void MainContentComponent::buttonClicked (Button* button)
 {
     if (button == &saveIrButton)
     {
-        audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
+        if ( sourceImagesHandler.IDs.size() > 0 )
+        {
+            audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
+        }
+        else {
+            AlertWindow::showMessageBoxAsync ( AlertWindow::NoIcon, "Impulse Response not saved", "No source images registered from raytracing client \n(Empty IR)", "OK");
+        }
     }
 }
 
