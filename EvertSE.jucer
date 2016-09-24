@@ -37,6 +37,7 @@
       <FILE id="VFZ1PG" name="AudioIOComponent.h" compile="0" resource="0"
             file="Source/AudioIOComponent.h"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
+      <FILE id="Gci68m" name="FilterBank.h" compile="0" resource="0" file="Source/FilterBank.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="l9hY4R" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>

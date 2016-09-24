@@ -21,6 +21,7 @@
 class MainContentComponent:
     public AudioAppComponent,
     public Button::Listener,
+    public ComboBox::Listener,
     public ChangeListener
 {
 
@@ -38,6 +39,7 @@ public:
     void resized() override;
     
     void buttonClicked (Button* button) override;
+    void comboBoxChanged(ComboBox* comboBox) override;
     
     
 private:
@@ -56,6 +58,8 @@ private:
     TextButton saveIrButton;
     TextEditor logTextBox;
     Image logoImage;
+    ComboBox numFrequencyBandsComboBox;
+    Label numFrequencyBandsLabel;
     
     //==========================================================================
     // AUDIO COMPONENTS

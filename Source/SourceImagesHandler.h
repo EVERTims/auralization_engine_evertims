@@ -3,6 +3,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "AmbixEncode/AmbixEncoder.h"
+#include "FilterBank.h"
 
 class SourceImagesHandler
 {
@@ -18,6 +19,10 @@ public:
     std::vector<float> delaysFuture; // in seconds
     std::vector<float> pathLengths; // in meters
     int numSourceImages;
+    
+    // octave filter bank
+    FilterBank filterBank;
+    FilterBank filterBankRec;
     
 private:
     
@@ -40,8 +45,6 @@ private:
     bool crossfadeOver = true;
     
     // octave filter bank
-    IIRFilter octaveFilterBank[NUM_OCTAVE_BANDS];
-    std::vector<float> octaveFilterData[NUM_OCTAVE_BANDS];
     std::vector< Array<float> > absorptionCoefs; // buffer for input data
     
     // ambisonic encoding
@@ -81,17 +84,13 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
     
-    
     // init filter bank
-    double f0 = 31.5;
-    double Q = sqrt(2) / (2 - 1);
-    float gainFactor = 1.0;
-    for( int i = 0; i < NUM_OCTAVE_BANDS; i++ )
-    {
-        f0 *= 2;
-        octaveFilterBank[i].setCoefficients(IIRCoefficients::makePeakFilter(sampleRate, f0, Q, gainFactor));
-    }
+    filterBank.prepareToPlay( samplesPerBlockExpected, sampleRate );
+    filterBank.setNumFilters( 3, IDs.size() );
     
+    // init IR recording filter bank (need a separate, see comment on continuous data stream in FilterBank class)
+    filterBankRec.prepareToPlay( samplesPerBlockExpected, sampleRate );
+    filterBankRec.setNumFilters( 10, IDs.size() ); // may as well get the best quality for recording IR
 }
     
 // get max source image delay in seconds
@@ -147,26 +146,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
         //==========================================================================
         // APPLY ABSORPTION COEFFICIENTS (octave filer bank decomposition)
-        
-        // keep local copy since working buffer will be used as cumulative, iteratively receiving octave bands buffers
-        clipboardBuffer = workingBuffer;
-        workingBuffer.clear();
-        
-        for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
-        {
-            // local working copy
-            workingBufferTemp.copyFrom(0, 0, clipboardBuffer, 0, 0, localSamplesPerBlockExpected);
-            
-            // filter bank decomposition
-            octaveFilterBank[k].processSamples(workingBufferTemp.getWritePointer(0), localSamplesPerBlockExpected);
-            
-            // apply frequency specific absorption gains
-            float octaveFreqGain = fmin(abs(1.0 - absorptionCoefs[j][k]), 1.0);
-            workingBufferTemp.applyGain(octaveFreqGain);
-            
-            // sum to output (recompose)
-            workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
-        }
+        filterBank.processBuffer( workingBuffer, absorptionCoefs[j], j );
         
         //==========================================================================
         // ADD REVERB TAIL (should reverb tail be in sourceImage loop? should have more taps if more sources?)
@@ -175,7 +155,6 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         // get tap time distribution
         // create taps as 1st order ambisonic
         // do not forget zipper effect in all that
-        
         
         //==========================================================================
         // AMBISONIC ENCODING
@@ -248,6 +227,9 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
     }
     
+    // update filter bank size
+    filterBank.setNumFilters( filterBank.getNumFilters(), IDs.size() );
+    
     // update number of valid source images
     numSourceImages = IDs.size();
     
@@ -278,25 +260,9 @@ AudioBuffer<float> getCurrentIR ()
             float tapGain = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
             irRecWorkingBuffer.setSample(0, tapSample, tapGain);
             
-            // apply material absorbtion
-            irRecClipboardBuffer = irRecWorkingBuffer;
-            irRecWorkingBuffer.clear();
-            
-            for( int k = 0; k < NUM_OCTAVE_BANDS; k++ )
-            {
-                // local working copy
-                irRecWorkingBufferTemp.copyFrom(0, 0, irRecClipboardBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
-                
-                // filter bank decomposition
-                octaveFilterBank[k].processSamples(irRecWorkingBufferTemp.getWritePointer(0), irRecWorkingBuffer.getNumSamples());
-                
-                // apply frequency specific absorption gains
-                float octaveFreqGain = fmin(abs(1.0 - absorptionCoefs[j][k]), 1.0);
-                irRecWorkingBufferTemp.applyGain(octaveFreqGain);
-                
-                // sum to output (recompose)
-                irRecWorkingBuffer.addFrom(0, 0, irRecWorkingBufferTemp, 0, 0, irRecWorkingBuffer.getNumSamples());
-            }
+            // apply material absorbtion (update filter bank size first, to match number of source image)
+            filterBankRec.setNumFilters( filterBankRec.getNumFilters(), IDs.size() );
+            filterBankRec.processBuffer( irRecWorkingBuffer, absorptionCoefs[j], j );
             
             // Ambisonic encoding
             irRecClipboardBuffer = irRecWorkingBuffer;
@@ -309,9 +275,8 @@ AudioBuffer<float> getCurrentIR ()
                 // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
                 irRecAmbisonicBuffer.addFrom(k, 0, irRecWorkingBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
             }
-            
         }
-
+        
         return irRecAmbisonicBuffer;
     }
     

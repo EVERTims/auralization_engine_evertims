@@ -49,6 +49,23 @@ ambi2binContainer()
     logTextBox.setColour (TextEditor::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
     logTextBox.setColour (TextEditor::outlineColourId, Colours::whitesmoke);
     logTextBox.setColour (TextEditor::shadowColourId, Colours::darkorange);
+    
+    addAndMakeVisible(numFrequencyBandsComboBox);
+    numFrequencyBandsComboBox.setEditableText (false);
+    numFrequencyBandsComboBox.setJustificationType (Justification::centred);
+    numFrequencyBandsComboBox.setColour(ComboBox::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
+    numFrequencyBandsComboBox.setColour(ComboBox::buttonColourId, Colour(PixelARGB(200,30,30,30)));
+    numFrequencyBandsComboBox.setColour(ComboBox::outlineColourId, Colour(PixelARGB(200,30,30,30)));
+    numFrequencyBandsComboBox.setColour(ComboBox::textColourId, Colours::whitesmoke);
+    numFrequencyBandsComboBox.addListener(this);
+    numFrequencyBandsComboBox.addItem("3", 1);
+    numFrequencyBandsComboBox.addItem("10", 2);
+    numFrequencyBandsComboBox.setSelectedId(1);
+    
+    addAndMakeVisible (numFrequencyBandsLabel);
+    numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
+    numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    
 }
 
 MainContentComponent::~MainContentComponent()
@@ -253,6 +270,9 @@ void MainContentComponent::resized()
     int thirdWidthIoComponent = (int)((getWidth() - 20)/ 3) - 20; // lazy to change all to add that to audioIOComponent GUI for now
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 80, thirdWidthIoComponent, 40);
     logTextBox.setBounds (8, 180, getWidth() - 16, getHeight() - 195);
+    
+    numFrequencyBandsComboBox.setBounds(getWidth() - 70, 140, 50, 20);
+    numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -280,6 +300,17 @@ void MainContentComponent::buttonClicked (Button* button)
     }
 }
 
+void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
+{
+    if (comboBox == &numFrequencyBandsComboBox)
+    {
+        int numFreqBands;
+        if( numFrequencyBandsComboBox.getSelectedId() == 1 ) numFreqBands = 3;
+        else numFreqBands = 10;
+        
+        sourceImagesHandler.filterBank.setNumFilters( numFreqBands, sourceImagesHandler.IDs.size() );
+    }
+}
 //==============================================================================
 // (This function is called by the app startup code to create our main component)
 Component* createMainContentComponent()     { return new MainContentComponent(); }
