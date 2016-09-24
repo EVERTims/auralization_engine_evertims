@@ -24,6 +24,7 @@ int port = 3860;
 std::map<int,EL_ImageSource> sourceImageMap;
 std::map<String,EL_Source> sourceMap;
 std::map<String,EL_Listener> listenerMap;
+float r60array[10] = {0,0,0,0,0,0,0,0,0,0};
 
 //==========================================================================
 // METHODS
@@ -161,8 +162,7 @@ void oscMessageReceived (const OSCMessage& msg) override
 {
     OSCAddressPattern pIn("/in");
     OSCAddressPattern pUpd("/upd");
-    
-    
+    OSCAddressPattern pR60("/r60");
     
     OSCAddress msgAdress(msg.getAddressPattern().toString());
     
@@ -194,6 +194,12 @@ void oscMessageReceived (const OSCMessage& msg) override
         
         // insert or update
         sourceImageMap[source.ID] = source;
+    }
+    
+    else if( pR60.matches(msgAdress) )
+    {
+        for( int i = 0; i < msg.size(); i++ ){ r60array[i] = msg[i].getFloat32(); }
+        // DBG(String("r60: ") + String(r60array[0]) + String(", ") + String(r60array[1]) + String(", ") + String(r60array[2]) + String(", ") + String(r60array[3]) + String(", ") + String(r60array[4]) + String(", ") + String(r60array[5]) + String(", ") + String(r60array[6]) + String(", ") + String(r60array[7]) + String(", ") + String(r60array[8]) + String(", ") + String(r60array[9]) + String(" "));
     }
     
     //    else {
