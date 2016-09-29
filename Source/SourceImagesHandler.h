@@ -234,8 +234,11 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     numSourceImages = IDs.size();
     
     // trigger crossfade mecanism
-    crossfadeGain = 0.0;
-    crossfadeOver = false;
+    if( numSourceImages > 0 )
+    {
+        crossfadeGain = 0.0;
+        crossfadeOver = false;
+    }
 }
 
 AudioBuffer<float> getCurrentIR ()
