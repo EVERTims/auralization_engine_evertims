@@ -249,6 +249,10 @@ AudioBuffer<float> getCurrentIR ()
         irRecAmbisonicBuffer.setSize(N_AMBI_CH, irNumSamples);
         irRecAmbisonicBuffer.clear();
         
+        // define remapping order for ambisonic IR exported to follow ACN convention
+        // (TODO: clean + procedural way to gerenate remapping, eventually remap original lib)
+        int ambiChannelExportRemapping [N_AMBI_CH] = { 0, 3, 2, 1, 8, 7, 6, 5, 4 };
+        
         // loop over sources images
         for( int j = 0; j < IDs.size(); j++ )
         {
@@ -273,7 +277,7 @@ AudioBuffer<float> getCurrentIR ()
                 // apply ambisonic gains
                 irRecWorkingBuffer.applyGain(ambisonicGainsCurrent[j][k]);
                 // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
-                irRecAmbisonicBuffer.addFrom(k, 0, irRecWorkingBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
+                irRecAmbisonicBuffer.addFrom(ambiChannelExportRemapping[k], 0, irRecWorkingBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
             }
         }
         
