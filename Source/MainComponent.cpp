@@ -146,6 +146,9 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
                 
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
+        // arbitrary: apply gain to compensate for loss from filterbank, cheaper to apply
+        // here than in sourceImagesHandler on each source image individually
+        ambisonicBuffer.applyGain( 2.f );
         
         // increment delay line write position
         delayLine.incrementWritePosition(workingBuffer.getNumSamples());

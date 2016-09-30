@@ -83,7 +83,7 @@ void setNumFilters( int numBands, int numSourceImages )
 
 int getNumFilters() { return numOctaveBands; }
     
-void processBuffer( AudioBuffer<float> &source, Array<float> &absorptionCoefsSingleSource, int sourceImageId )
+void processBuffer( AudioBuffer<float> &source, Array<float> absorptionCoefsSingleSource, int sourceImageId )
 {
     // prepare buffers
     bufferRemains = source;
