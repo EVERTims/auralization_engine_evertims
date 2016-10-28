@@ -29,7 +29,8 @@ ambi2binContainer()
     addAndMakeVisible(audioIOComponent);
     
     // setup logo image
-    logoImage = ImageCache::getFromMemory(BinaryData::evertims_logo_png, BinaryData::evertims_logo_pngSize);
+    logoImage = ImageCache::getFromMemory(BinaryData::evertims_logo_512_png, BinaryData::evertims_logo_512_pngSize);
+    logoImage = logoImage.rescaled(logoImage.getWidth()/2, logoImage.getHeight()/2);
     
     // local GUI elements
     saveIrButton.setButtonText ("Save IR to Desktop");

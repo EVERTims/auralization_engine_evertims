@@ -60,13 +60,15 @@
               xcodeResource="1"/>
       </GROUP>
       <GROUP id="{E6596461-6A75-A89E-D160-2311FACB6112}" name="images">
-        <FILE id="K0yOmn" name="evertims_logo.png" compile="0" resource="1"
-              file="data/images/evertims_logo.png"/>
+        <FILE id="c3T5di" name="evertims_logo_512.png" compile="0" resource="1"
+              file="data/images/evertims_logo_512.png"/>
+        <FILE id="S30np0" name="evertims_logo_256.png" compile="0" resource="1"
+              file="data/images/evertims_logo_256.png"/>
       </GROUP>
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX" bigIcon="" smallIcon="K0yOmn">
+    <XCODE_MAC targetFolder="Builds/MacOSX" bigIcon="c3T5di" smallIcon="S30np0">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="EvertSE"
                        headerPath="../../libs/eigen-eigen-7403112d5871"/>
