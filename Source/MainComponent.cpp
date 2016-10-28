@@ -66,6 +66,12 @@ ambi2binContainer()
     numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
     numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
     
+    addAndMakeVisible (&reverbTailToggle);
+    reverbTailToggle.setButtonText ("Reverb Tail");
+    reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
+    reverbTailToggle.setEnabled(true);
+    reverbTailToggle.addListener(this);
+    reverbTailToggle.setToggleState(false, juce::sendNotification);
 }
 
 MainContentComponent::~MainContentComponent()
@@ -276,6 +282,8 @@ void MainContentComponent::resized()
     
     numFrequencyBandsComboBox.setBounds(getWidth() - 70, 140, 50, 20);
     numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
+    
+    reverbTailToggle.setBounds(getWidth() - 380, 140, 120, 20);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -301,6 +309,10 @@ void MainContentComponent::buttonClicked (Button* button)
             AlertWindow::showMessageBoxAsync ( AlertWindow::NoIcon, "Impulse Response not saved", "No source images registered from raytracing client \n(Empty IR)", "OK");
         }
     }
+    if( button == &reverbTailToggle )
+    {
+        sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
+    }
 }
 
 void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
@@ -312,6 +324,7 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         else numFreqBands = 10;
         
         sourceImagesHandler.filterBank.setNumFilters( numFreqBands, sourceImagesHandler.IDs.size() );
+        sourceImagesHandler.filterBankTail.setNumFilters( numFreqBands, sourceImagesHandler.tailTimesCurrent.size() );
     }
 }
 //==============================================================================

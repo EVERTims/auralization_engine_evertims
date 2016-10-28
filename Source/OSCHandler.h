@@ -24,7 +24,7 @@ int port = 3860;
 std::map<int,EL_ImageSource> sourceImageMap;
 std::map<String,EL_Source> sourceMap;
 std::map<String,EL_Listener> listenerMap;
-float r60array[10] = {0,0,0,0,0,0,0,0,0,0};
+std::vector<float> valuesR60;
 
 //==========================================================================
 // METHODS
@@ -39,6 +39,8 @@ OSCHandler()
         showConnectionErrorMessage ("Error: (OSC) could not connect to localhost@" + String(port) + ".");
     
     addListener (this);
+    
+    valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
 }
 
 ~OSCHandler() {}
@@ -109,6 +111,11 @@ Array<float> getSourceImageAbsorbtion(int sourceID)
     return sourceImageMap.find(sourceID)->second.absorption;
 }
 
+std::vector<float> getRT60Values()
+{
+    return valuesR60;
+}
+
 String getMapContent()
 {
     String output;
@@ -116,7 +123,7 @@ String getMapContent()
     
     for(auto const &ent1 : listenerMap) {
         // ent1.first is the first key
-        output += String("Listener: \t") + String(ent1.first) + String(", pos: [ ") +
+        output += String("Listener: \t") + String(ent1.first) + String(", pos: \t[ ") +
         String(round2(ent1.second.position(0), nDecimals)) + String(", ") +
         String(round2(ent1.second.position(1), nDecimals)) + String(", ") +
         String(round2(ent1.second.position(2), nDecimals)) + String(" ]\n");
@@ -125,10 +132,18 @@ String getMapContent()
     
     for(auto const &ent1 : sourceMap) {
         // ent1.first is the first key
-        output += String("Source:  \t") + String(ent1.first) + String(", pos: [ ") +
+        output += String("Source:  \t") + String(ent1.first) + String(", pos: \t [ ") +
         String(round2(ent1.second.position(0), nDecimals)) + String(", ") +
         String(round2(ent1.second.position(1), nDecimals)) + String(", ") +
         String(round2(ent1.second.position(2), nDecimals)) + String(" ]\n");
+    }
+    output += String("\n");
+    
+    output += String("RT60: \t[ ");
+    for( int i = 0; i < valuesR60.size(); i++ ){
+        output += String(round2(valuesR60[i], nDecimals));
+        if( i < valuesR60.size() - 1 ) output += String(", ");
+        else output += String(" ] (sec) \n");
     }
     output += String("\n");
     
@@ -139,7 +154,7 @@ String getMapContent()
         // ent1.first is the first key
         // Eigen::Vector3f posSph = cartesianToSpherical(ent1.second.positionRelectionLast - listenerPos);
         
-        output += String("Source Image: ") + String(ent1.first) + String(", posLast: \t [ ") +
+        output += String("Source Image: ") + String(ent1.first) + String(", \t posLast:  [ ") +
         String(round2(ent1.second.positionRelectionLast(0), nDecimals)) + String(", ") +
         String(round2(ent1.second.positionRelectionLast(1), nDecimals)) + String(", ") +
         String(round2(ent1.second.positionRelectionLast(2), nDecimals)) + String(" ]");
@@ -198,8 +213,8 @@ void oscMessageReceived (const OSCMessage& msg) override
     
     else if( pR60.matches(msgAdress) )
     {
-        for( int i = 0; i < msg.size(); i++ ){ r60array[i] = msg[i].getFloat32(); }
-        // DBG(String("r60: ") + String(r60array[0]) + String(", ") + String(r60array[1]) + String(", ") + String(r60array[2]) + String(", ") + String(r60array[3]) + String(", ") + String(r60array[4]) + String(", ") + String(r60array[5]) + String(", ") + String(r60array[6]) + String(", ") + String(r60array[7]) + String(", ") + String(r60array[8]) + String(", ") + String(r60array[9]) + String(" "));
+        for( int i = 0; i < msg.size(); i++ ){ valuesR60[i] = msg[i].getFloat32(); }
+        DBG(String("r60: ") + String(valuesR60[0]) + String(", ") + String(valuesR60[1]) + String(", ") + String(valuesR60[2]) + String(", ") + String(valuesR60[3]) + String(", ") + String(valuesR60[4]) + String(", ") + String(valuesR60[5]) + String(", ") + String(valuesR60[6]) + String(", ") + String(valuesR60[7]) + String(", ") + String(valuesR60[8]) + String(", ") + String(valuesR60[9]) + String(" "));
     }
     
     //    else {

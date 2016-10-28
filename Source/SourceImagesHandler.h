@@ -5,6 +5,11 @@
 #include "AmbixEncode/AmbixEncoder.h"
 #include "FilterBank.h"
 
+#include <numeric>
+
+#define MIN_DELAY_BETWEEN_TAIL_TAP 0.001f // minimum delay between reverb tail tap, in sec
+#define MAX_DELAY_BETWEEN_TAIL_TAP 0.005f  // maximum delay between reverb tail tap, in sec
+
 class SourceImagesHandler
 {
 
@@ -22,7 +27,17 @@ public:
     
     // octave filter bank
     FilterBank filterBank;
+    FilterBank filterBankTail;
     FilterBank filterBankRec;
+    
+    // reverb tail
+    std::vector<float> valuesRT60Future; // in seconds
+    std::vector<float> valuesRT60Current; // in seconds
+    std::vector<float> slopesRT60;
+    Array<float> gainsRT60;
+    std::vector<float> tailTimesCurrent; // in seconds
+    std::vector<float> tailTimesFuture; // in seconds
+    bool enableReverbTail;
     
 private:
     
@@ -61,7 +76,12 @@ public:
     
 SourceImagesHandler()
 {
-
+    // these values are here rather than in prepare to play since they're not (directly) concerned
+    // with the number of absorption bands
+    valuesRT60Current.resize(10, 0.0f);
+    valuesRT60Future.resize(10, 0.0f);
+    slopesRT60.resize(10, 0.0f);
+    gainsRT60.resize(10);
 }
 
 ~SourceImagesHandler() {}
@@ -88,6 +108,11 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     filterBank.prepareToPlay( samplesPerBlockExpected, sampleRate );
     filterBank.setNumFilters( 3, IDs.size() );
     
+    // init reverb tail filter bank
+    filterBankTail.prepareToPlay( samplesPerBlockExpected, sampleRate );
+    filterBankTail.setNumFilters( 3, tailTimesCurrent.size() );
+    
+    
     // init IR recording filter bank (need a separate, see comment on continuous data stream in FilterBank class)
     filterBankRec.prepareToPlay( samplesPerBlockExpected, sampleRate );
     filterBankRec.setNumFilters( 10, IDs.size() ); // may as well get the best quality for recording IR
@@ -96,10 +121,14 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 // get max source image delay in seconds
 float getMaxDelayFuture()
 {
-    float maxDelay = *std::max_element(std::begin(delaysFuture), std::end(delaysFuture));
-    return maxDelay;
+    float maxDelayTap = getMaxValue(delaysFuture);
+    if( enableReverbTail ){
+        float maxDelayTail = getMaxValue(valuesRT60Future);
+        return fmax(maxDelayTap, maxDelayTail);
+    }
+    else{ return maxDelayTap; }
 }
-
+    
 // main: loop over sources images, apply delay + room coloration + spatialization
 AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 {
@@ -149,9 +178,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         filterBank.processBuffer( workingBuffer, absorptionCoefs[j], j );
         
         //==========================================================================
-        // ADD REVERB TAIL (should reverb tail be in sourceImage loop? should have more taps if more sources?)
+        // ADD SOURCE IMAGE REVERB TAIL
         
-        // get T30 estimate
         // get tap time distribution
         // create taps as 1st order ambisonic
         // do not forget zipper effect in all that
@@ -193,6 +221,60 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
     }
     
+    //==========================================================================
+    // ADD GENERAL REVERB TAIL
+    
+    // TODO:
+    //      • add crossfade
+    //      • double check RT60 values and usage if correct
+    //      • add reverb tail to save IR method
+    
+    if( enableReverbTail )
+    {
+        // get init tail gain / time
+        float tailInitGain = fmin( 1.0, fmax( 0.0, 1.0/getMaxValue(pathLengths) ));
+        float tailInitDelay = getMaxValue(delaysCurrent);
+        
+        // get tail decrease slope (based on rt60)
+        for (int j = 0; j < slopesRT60.size(); j++)
+        {
+            slopesRT60[j] = tailInitGain * ((9.53674316e-7)-1) / valuesRT60Current[j]; // 1/(2^20) -> -60dB
+        }
+        
+        // DBG(String("time , gain:"));
+        // DBG(String(tailInitDelay) + String(" , ") + String(tailInitGain) );
+        
+        // for each reverb tail tap
+        float delayInFractionalSamples = 0.0f;
+        for (int j = 0; j < tailTimesCurrent.size(); j++)
+        {
+            // tape in delay line
+            delayInFractionalSamples = (tailTimesCurrent[j] * localSampleRate);
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            
+            // get tap gains
+            for (int k = 0; k < slopesRT60.size(); k++)
+            {
+                // negative slope: understand gainCurrent = gainInit - slope*(timeCurrent-timeInit)
+                // the "1 - ..." is to get an absorption, not a gain, to be used in filterbank processBuffer method 
+                gainsRT60.set(k, 1.0f - (tailInitGain + slopesRT60[k] * ( tailTimesCurrent[j] - tailInitDelay )) );
+                // DBG(String(tailTimesCurrent[j]) + String(" , ") + String(gainsRT60[k]) );
+            }
+            
+            // DBG(String(tailTimesCurrent[j]) + String(" , ") + String(gainsRT60[0]) );
+            
+            // apply freq-specific gains
+            filterBankTail.processBuffer( workingBuffer, gainsRT60, j );
+            // workingBuffer.applyGain(gainsRT60[0]);
+            
+            // write reverb tap to ambisonic channel W
+            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+        }
+        
+        
+        
+    }
+    
     return ambisonicBuffer;
 }
     
@@ -218,6 +300,13 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
     }
     
+    // save new RT60 times
+    valuesRT60Future = oscHandler.getRT60Values();
+    updateReverbTailDistribution();
+    DBG( String("future tail size: ") + String( tailTimesCurrent.size() ));
+    DBG( String("max tail size:    ") + String( (getMaxValue(valuesRT60Future) - getMaxValue(delaysFuture)) / MIN_DELAY_BETWEEN_TAIL_TAP ));
+    DBG( String("min tail size:    ") + String( (getMaxValue(valuesRT60Future) - getMaxValue(delaysFuture)) / MAX_DELAY_BETWEEN_TAIL_TAP ));
+    
     // save (compute) new Ambisonic gains
     auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
     ambisonicGainsCurrent.resize(IDs.size());
@@ -229,6 +318,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     
     // update filter bank size
     filterBank.setNumFilters( filterBank.getNumFilters(), IDs.size() );
+    filterBankTail.setNumFilters( filterBankTail.getNumFilters(), tailTimesFuture.size() );
     
     // update number of valid source images
     numSourceImages = IDs.size();
@@ -244,7 +334,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
 AudioBuffer<float> getCurrentIR ()
     {
         // init buffers
-        float maxDelay = getMaxDelayCurrent();
+        float maxDelay = getMaxValue(delaysCurrent);
         // TODO: acount for impact of absorbtion on maxDelay required (if it does make sense..)
         int irNumSamples = (int) (maxDelay*1.1 * localSampleRate);
         irRecWorkingBuffer.setSize(1, irNumSamples);
@@ -302,6 +392,8 @@ void updateCrossfade()
     {
         // or stop crossfade mecanism
         delaysCurrent = delaysFuture;
+        valuesRT60Current = valuesRT60Future;
+        tailTimesCurrent = tailTimesFuture;
         ambisonicGainsCurrent = ambisonicGainsFuture;
         
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
@@ -309,11 +401,41 @@ void updateCrossfade()
     }
 }
 
-// get max source image delay in seconds
-float getMaxDelayCurrent()
+// return max value of vector
+float getMaxValue(std::vector<float> vectIn)
 {
-    float maxDelay = *std::max_element(std::begin(delaysCurrent), std::end(delaysCurrent));
-    return maxDelay;
+    float maxValue = *std::max_element(std::begin(vectIn), std::end(vectIn));
+    return maxValue;
+}
+    
+float getReverbTailIncrement()
+{
+    return ( MIN_DELAY_BETWEEN_TAIL_TAP + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(MAX_DELAY_BETWEEN_TAIL_TAP-MIN_DELAY_BETWEEN_TAIL_TAP))) );
+}
+
+// compute new tail time distribution
+void updateReverbTailDistribution()
+{
+    float maxDelayTail = getMaxValue(valuesRT60Future);
+    float maxDelayTap = getMaxValue(delaysFuture);
+    if( maxDelayTail > maxDelayTap ) // discard e.g. full absorbant material scenario
+    {
+        // set new time distribution size (to max number of values possible)
+        tailTimesFuture.resize( (maxDelayTail - maxDelayTap) / MIN_DELAY_BETWEEN_TAIL_TAP, 0.f );
+        
+        // get reverb tail time distribution over [minTime - maxTime]
+        float time = maxDelayTap + getReverbTailIncrement();
+        int index = 0;
+        while( time < maxDelayTail )
+        {
+            tailTimesFuture[index] = time;
+            index += 1;
+            time += getReverbTailIncrement();
+        }
+        // remove zero at the end (the precaution taken above)
+        tailTimesFuture.resize(index);
+    }
+    else{ tailTimesFuture.resize(0); }
 }
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)

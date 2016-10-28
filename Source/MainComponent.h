@@ -60,6 +60,7 @@ private:
     Image logoImage;
     ComboBox numFrequencyBandsComboBox;
     Label numFrequencyBandsLabel;
+    ToggleButton reverbTailToggle;
     
     //==========================================================================
     // AUDIO COMPONENTS
