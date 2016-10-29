@@ -4,11 +4,7 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "AmbixEncode/AmbixEncoder.h"
 #include "FilterBank.h"
-
-#include <numeric>
-
-#define MIN_DELAY_BETWEEN_TAIL_TAP 0.001f // minimum delay between reverb tail tap, in sec
-#define MAX_DELAY_BETWEEN_TAIL_TAP 0.005f  // maximum delay between reverb tail tap, in sec
+#include "ReverbTail.h"
 
 class SourceImagesHandler
 {
@@ -27,16 +23,11 @@ public:
     
     // octave filter bank
     FilterBank filterBank;
-    FilterBank filterBankTail;
     FilterBank filterBankRec;
     
     // reverb tail
-    std::vector<float> valuesRT60Future; // in seconds
-    std::vector<float> valuesRT60Current; // in seconds
-    std::vector<float> slopesRT60;
-    Array<float> gainsRT60;
-    std::vector<float> tailTimesCurrent; // in seconds
-    std::vector<float> tailTimesFuture; // in seconds
+    ReverbTail reverbTailCurrent;
+    ReverbTail reverbTailFuture;
     bool enableReverbTail;
     
 private:
@@ -74,15 +65,7 @@ private:
     
 public:
     
-SourceImagesHandler()
-{
-    // these values are here rather than in prepare to play since they're not (directly) concerned
-    // with the number of absorption bands
-    valuesRT60Current.resize(10, 0.0f);
-    valuesRT60Future.resize(10, 0.0f);
-    slopesRT60.resize(10, 0.0f);
-    gainsRT60.resize(10);
-}
+SourceImagesHandler() {}
 
 ~SourceImagesHandler() {}
 
@@ -106,16 +89,15 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     
     // init filter bank
     filterBank.prepareToPlay( samplesPerBlockExpected, sampleRate );
-    filterBank.setNumFilters( 3, IDs.size() );
+    filterBank.setNumFilters( NUM_OCTAVE_BANDS, IDs.size() );
     
-    // init reverb tail filter bank
-    filterBankTail.prepareToPlay( samplesPerBlockExpected, sampleRate );
-    filterBankTail.setNumFilters( 3, tailTimesCurrent.size() );
-    
+    // init reverb tail
+    reverbTailCurrent.prepareToPlay( samplesPerBlockExpected, sampleRate );
+    reverbTailFuture.prepareToPlay( samplesPerBlockExpected, sampleRate );
     
     // init IR recording filter bank (need a separate, see comment on continuous data stream in FilterBank class)
     filterBankRec.prepareToPlay( samplesPerBlockExpected, sampleRate );
-    filterBankRec.setNumFilters( 10, IDs.size() ); // may as well get the best quality for recording IR
+    filterBankRec.setNumFilters( NUM_OCTAVE_BANDS, IDs.size() ); // may as well get the best quality for recording IR
 }
     
 // get max source image delay in seconds
@@ -123,7 +105,7 @@ float getMaxDelayFuture()
 {
     float maxDelayTap = getMaxValue(delaysFuture);
     if( enableReverbTail ){
-        float maxDelayTail = getMaxValue(valuesRT60Future);
+        float maxDelayTail = getMaxValue(reverbTailFuture.valuesRT60);
         return fmax(maxDelayTap, maxDelayTail);
     }
     else{ return maxDelayTap; }
@@ -222,58 +204,35 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     }
     
     //==========================================================================
-    // ADD GENERAL REVERB TAIL
+    // ADD REVERB TAIL
     
-    // TODO:
-    //      • add crossfade
-    //      • double check RT60 values and usage if correct
-    //      • add reverb tail to save IR method
-    
-    if( enableReverbTail )
-    {
-        // get init tail gain / time
-        float tailInitGain = fmin( 1.0, fmax( 0.0, 1.0/getMaxValue(pathLengths) ));
-        float tailInitDelay = getMaxValue(delaysCurrent);
-        
-        // get tail decrease slope (based on rt60)
-        for (int j = 0; j < slopesRT60.size(); j++)
+    if( enableReverbTail ){
+        if( !crossfadeOver )
         {
-            slopesRT60[j] = tailInitGain * ((9.53674316e-7)-1) / valuesRT60Current[j]; // 1/(2^20) -> -60dB
-        }
-        
-        // DBG(String("time , gain:"));
-        // DBG(String(tailInitDelay) + String(" , ") + String(tailInitGain) );
-        
-        // for each reverb tail tap
-        float delayInFractionalSamples = 0.0f;
-        for (int j = 0; j < tailTimesCurrent.size(); j++)
-        {
-            // tape in delay line
-            delayInFractionalSamples = (tailTimesCurrent[j] * localSampleRate);
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            // DBG(String("crossfade tail: ") + String(crossfadeGain) );
             
-            // get tap gains
-            for (int k = 0; k < slopesRT60.size(); k++)
-            {
-                // negative slope: understand gainCurrent = gainInit - slope*(timeCurrent-timeInit)
-                // the "1 - ..." is to get an absorption, not a gain, to be used in filterbank processBuffer method 
-                gainsRT60.set(k, 1.0f - (tailInitGain + slopesRT60[k] * ( tailTimesCurrent[j] - tailInitDelay )) );
-                // DBG(String(tailTimesCurrent[j]) + String(" , ") + String(gainsRT60[k]) );
-            }
+            // get reverb tail past
+            workingBuffer = reverbTailCurrent.getTailBuffer(delayLine);
+            workingBuffer.applyGain( (1.0 - crossfadeGain) );
+            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
             
-            // DBG(String(tailTimesCurrent[j]) + String(" , ") + String(gainsRT60[0]) );
-            
-            // apply freq-specific gains
-            filterBankTail.processBuffer( workingBuffer, gainsRT60, j );
-            // workingBuffer.applyGain(gainsRT60[0]);
-            
-            // write reverb tap to ambisonic channel W
+            // get reverb tail future
+            workingBuffer = reverbTailFuture.getTailBuffer(delayLine);
+            workingBuffer.applyGain( crossfadeGain );
             ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         }
-        
-        
-        
+        else{
+            workingBuffer = reverbTailCurrent.getTailBuffer(delayLine);
+            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+        }
     }
+    
+    // TODO:
+    //      • improve crossfade in reverb tail: e.g. no need to crossfade but if room changed (i.e. should not impacted by listener pos, to check from evert values)
+    //            (still zipper noises but with very low values of crossfade increment)
+    //      • double check RT60 values and usage if correct
+    //      • check why evert sometimes sends "nan" RT60 (in one or two bands when changin room / material)
+    //      • add reverb tail to save IR method
     
     return ambisonicBuffer;
 }
@@ -300,12 +259,10 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
     }
     
-    // save new RT60 times
-    valuesRT60Future = oscHandler.getRT60Values();
-    updateReverbTailDistribution();
-    DBG( String("future tail size: ") + String( tailTimesCurrent.size() ));
-    DBG( String("max tail size:    ") + String( (getMaxValue(valuesRT60Future) - getMaxValue(delaysFuture)) / MIN_DELAY_BETWEEN_TAIL_TAP ));
-    DBG( String("min tail size:    ") + String( (getMaxValue(valuesRT60Future) - getMaxValue(delaysFuture)) / MAX_DELAY_BETWEEN_TAIL_TAP ));
+    // udpate reverb tail
+    float lastSourceImageDelay = getMaxValue(delaysFuture);
+    float lastSourceImageGain = fmin( 1.0, fmax( 0.0, 1.0/getMaxValue(pathLengths) ));
+    reverbTailFuture.updateInternals(oscHandler.getRT60Values(), lastSourceImageGain, lastSourceImageDelay);
     
     // save (compute) new Ambisonic gains
     auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
@@ -318,7 +275,6 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     
     // update filter bank size
     filterBank.setNumFilters( filterBank.getNumFilters(), IDs.size() );
-    filterBankTail.setNumFilters( filterBankTail.getNumFilters(), tailTimesFuture.size() );
     
     // update number of valid source images
     numSourceImages = IDs.size();
@@ -377,65 +333,36 @@ AudioBuffer<float> getCurrentIR ()
         return irRecAmbisonicBuffer;
     }
     
+void setFilterBankSize(int numFreqBands)
+{
+    filterBank.setNumFilters( numFreqBands, IDs.size() );
+    reverbTailCurrent.setFilterBankSize( numFreqBands );
+    reverbTailFuture.setFilterBankSize( numFreqBands );
+}
+    
 private:
     
 // update crossfade mecanism (to avoid zipper noise with smooth gains transitions)
 void updateCrossfade()
 {
-    // handle crossfade gain mecanism
+    // either update crossfade
     if( crossfadeGain < 1.0 )
     {
-        // either increment delay line crossfade
         crossfadeGain += 0.1;
     }
+    // or stop crossfade mecanism if not already stopped
     else if (!crossfadeOver)
     {
-        // or stop crossfade mecanism
+        // set past = future
         delaysCurrent = delaysFuture;
-        valuesRT60Current = valuesRT60Future;
-        tailTimesCurrent = tailTimesFuture;
         ambisonicGainsCurrent = ambisonicGainsFuture;
+        reverbTailCurrent.updateInternals(reverbTailFuture.valuesRT60, reverbTailFuture.initGain, reverbTailFuture.initDelay);
         
+        // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
         crossfadeOver = true;
     }
-}
-
-// return max value of vector
-float getMaxValue(std::vector<float> vectIn)
-{
-    float maxValue = *std::max_element(std::begin(vectIn), std::end(vectIn));
-    return maxValue;
-}
     
-float getReverbTailIncrement()
-{
-    return ( MIN_DELAY_BETWEEN_TAIL_TAP + static_cast <float> (rand()) /( static_cast <float> (RAND_MAX/(MAX_DELAY_BETWEEN_TAIL_TAP-MIN_DELAY_BETWEEN_TAIL_TAP))) );
-}
-
-// compute new tail time distribution
-void updateReverbTailDistribution()
-{
-    float maxDelayTail = getMaxValue(valuesRT60Future);
-    float maxDelayTap = getMaxValue(delaysFuture);
-    if( maxDelayTail > maxDelayTap ) // discard e.g. full absorbant material scenario
-    {
-        // set new time distribution size (to max number of values possible)
-        tailTimesFuture.resize( (maxDelayTail - maxDelayTap) / MIN_DELAY_BETWEEN_TAIL_TAP, 0.f );
-        
-        // get reverb tail time distribution over [minTime - maxTime]
-        float time = maxDelayTap + getReverbTailIncrement();
-        int index = 0;
-        while( time < maxDelayTail )
-        {
-            tailTimesFuture[index] = time;
-            index += 1;
-            time += getReverbTailIncrement();
-        }
-        // remove zero at the end (the precaution taken above)
-        tailTimesFuture.resize(index);
-    }
-    else{ tailTimesFuture.resize(0); }
 }
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)

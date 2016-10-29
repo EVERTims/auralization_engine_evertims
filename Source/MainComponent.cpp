@@ -70,7 +70,7 @@ ambi2binContainer()
     addAndMakeVisible (&reverbTailToggle);
     reverbTailToggle.setButtonText ("Reverb Tail");
     reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    reverbTailToggle.setEnabled(true);
+    reverbTailToggle.setEnabled(false);
     reverbTailToggle.addListener(this);
     reverbTailToggle.setToggleState(false, juce::sendNotification);
 }
@@ -313,6 +313,7 @@ void MainContentComponent::buttonClicked (Button* button)
     if( button == &reverbTailToggle )
     {
         sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
+        updateOnOscReveive(localSampleRate); // require delay line size update
     }
 }
 
@@ -324,8 +325,7 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         if( numFrequencyBandsComboBox.getSelectedId() == 1 ) numFreqBands = 3;
         else numFreqBands = 10;
         
-        sourceImagesHandler.filterBank.setNumFilters( numFreqBands, sourceImagesHandler.IDs.size() );
-        sourceImagesHandler.filterBankTail.setNumFilters( numFreqBands, sourceImagesHandler.tailTimesCurrent.size() );
+        sourceImagesHandler.setFilterBankSize(numFreqBands);
     }
 }
 //==============================================================================

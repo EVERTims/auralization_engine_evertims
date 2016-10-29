@@ -105,3 +105,13 @@ template <typename Type>
 inline Type round2(Type x, int numberOfDecimals){
     return round(x * pow(10,numberOfDecimals)) / pow(10,numberOfDecimals);
 }
+
+// return max value of vector
+inline float getMaxValue(std::vector<float> vectIn)
+{
+    if( vectIn.size() == 0 ) { return 0; } // not sure this is wise..
+    else{
+        float maxValue = *std::max_element(std::begin(vectIn), std::end(vectIn));
+        return maxValue;
+    }
+}
