@@ -7,8 +7,8 @@
 #include <numeric>
 
 #define MIN_DELAY_BETWEEN_TAIL_TAP 0.001f // minimum delay between reverb tail tap, in sec
-#define MAX_DELAY_BETWEEN_TAIL_TAP 0.005f  // maximum delay between reverb tail tap, in sec
-#define G60 9.537e-7 // 9.53674316e-7 = 1/(2^20) -> -60dB
+#define MAX_DELAY_BETWEEN_TAIL_TAP 0.007f  // maximum delay between reverb tail tap, in sec
+#define G60 1e-6 // 9.53674316e-7 = 1/(2^20) -> -60dB
 
 class ReverbTail
 {
@@ -82,7 +82,7 @@ void updateInternals( std::vector<float> r60Values, float newInitGain, float new
     // update tail decrease slope (based on rt60)
     for (int j = 0; j < NUM_OCTAVE_BANDS; j++)
     {
-        slopesRT60[j] = initGain * (G60-1) / valuesRT60[j];
+        slopesRT60[j] = -60 / valuesRT60[j];
     }
     
     // update tail distribution
@@ -92,8 +92,7 @@ void updateInternals( std::vector<float> r60Values, float newInitGain, float new
     filterBank.setNumFilters( filterBank.getNumFilters(), tailTimes.size() );
     
     // DEBUG
-//    DBG( String("last source image time : ") + String(initDelay) + String(" reverb tail -60dB time: ") + String( getMaxValue(valuesRT60)) + String(" sec") );
-//    DBG( String("last source image gain: ") + String(initGain) );
+//    DBG( String("first reverb tail time / gain : ") + String(initDelay) + String(" / ") + String(initGain) );
 //    DBG( String("future reverb tail size: ") + String( tailTimes.size() ) );
 //    DBG( String("(max reverb tail size: ") + String( (getMaxValue(valuesRT60) - newInitDelay) / MIN_DELAY_BETWEEN_TAIL_TAP ) + String(")") );
 //    DBG( String("(min reverb tail size: ") + String( (getMaxValue(valuesRT60) - newInitDelay) / MAX_DELAY_BETWEEN_TAIL_TAP ) + String(")") );
@@ -113,6 +112,7 @@ AudioBuffer<float> getTailBuffer( DelayLine* delayLine )
     // init
     tailBuffer.clear();
     float delayInFractionalSamples = 0.0f;
+    float tapGain = 0.f;
 
     // for each reverb tail tap
     for (int j = 0; j < tailTimes.size(); j++)
@@ -127,7 +127,9 @@ AudioBuffer<float> getTailBuffer( DelayLine* delayLine )
         {
             // negative slope: understand gainCurrent = gainInit - slope*(timeCurrent-timeInit)
             // the "1 - ..." is to get an absorption, not a gain, to be used in filterbank processBuffer method
-            absorbanceRT60.set(k, 1.0f - (initGain + slopesRT60[k] * ( tailTimes[j] - initDelay )) );
+            tapGain = slopesRT60[k] * ( tailTimes[j] - initDelay ); // dB
+            tapGain = initGain * pow(10, tapGain/10.f); // linear
+            absorbanceRT60.set(k, 1.0f - tapGain );
             // DBG(String(tailTimes[j]) + String(" , ") + String(1.0 - absorbanceRT60[k]) );
         }
         
@@ -163,16 +165,16 @@ void updateReverbTailDistribution()
     if( maxDelayTail > initDelay ) // discard e.g. full absorbant material scenario
     {
         // set new time distribution size (to max number of values possible)
-        tailTimes.resize( (maxDelayTail - initDelay) / MIN_DELAY_BETWEEN_TAIL_TAP, 0.f );
+        tailTimes.resize( (maxDelayTail - initDelay) / (MIN_DELAY_BETWEEN_TAIL_TAP * maxDelayTail), 0.f );
         
         // get reverb tail time distribution over [minTime - maxTime]
-        float time = initDelay + getReverbTailIncrement();
+        float time = initDelay + getReverbTailIncrement() * maxDelayTail;
         int index = 0;
         while( time < maxDelayTail )
         {
             tailTimes[index] = time;
             index += 1;
-            time += getReverbTailIncrement();
+            time += getReverbTailIncrement() * maxDelayTail;
         }
         // remove zero at the end (the precaution taken above)
         tailTimes.resize(index);

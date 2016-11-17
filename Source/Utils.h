@@ -115,3 +115,13 @@ inline float getMaxValue(std::vector<float> vectIn)
         return maxValue;
     }
 }
+
+// return min value of vector
+inline float getMinValue(std::vector<float> vectIn)
+{
+    if( vectIn.size() == 0 ) { return 0; } // not sure this is wise..
+    else{
+        float minValue = *std::min_element(std::begin(vectIn), std::end(vectIn));
+        return minValue;
+    }
+}

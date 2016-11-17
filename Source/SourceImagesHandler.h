@@ -259,10 +259,14 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
     }
     
-    // udpate reverb tail
-    float lastSourceImageDelay = getMaxValue(delaysFuture);
-    float lastSourceImageGain = fmin( 1.0, fmax( 0.0, 1.0/getMaxValue(pathLengths) ));
-    reverbTailFuture.updateInternals(oscHandler.getRT60Values(), lastSourceImageGain, lastSourceImageDelay);
+    if( enableReverbTail ){
+        int index5dB = getIndexOf5dBLoss();
+        if( index5dB >= 0 ){
+            // DBG( String("last source image time / gain : ") + String(getMaxValue(delaysFuture) ) + String(" / ") + String(1.f/getMaxValue(pathLengths) ));
+            reverbTailFuture.updateInternals(oscHandler.getRT60Values(), 1.f/pathLengths[index5dB], delaysFuture[index5dB]);
+        }
+        // else{ DBG(String("no -5d index found, last index / val : ") + String(pathLengths.size()-1) + String(" / ") + String(1.f/pathLengths[pathLengths.size()-1])); }
+    }
     
     // save (compute) new Ambisonic gains
     auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
@@ -356,13 +360,42 @@ void updateCrossfade()
         // set past = future
         delaysCurrent = delaysFuture;
         ambisonicGainsCurrent = ambisonicGainsFuture;
-        reverbTailCurrent.updateInternals(reverbTailFuture.valuesRT60, reverbTailFuture.initGain, reverbTailFuture.initDelay);
+        if( enableReverbTail ){
+            reverbTailCurrent.updateInternals(reverbTailFuture.valuesRT60, reverbTailFuture.initGain, reverbTailFuture.initDelay);
+        }
         
         // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
         crossfadeOver = true;
     }
     
+}
+    
+int getIndexOf5dBLoss(){
+    // TODO: interpolate with up / down bounds rather than nearest to find -5dB estimate time / value
+    
+    if( pathLengths.size() == 0 ) { return -1; }
+    
+    // get / store new init delay / gain (-5dB of max init gain)
+    float maxGain = 1.f / getMinValue(pathLengths);
+    float threshold = pow(10, -5.f / 10.f) * maxGain;
+    DBG(String("maxGain: ") + String(maxGain) + String(" -5dB threshold: ") + String(threshold) );
+    float bestMatchDiff = INFINITY;
+    float diff = 0.f;
+    int bestMatchIndex = -1;
+    for (int i = 0; i < pathLengths.size(); i++)
+    {
+        // WARNING: pathLengths is not a sorted vector
+        diff = abs( (1.f / pathLengths[i]) - threshold);
+        // DBG(String(i) + String(": ") + String(diff));
+        if( diff < bestMatchDiff ) {
+            bestMatchDiff = diff;
+            bestMatchIndex = i;
+        }
+    }
+    DBG(String("-5dB index / gain / diff: ") + String(bestMatchIndex) + String(" / ") + String(1.f/pathLengths[bestMatchIndex]) + String(" / ") + String(bestMatchDiff));
+    
+    return bestMatchIndex;
 }
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)

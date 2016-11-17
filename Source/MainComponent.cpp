@@ -68,7 +68,7 @@ ambi2binContainer()
     numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
     
     addAndMakeVisible (&reverbTailToggle);
-    reverbTailToggle.setButtonText ("Reverb Tail");
+    reverbTailToggle.setButtonText ("Reverb tail");
     reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
     reverbTailToggle.setEnabled(false);
     reverbTailToggle.addListener(this);
