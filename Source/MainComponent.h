@@ -61,6 +61,7 @@ private:
     ComboBox numFrequencyBandsComboBox;
     Label numFrequencyBandsLabel;
     ToggleButton reverbTailToggle;
+    ToggleButton skipDirectPathToggle;
     
     //==========================================================================
     // AUDIO COMPONENTS

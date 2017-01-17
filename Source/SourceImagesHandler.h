@@ -15,11 +15,13 @@ class SourceImagesHandler
 public:
     
     // sources images
-    std::vector<float> IDs;
+    std::vector<int> IDs;
     std::vector<float> delaysCurrent; // in seconds
     std::vector<float> delaysFuture; // in seconds
     std::vector<float> pathLengths; // in meters
     int numSourceImages;
+    int directPathId;
+    bool skipDirectPath;
     
     // octave filter bank
     FilterBank filterBank;
@@ -74,6 +76,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     // set number of valid source image
     numSourceImages = 0;
+    directPathId = -1;
     
     // prepare buffers
     workingBuffer.setSize(1, samplesPerBlockExpected);
@@ -124,6 +127,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     // loop over sources images
     for( int j = 0; j < numSourceImages; j++ )
     {
+        // skip rendering direct path
+        if( skipDirectPath && (directPathId == IDs[j]) ){ continue; }
         
         //==========================================================================
         // GET DELAYED BUFFER
@@ -249,6 +254,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     
     // save new source image data, ready to be used in next audio loop
     IDs = oscHandler.getSourceImageIDs();
+    directPathId = oscHandler.getDirectPathId();
     delaysFuture = oscHandler.getSourceImageDelays();
     delaysCurrent.resize(delaysFuture.size(), 0.0f);
     pathLengths = oscHandler.getSourceImagePathsLength();
@@ -256,7 +262,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     absorptionCoefs.resize(IDs.size());
     for (int j = 0; j < IDs.size(); j++)
     {
-        absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
+        absorptionCoefs[j] = oscHandler.getSourceImageAbsorption(IDs[j]);
     }
     
     if( enableReverbTail ){
@@ -295,7 +301,7 @@ AudioBuffer<float> getCurrentIR ()
     {
         // init buffers
         float maxDelay = getMaxValue(delaysCurrent);
-        // TODO: acount for impact of absorbtion on maxDelay required (if it does make sense..)
+        // TODO: acount for impact of absorption on maxDelay required (if it does make sense..)
         int irNumSamples = (int) (maxDelay*1.1 * localSampleRate);
         irRecWorkingBuffer.setSize(1, irNumSamples);
         irRecWorkingBufferTemp = irRecWorkingBuffer;
@@ -317,7 +323,7 @@ AudioBuffer<float> getCurrentIR ()
             float tapGain = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
             irRecWorkingBuffer.setSample(0, tapSample, tapGain);
             
-            // apply material absorbtion (update filter bank size first, to match number of source image)
+            // apply material absorption (update filter bank size first, to match number of source image)
             filterBankRec.setNumFilters( filterBankRec.getNumFilters(), IDs.size() );
             filterBankRec.processBuffer( irRecWorkingBuffer, absorptionCoefs[j], j );
             

@@ -46,9 +46,9 @@ OSCHandler()
 ~OSCHandler() {}
 
 // TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
-std::vector<float> getSourceImageIDs()
+std::vector<int> getSourceImageIDs()
 {
-    std::vector<float> IDs;
+    std::vector<int> IDs;
     IDs.resize(sourceImageMap.size());
     int i = 0;
     for(auto const &ent1 : sourceImageMap) {
@@ -106,7 +106,7 @@ std::vector<Eigen::Vector3f> getSourceImageDOAs()
 }
 
 // TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
-Array<float> getSourceImageAbsorbtion(int sourceID)
+Array<float> getSourceImageAbsorption(int sourceID)
 {
     return sourceImageMap.find(sourceID)->second.absorption;
 }
@@ -114,6 +114,16 @@ Array<float> getSourceImageAbsorbtion(int sourceID)
 std::vector<float> getRT60Values()
 {
     return valuesR60;
+}
+    
+int getDirectPathId()
+{
+    for(auto const &ent1 : sourceImageMap) {
+        if( ent1.second.reflectionOrder == 0) {
+            return ent1.first;
+        }
+    }
+    return -1;
 }
 
 String getMapContent()

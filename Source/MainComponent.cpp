@@ -73,6 +73,14 @@ ambi2binContainer()
     reverbTailToggle.setEnabled(false);
     reverbTailToggle.addListener(this);
     reverbTailToggle.setToggleState(false, juce::sendNotification);
+    
+    addAndMakeVisible (&skipDirectPathToggle);
+    skipDirectPathToggle.setButtonText ("No direct path");
+    skipDirectPathToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
+    skipDirectPathToggle.setEnabled(true);
+    skipDirectPathToggle.addListener(this);
+    skipDirectPathToggle.setToggleState(false, juce::sendNotification);
+    
 }
 
 MainContentComponent::~MainContentComponent()
@@ -285,6 +293,7 @@ void MainContentComponent::resized()
     numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
     
     reverbTailToggle.setBounds(getWidth() - 380, 140, 120, 20);
+    skipDirectPathToggle.setBounds(getWidth() - 380, 110, 120, 20);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -314,6 +323,10 @@ void MainContentComponent::buttonClicked (Button* button)
     {
         sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
         updateOnOscReveive(localSampleRate); // require delay line size update
+    }
+    if( button == &skipDirectPathToggle )
+    {
+        sourceImagesHandler.skipDirectPath = skipDirectPathToggle.getToggleState();
     }
 }
 
