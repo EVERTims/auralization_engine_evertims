@@ -207,22 +207,34 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     // ADD REVERB TAIL
     
     if( enableReverbTail ){
+        
+        // get input buffer
+        clipboardBuffer.copyFrom(0, 0, ambisonicBuffer, 0, 0, localSamplesPerBlockExpected);
+        
+        // de-apply W channel ambi gain
+        clipboardBuffer.applyGain(1.f - ambisonicGainsCurrent[0][0]);
+        
         if( !crossfadeOver )
         {
-            // DBG(String("crossfade tail: ") + String(crossfadeGain) );
-            
             // get reverb tail past
-            workingBuffer = reverbTailCurrent.getTailBuffer(delayLine);
-            workingBuffer.applyGain( (1.0 - crossfadeGain) );
+            workingBuffer = reverbTailCurrent.getTailBuffer(clipboardBuffer);
+            // apply crossfade gain and re-apply W channel gain
+            workingBuffer.applyGain( (1.0 - crossfadeGain) * ambisonicGainsCurrent[0][0] );
+            // add to ambisonic channel W
             ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
             
             // get reverb tail future
-            workingBuffer = reverbTailFuture.getTailBuffer(delayLine);
-            workingBuffer.applyGain( crossfadeGain );
+            workingBuffer = reverbTailFuture.getTailBuffer(clipboardBuffer);
+            // apply crossfade gain and re-apply W channel gain
+            workingBuffer.applyGain( crossfadeGain * ambisonicGainsCurrent[0][0] );
+            // add to ambisonic channel W
             ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         }
         else{
-            workingBuffer = reverbTailCurrent.getTailBuffer(delayLine);
+            workingBuffer = reverbTailCurrent.getTailBuffer(clipboardBuffer);
+            // re-apply W channel gain
+            workingBuffer.applyGain( ambisonicGainsCurrent[0][0] );
+            // add to ambisonic channel W
             ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         }
     }
@@ -340,8 +352,8 @@ AudioBuffer<float> getCurrentIR ()
 void setFilterBankSize(int numFreqBands)
 {
     filterBank.setNumFilters( numFreqBands, IDs.size() );
-    reverbTailCurrent.setFilterBankSize( numFreqBands );
-    reverbTailFuture.setFilterBankSize( numFreqBands );
+    // reverbTailCurrent.setFilterBankSize( numFreqBands ); // no longer, size is static 3
+    // reverbTailFuture.setFilterBankSize( numFreqBands );
 }
     
 private:

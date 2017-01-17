@@ -70,7 +70,7 @@ ambi2binContainer()
     addAndMakeVisible (&reverbTailToggle);
     reverbTailToggle.setButtonText ("Reverb tail");
     reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    reverbTailToggle.setEnabled(false);
+    reverbTailToggle.setEnabled(true);
     reverbTailToggle.addListener(this);
     reverbTailToggle.setToggleState(false, juce::sendNotification);
 }
@@ -149,7 +149,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         }
         
         // add current audio buffer to delay line
-        delayLine.addFrom(workingBuffer, 0, 0, workingBuffer.getNumSamples());
+        delayLine.copyFrom(workingBuffer, 0, 0, workingBuffer.getNumSamples());
                 
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);

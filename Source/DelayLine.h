@@ -46,7 +46,7 @@ void setSize(int newNumSamples)
 }
 
 // add samples from buffer to delay line
-void addFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+void copyFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
 {
     // either simple copy
     if ( writeIndex + numSamples <= buffer.getNumSamples() )
@@ -60,6 +60,24 @@ void addFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStar
         int numSamplesTail = buffer.getNumSamples() - writeIndex;
         buffer.copyFrom(0, writeIndex, source, 0, 0, numSamplesTail);
         buffer.copyFrom(0, 0, source, 0, numSamplesTail, numSamples - numSamplesTail);
+    }
+}
+
+// add samples from buffer to delay line
+void addFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+{
+    // either simple copy
+    if ( writeIndex + numSamples <= buffer.getNumSamples() )
+    {
+        buffer.addFrom(0, writeIndex, source, 0, 0, numSamples);
+    }
+    
+    // or circular copy (last samples of audio buffer will go at delay line buffer begining)
+    else
+    {
+        int numSamplesTail = buffer.getNumSamples() - writeIndex;
+        buffer.addFrom(0, writeIndex, source, 0, 0, numSamplesTail);
+        buffer.addFrom(0, 0, source, 0, numSamplesTail, numSamples - numSamplesTail);
     }
 }
 
