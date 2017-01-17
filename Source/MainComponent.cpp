@@ -75,7 +75,7 @@ ambi2binContainer()
     reverbTailToggle.setToggleState(false, juce::sendNotification);
     
     addAndMakeVisible (&skipDirectPathToggle);
-    skipDirectPathToggle.setButtonText ("No direct path");
+    skipDirectPathToggle.setButtonText ("Disable direct path");
     skipDirectPathToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
     skipDirectPathToggle.setEnabled(true);
     skipDirectPathToggle.addListener(this);
@@ -292,8 +292,8 @@ void MainContentComponent::resized()
     numFrequencyBandsComboBox.setBounds(getWidth() - 70, 140, 50, 20);
     numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
     
-    reverbTailToggle.setBounds(getWidth() - 380, 140, 120, 20);
-    skipDirectPathToggle.setBounds(getWidth() - 380, 110, 120, 20);
+    reverbTailToggle.setBounds(getWidth() - 400, 140, 120, 20);
+    skipDirectPathToggle.setBounds(getWidth() - 400, 110, 140, 20);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
