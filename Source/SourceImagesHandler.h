@@ -132,12 +132,12 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         {
             // get old delay, tap from delay line, apply gain=f(delay)
             delayInFractionalSamples = delaysCurrent[j] * localSampleRate;
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
             workingBuffer.applyGain(1.0 - crossfadeGain);
             
             // get new delay, tap from delay line, apply gain=f(delay)
             delayInFractionalSamples = delaysFuture[j] * localSampleRate;
-            workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
             workingBufferTemp.applyGain(crossfadeGain);
             
             // add both buffers
@@ -147,7 +147,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         {
             // get delay, tap from delay line
             delayInFractionalSamples = (delaysCurrent[j] * localSampleRate);
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
         }
         
         //==========================================================================

@@ -142,14 +142,14 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             int updatedDelayLineLength = (int)( 1.5 * maxDelay * localSampleRate); // longest delay creates noisy sound if delay line is exactly 1* its duration
             
             // update delay line size
-            delayLine.setSize(updatedDelayLineLength);
+            delayLine.setSize(1, updatedDelayLineLength);
             
             // unflag update required
             requireDelayLineSizeUpdate = false;
         }
         
         // add current audio buffer to delay line
-        delayLine.copyFrom(workingBuffer, 0, 0, workingBuffer.getNumSamples());
+        delayLine.copyFrom(0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
                 
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
