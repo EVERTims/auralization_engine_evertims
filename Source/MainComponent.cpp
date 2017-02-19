@@ -72,7 +72,7 @@ ambi2binContainer()
     reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
     reverbTailToggle.setEnabled(true);
     reverbTailToggle.addListener(this);
-    reverbTailToggle.setToggleState(false, juce::sendNotification);
+    reverbTailToggle.setToggleState(true, juce::sendNotification);
 }
 
 MainContentComponent::~MainContentComponent()

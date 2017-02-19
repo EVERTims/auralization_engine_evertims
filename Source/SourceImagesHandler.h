@@ -160,11 +160,18 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         filterBank.processBuffer( workingBuffer, absorptionCoefs[j], j );
         
         //==========================================================================
-        // ADD SOURCE IMAGE REVERB TAIL
+        // ADD SOURCE IMAGE TO REVERB TAIL
         
         // get tap time distribution
         // create taps as 1st order ambisonic
         // do not forget zipper effect in all that
+        
+        if( enableReverbTail )
+        {
+            // TODO: bus Id selection must be done once and for all for a given source Id (..?)
+            int busId = j%16;
+            reverbTailCurrent.addToBus(busId, workingBuffer);
+        }
         
         //==========================================================================
         // AMBISONIC ENCODING
@@ -208,35 +215,41 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     
     if( enableReverbTail ){
         
-        // get input buffer
-        clipboardBuffer.copyFrom(0, 0, ambisonicBuffer, 0, 0, localSamplesPerBlockExpected);
+        // DEBUG: overwrite ambisonic buffer to only listen to reverb tail
+        workingBuffer = reverbTailCurrent.getTailBuffer();
+        ambisonicBuffer.clear();
+        ambisonicBuffer.copyFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         
-        // de-apply W channel ambi gain
-        clipboardBuffer.applyGain(1.f - ambisonicGainsCurrent[0][0]);
-        
-        if( !crossfadeOver )
-        {
-            // get reverb tail past
-            workingBuffer = reverbTailCurrent.getTailBuffer(clipboardBuffer);
-            // apply crossfade gain and re-apply W channel gain
-            workingBuffer.applyGain( (1.0 - crossfadeGain) * ambisonicGainsCurrent[0][0] );
-            // add to ambisonic channel W
-            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
-            
-            // get reverb tail future
-            workingBuffer = reverbTailFuture.getTailBuffer(clipboardBuffer);
-            // apply crossfade gain and re-apply W channel gain
-            workingBuffer.applyGain( crossfadeGain * ambisonicGainsCurrent[0][0] );
-            // add to ambisonic channel W
-            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
-        }
-        else{
-            workingBuffer = reverbTailCurrent.getTailBuffer(clipboardBuffer);
-            // re-apply W channel gain
-            workingBuffer.applyGain( ambisonicGainsCurrent[0][0] );
-            // add to ambisonic channel W
-            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
-        }
+
+//        // get input buffer
+//        clipboardBuffer.copyFrom(0, 0, ambisonicBuffer, 0, 0, localSamplesPerBlockExpected);
+//        
+//        // de-apply W channel ambi gain
+//        clipboardBuffer.applyGain(1.f - ambisonicGainsCurrent[0][0]);
+//        
+//        if( !crossfadeOver )
+//        {
+//            // get reverb tail past
+//            workingBuffer = reverbTailCurrent.getTailBuffer(clipboardBuffer);
+//            // apply crossfade gain and re-apply W channel gain
+//            workingBuffer.applyGain( (1.0 - crossfadeGain) * ambisonicGainsCurrent[0][0] );
+//            // add to ambisonic channel W
+//            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+//            
+//            // get reverb tail future
+//            workingBuffer = reverbTailFuture.getTailBuffer(clipboardBuffer);
+//            // apply crossfade gain and re-apply W channel gain
+//            workingBuffer.applyGain( crossfadeGain * ambisonicGainsCurrent[0][0] );
+//            // add to ambisonic channel W
+//            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+//        }
+//        else{
+//            workingBuffer = reverbTailCurrent.getTailBuffer(clipboardBuffer);
+//            // re-apply W channel gain
+//            workingBuffer.applyGain( ambisonicGainsCurrent[0][0] );
+//            // add to ambisonic channel W
+//            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+//        }
     }
     
     // TODO:
