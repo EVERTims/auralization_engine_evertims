@@ -36,6 +36,8 @@ private:
     AudioBuffer<float> workingBuffer; // working buffer
     AudioBuffer<float> workingBufferTemp; // 2nd working buffer, e.g. for crossfade mecanism
     AudioBuffer<float> clipboardBuffer; // to be used as local copy of working buffer when working buffer modified in loops
+    AudioBuffer<float> bandBuffer; // N band buffer returned by the filterbank for f(freq) absorption
+    AudioBuffer<float> tailBuffer; // FDN_ORDER band buffer returned by the FDN reverb tail
     
     AudioBuffer<float> irRecWorkingBuffer; // used for IR recording
     AudioBuffer<float> irRecWorkingBufferTemp; // used for IR recording
@@ -80,6 +82,8 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     workingBuffer.clear();
     workingBufferTemp = workingBuffer;
     clipboardBuffer = workingBuffer;
+    bandBuffer.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
+    tailBuffer.setSize(16, samplesPerBlockExpected);
     
     ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
     
@@ -104,11 +108,13 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 float getMaxDelayFuture()
 {
     float maxDelayTap = getMaxValue(delaysFuture);
-    if( enableReverbTail ){
-        float maxDelayTail = getMaxValue(reverbTailFuture.valuesRT60);
-        return fmax(maxDelayTap, maxDelayTail);
-    }
-    else{ return maxDelayTap; }
+    
+    // NO NEED SINCE FDN HANDLES ITS OWN DELAY LINE
+//    if( enableReverbTail ){
+//        float maxDelayTail = getMaxValue(reverbTailFuture.valuesRT60);
+//        return fmax(maxDelayTap, maxDelayTail);
+//    }
+    return maxDelayTap;
 }
     
 // main: loop over sources images, apply delay + room coloration + spatialization
@@ -156,21 +162,28 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         workingBuffer.applyGain(gainDelayLine);
         
         //==========================================================================
-        // APPLY ABSORPTION COEFFICIENTS (octave filer bank decomposition)
-        filterBank.processBuffer( workingBuffer, absorptionCoefs[j], j );
+        // APPLY ABSORPTION (FREQUENCY-BAND WISE)
         
+        // decompose in frequency bands
+        bandBuffer = filterBank.getBandBuffer( workingBuffer, j);
+        
+        // apply abs gains and recompose
+        workingBuffer.clear();
+        for( int k = 0; k < bandBuffer.getNumChannels(); k++ )
+        {
+            // apply absorption gains
+            bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, fmin(abs(1.0 - absorptionCoefs[j][k]), 1.f));
+            
+            // recompose (add-up frequency bands)
+            workingBuffer.addFrom(0, 0, bandBuffer, k, 0, localSamplesPerBlockExpected);
+        }
+
         //==========================================================================
-        // ADD SOURCE IMAGE TO REVERB TAIL
-        
-        // get tap time distribution
-        // create taps as 1st order ambisonic
-        // do not forget zipper effect in all that
-        
+        // FEED REVERB TAIL FDN
         if( enableReverbTail )
         {
-            // TODO: bus Id selection must be done once and for all for a given source Id (..?)
-            int busId = j%16;
-            reverbTailCurrent.addToBus(busId, workingBuffer);
+            int busId = j%16; // TODO: make it dynamic
+            reverbTailCurrent.addToBus(busId, bandBuffer);
         }
         
         //==========================================================================
@@ -215,12 +228,22 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     
     if( enableReverbTail ){
         
-        // DEBUG: overwrite ambisonic buffer to only listen to reverb tail
-        workingBuffer = reverbTailCurrent.getTailBuffer();
-        ambisonicBuffer.clear();
-        ambisonicBuffer.copyFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+        // get tail buffer
+        tailBuffer = reverbTailCurrent.getTailBuffer();
         
-
+        // apply gain
+        tailBuffer.applyGain(0.4f);
+        
+        // add to ambisonic channels
+        int ambiId; int fdnId;
+        for( int k = 0; k < fmin(N_AMBI_CH, 16); k++ )
+        {
+            ambiId = k % 4;
+            fdnId = k % 16;
+            ambisonicBuffer.addFrom(ambiId, 0, tailBuffer, fdnId, 0, localSamplesPerBlockExpected);
+        }
+        
+        
 //        // get input buffer
 //        clipboardBuffer.copyFrom(0, 0, ambisonicBuffer, 0, 0, localSamplesPerBlockExpected);
 //        
@@ -282,6 +305,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     for (int j = 0; j < IDs.size(); j++)
     {
         absorptionCoefs[j] = oscHandler.getSourceImageAbsorbtion(IDs[j]);
+        absorptionCoefs[j] = reduceAbsorptionCoefs(absorptionCoefs[j]);
     }
     
     if( enableReverbTail ){
@@ -316,6 +340,37 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     }
 }
 
+// from 10 bands to 3 bands if need be
+Array<float> reduceAbsorptionCoefs(Array<float> absorptionCoefsSingleSource)
+{
+    // skip if no need for reduction
+    if( filterBank.getNumFilters() == 10 ){ return absorptionCoefsSingleSource; }
+
+
+    
+    // reduce from 10 to 3 bands
+    // Band Low
+    int freqBandGain = 0.0f;
+    for( int i = 0; i < 5; i++ ){ freqBandGain += absorptionCoefsSingleSource[i]; }
+    freqBandGain = freqBandGain/5.f;
+    absorptionCoefsSingleSource.set(0, freqBandGain);
+
+    // Band Med
+    freqBandGain = 0.0f;
+    for( int i = 5; i < 9; i++ ){ freqBandGain += absorptionCoefsSingleSource[i]; }
+    freqBandGain = freqBandGain/5.f;
+    // freqBandGain = fmin(abs(1.0 - freqBandGain/5.f), 1.f);
+    absorptionCoefsSingleSource.set(1, freqBandGain);
+    
+    // Band High
+    freqBandGain = absorptionCoefsSingleSource[9];
+    absorptionCoefsSingleSource.set(2, freqBandGain);
+    
+
+    return absorptionCoefsSingleSource;
+}
+
+    
 AudioBuffer<float> getCurrentIR ()
     {
         // init buffers
@@ -365,6 +420,7 @@ AudioBuffer<float> getCurrentIR ()
 void setFilterBankSize(int numFreqBands)
 {
     filterBank.setNumFilters( numFreqBands, IDs.size() );
+    bandBuffer.setSize( numFreqBands, localSamplesPerBlockExpected );
     // reverbTailCurrent.setFilterBankSize( numFreqBands ); // no longer, size is static 3
     // reverbTailFuture.setFilterBankSize( numFreqBands );
 }
