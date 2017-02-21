@@ -125,3 +125,53 @@ inline float getMinValue(std::vector<float> vectIn)
         return minValue;
     }
 }
+
+// general function used to convert 10 frequency bands coefficients to 3 bands
+inline std::vector<float> from10to3bands(std::vector<float> vect10bands)
+{
+    // init
+    std::vector<float> vect3bands;
+    
+    // fill input
+    for( int i = 0; i < 3; i++ ){ vect3bands.push_back(0.f); }
+    
+    // band Low
+    for( int i = 0; i < 5; i++ ){ vect3bands[0] += vect10bands[i]; }
+    vect3bands[0] /= 5.f;
+
+    // band Med
+    for( int i = 5; i < 9; i++ ){ vect3bands[1] += vect10bands[i]; }
+    vect3bands[1] /= 4.f;
+    
+    // band high
+    vect3bands[2] = vect10bands[9];
+    
+    return vect3bands;
+}
+
+// general function used to convert 10 frequency bands coefficients to 3 bands
+inline Array<float> from10to3bands(Array<float> vect10bands)
+{
+    // init
+    Array<float> vect3bands;
+    vect3bands.resize(3);
+    float bandValue;
+    
+    // Band Low
+    bandValue = 0.f;
+    for( int i = 0; i < 5; i++ ){ bandValue += vect10bands[i]; }
+    bandValue = bandValue/5.f;
+    vect3bands.set(0, bandValue);
+    
+    // Band Med
+    bandValue = 0.f;
+    for( int i = 5; i < 9; i++ ){ bandValue += vect10bands[i]; }
+    bandValue = bandValue/4.f;
+    vect3bands.set(1, bandValue);
+    
+    // Band High
+    bandValue = vect10bands[9];
+    vect3bands.set(2, bandValue);
+    
+    return vect3bands;
+}

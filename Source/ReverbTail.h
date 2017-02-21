@@ -2,11 +2,6 @@
 #define REVERBTAIL_H_INCLUDED
 
 #include "../JuceLibraryCode/JuceHeader.h"
-#include "FilterBank.h"
-
-#include <numeric>
-
-#define FDN_ORDER 16 // speed of sound in m.s-1
 
 class ReverbTail
 {
@@ -17,38 +12,29 @@ class ReverbTail
 public:
 
     std::vector<float> valuesRT60; // in sec
-    float initGain = 0.0f; // S.I.
-    float initDelay = 0.0f; // in sec
+
+    static const int numOctaveBands = 3;
+    static const int MAX_FDN_ORDER = 16;
+    static const int fdnOrder = 16;
     
 private:
-
-    // octave filter bank
-    // FilterBank filterBank;
-    int numOctaveBands = 3;
-    // std::vector<IIRFilter> freqFilters;
     
     // local delay line
     DelayLine delayLine;
-    // bool reverbTailReadyToUse;
     
     // setup FDN (static FDN order of 16 is max for now)
-    std::array<float, 16> fdnDelays; // in sec
-    // std::array<float, 16> fdnGains; // S.I.
-    std::array< std::array < float, 16>, 3 > fdnGains; // S.I.
-    std::array< std::array < float, 16>, 16 > fdnFeedbackMatrix; // S.I.
+    std::array<float, MAX_FDN_ORDER> fdnDelays; // in sec
+    std::array< std::array < float, MAX_FDN_ORDER>, numOctaveBands > fdnGains; // S.I.
+    std::array< std::array < float, MAX_FDN_ORDER>, MAX_FDN_ORDER > fdnFeedbackMatrix; // S.I.
     
     // audio buffers
     AudioBuffer<float> reverbBusBuffers; // working buffer
     AudioBuffer<float> workingBuffer; // working buffer
     AudioBuffer<float> tailBuffer;
-
-    // RT60 values
-    // std::vector<float> slopesRT60;
     
     // misc.
     double localSampleRate;
     int localSamplesPerBlockExpected;
-    // Array<float> absorbanceRT60;
     
 //==========================================================================
 // METHODS
@@ -56,20 +42,11 @@ private:
 public:
     
 ReverbTail() {
-    // set to NUM_OCTAVE_BANDS rather than local numOctaveBands since anyway get methods
-    // from OSCHandler will resize them (for "clarity's" sake here).
-//    slopesRT60.resize( NUM_OCTAVE_BANDS, 0.0f );
     
-//    absorbanceRT60.resize( numOctaveBands );
-    
-    valuesRT60.resize( NUM_OCTAVE_BANDS, 0.0f );
-    
-    
+    valuesRT60.resize( numOctaveBands, 0.0f );
+
     defineFdnFeedbackMatrix();
     updateFdnParameters();
-    
-    // tailNoises.resize( numOctaveBands );
-    // reverbTailReadyToUse = false;
 }
 
 ~ReverbTail() {}
@@ -78,32 +55,28 @@ ReverbTail() {
 void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     // prepare buffers
-    reverbBusBuffers.setSize(FDN_ORDER*3, samplesPerBlockExpected); // for 3 freq bands
+    reverbBusBuffers.setSize(fdnOrder*numOctaveBands, samplesPerBlockExpected);
     reverbBusBuffers.clear();
-    tailBuffer.setSize(FDN_ORDER, samplesPerBlockExpected);
-    
-    workingBuffer.setSize(1, samplesPerBlockExpected);
-    workingBuffer.clear();
+    tailBuffer.setSize(fdnOrder, samplesPerBlockExpected);
+    workingBuffer.setSize(1, samplesPerBlockExpected, false, true);
     
     // init delay line
     delayLine.prepareToPlay(samplesPerBlockExpected, sampleRate);
-    delayLine.setSize(FDN_ORDER*3, sampleRate); // debug: set delay line max size
+    delayLine.setSize(fdnOrder*numOctaveBands, sampleRate); // debug: set delay line max size
     
     // keep local copies
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
 }
 
-void updateInternals( std::vector<float> r60Values, float newInitGain, float newInitDelay )
+void updateInternals( std::vector<float> rt60Values )
 {
-    // store new values
-    initDelay = newInitDelay;
-    initGain = newInitGain;
-    valuesRT60 = r60Values;
+    // store new RT60 values
+    valuesRT60 = from10to3bands( rt60Values );
     
     // increase fdn delay line length if need be
     float maxDelay = getMaxValue(valuesRT60);
-    delayLine.setSize(FDN_ORDER*3, maxDelay*localSampleRate);
+    delayLine.setSize(fdnOrder*numOctaveBands, maxDelay*localSampleRate);
     
     // update FDN parameters
     updateFdnParameters();
@@ -112,13 +85,17 @@ void updateInternals( std::vector<float> r60Values, float newInitGain, float new
 // add source image to reverberation bus for latter use
 void addToBus( int busId, AudioBuffer<float> source )
 {
-    // TODO: SUPPORT 10 CHANNELS INPUTS (i.e. downmix to 3 here)
     if( source.getNumChannels() == 3 )
     {
         for( int k = 0; k < source.getNumChannels(); k++ )
         {
-            reverbBusBuffers.addFrom(k*FDN_ORDER+busId, 0, source, k, 0, localSamplesPerBlockExpected);
+            reverbBusBuffers.addFrom(k*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected);
         }
+    }
+    else{ // from 10 to 3 bands
+        for( int k = 0; k < 5; k++ ){ reverbBusBuffers.addFrom(0*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected); }
+        for( int k = 5; k < 9; k++ ){ reverbBusBuffers.addFrom(1*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected); }
+        reverbBusBuffers.addFrom(2*fdnOrder+busId, 0, source, 9, 0, localSamplesPerBlockExpected);
     }
 }
     
@@ -131,13 +108,13 @@ AudioBuffer<float> getTailBuffer()
     workingBuffer.clear();
     
     int bufferIndex = 0;
-    for (int fdnId = 0; fdnId < FDN_ORDER; fdnId++)
+    for (int fdnId = 0; fdnId < fdnOrder; fdnId++)
     {
         delayInFractionalSamples = fdnDelays[fdnId] * localSampleRate;
         
-        for (int bandId = 0; bandId < 3; bandId++)
+        for (int bandId = 0; bandId < numOctaveBands; bandId++)
         {
-            bufferIndex = bandId*FDN_ORDER + fdnId;
+            bufferIndex = bandId*fdnOrder + fdnId;
             
             // clear delay line head (copy cleared buffer): necessary, to recursively use the delayLine addFrom afterwards
             delayLine.copyFrom( bufferIndex, workingBuffer, 0, 0, localSamplesPerBlockExpected );
@@ -161,18 +138,18 @@ AudioBuffer<float> getTailBuffer()
     
     // write fdn outputs to delay lines (with cross-feedback matrix)
     // had to put this in a different loop to await for reverbBusBuffers fill
-    for (int fdnId = 0; fdnId < FDN_ORDER; fdnId++)
+    for (int fdnId = 0; fdnId < fdnOrder; fdnId++)
     {
-         for (int fdnFedId = 0; fdnFedId < FDN_ORDER; fdnFedId++)
+         for (int fdnFedId = 0; fdnFedId < fdnOrder; fdnFedId++)
         {
-            for (int bandId = 0; bandId < 3; bandId++)
+            for (int bandId = 0; bandId < numOctaveBands; bandId++)
             {
                 // get fdnFedId output, apply cross-feedback gain
-                workingBuffer.copyFrom(0, 0, reverbBusBuffers, fdnFedId + bandId*FDN_ORDER, 0, localSamplesPerBlockExpected);
+                workingBuffer.copyFrom(0, 0, reverbBusBuffers, fdnFedId + bandId*fdnOrder, 0, localSamplesPerBlockExpected);
                 workingBuffer.applyGain(fdnFeedbackMatrix[fdnId][fdnFedId]);
                 
                 // write to fdnId (delayLine)
-                delayLine.addFrom(fdnId + bandId*FDN_ORDER, workingBuffer, 0, 0, localSamplesPerBlockExpected );
+                delayLine.addFrom(fdnId + bandId*fdnOrder, workingBuffer, 0, 0, localSamplesPerBlockExpected );
             }
         }
     }
@@ -184,42 +161,42 @@ AudioBuffer<float> getTailBuffer()
     reverbBusBuffers.clear();
     
     return tailBuffer;
-
-
-    
 }
 
     
 private:
   
-    void updateFdnParameters(){
-        
-        // TO DO: delay values should be based on dist min / max (see pd patch / Sabine formula)
-        fdnDelays[0] = 0.011995;
-        fdnDelays[1] = 0.019070;
-        fdnDelays[2] = 0.021791;
-        fdnDelays[3] = 0.031043;
-        fdnDelays[4] = 0.038118;
-        fdnDelays[5] = 0.041927;
-        fdnDelays[6] = 0.050091;
-        fdnDelays[7] = 0.063696;
-        fdnDelays[8] = 0.078934;
-        fdnDelays[9] = 0.084376;
-        fdnDelays[10] = 0.101791;
-        fdnDelays[11] = 0.114308;
-        fdnDelays[12] = 0.120839;
-        fdnDelays[13] = 0.141519;
-        fdnDelays[14] = 0.156213;
-        fdnDelays[15] = 0.179615;
-        
-        for (int bandId = 0; bandId < 3; bandId++)
+void updateFdnParameters(){
+    
+    // Define FDN delays
+    // TO DO: delay values should be based on dist min / max (see pd patch / Sabine formula)
+    // but that would require estimation of room volume / surface
+    fdnDelays[0] = 0.011995;
+    fdnDelays[1] = 0.019070;
+    fdnDelays[2] = 0.021791;
+    fdnDelays[3] = 0.031043;
+    fdnDelays[4] = 0.038118;
+    fdnDelays[5] = 0.041927;
+    fdnDelays[6] = 0.050091;
+    fdnDelays[7] = 0.063696;
+    fdnDelays[8] = 0.078934;
+    fdnDelays[9] = 0.084376;
+    fdnDelays[10] = 0.101791;
+    fdnDelays[11] = 0.114308;
+    fdnDelays[12] = 0.120839;
+    fdnDelays[13] = 0.141519;
+    fdnDelays[14] = 0.156213;
+    fdnDelays[15] = 0.179615;
+    
+    // Define FDN gains
+    for (int bandId = 0; bandId < numOctaveBands; bandId++)
+    {
+        for (int fdnId = 0; fdnId < fdnOrder; fdnId++)
         {
-            for (int fdnId = 0; fdnId < FDN_ORDER; fdnId++)
-            {   // TODO: valuesRT60 are still for 10 bands, to be converted
-                fdnGains[bandId][fdnId] = pow( 10, -3*fdnDelays[fdnId] / valuesRT60[bandId] );
-            }
+            fdnGains[bandId][fdnId] = pow( 10, -3*fdnDelays[fdnId] / valuesRT60[bandId] );
         }
     }
+}
 
 // direct copy of output of hadamar matrix as defined in reverbTailv3.m file
 void defineFdnFeedbackMatrix(){
