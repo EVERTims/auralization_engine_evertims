@@ -63,6 +63,16 @@ ambi2binContainer()
     numFrequencyBandsComboBox.addItem("10", 2);
     numFrequencyBandsComboBox.setSelectedId(1);
     
+    addAndMakeVisible(gainReverbTailSlider);
+    gainReverbTailSlider.setRange(0.0, 2.0);
+    gainReverbTailSlider.setValue(1.0);
+    gainReverbTailSlider.setSliderStyle(Slider::LinearHorizontal);
+    gainReverbTailSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    gainReverbTailSlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    gainReverbTailSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    gainReverbTailSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    gainReverbTailSlider.addListener(this);
+    
     addAndMakeVisible (numFrequencyBandsLabel);
     numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
     numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
@@ -70,9 +80,9 @@ ambi2binContainer()
     addAndMakeVisible (&reverbTailToggle);
     reverbTailToggle.setButtonText ("Reverb tail");
     reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    reverbTailToggle.setEnabled(false);
+    reverbTailToggle.setEnabled(true);
     reverbTailToggle.addListener(this);
-    reverbTailToggle.setToggleState(false, juce::sendNotification);
+    reverbTailToggle.setToggleState(true, juce::sendNotification);
     
     addAndMakeVisible (&skipDirectPathToggle);
     skipDirectPathToggle.setButtonText ("Disable direct path");
@@ -80,7 +90,6 @@ ambi2binContainer()
     skipDirectPathToggle.setEnabled(true);
     skipDirectPathToggle.addListener(this);
     skipDirectPathToggle.setToggleState(false, juce::sendNotification);
-    
 }
 
 MainContentComponent::~MainContentComponent()
@@ -150,14 +159,14 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
             int updatedDelayLineLength = (int)( 1.5 * maxDelay * localSampleRate); // longest delay creates noisy sound if delay line is exactly 1* its duration
             
             // update delay line size
-            delayLine.setSize(updatedDelayLineLength);
+            delayLine.setSize(1, updatedDelayLineLength);
             
             // unflag update required
             requireDelayLineSizeUpdate = false;
         }
         
         // add current audio buffer to delay line
-        delayLine.addFrom(workingBuffer, 0, 0, workingBuffer.getNumSamples());
+        delayLine.copyFrom(0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
                 
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
@@ -292,8 +301,11 @@ void MainContentComponent::resized()
     numFrequencyBandsComboBox.setBounds(getWidth() - 70, 140, 50, 20);
     numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
     
-    reverbTailToggle.setBounds(getWidth() - 400, 140, 120, 20);
-    skipDirectPathToggle.setBounds(getWidth() - 400, 110, 140, 20);
+    skipDirectPathToggle.setBounds(200, 110, 140, 20);
+
+    reverbTailToggle.setBounds(30, 140, 120, 20);
+    gainReverbTailSlider.setBounds (150, 140, 250, 20);
+
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -341,6 +353,15 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         sourceImagesHandler.setFilterBankSize(numFreqBands);
     }
 }
+
+void MainContentComponent::sliderValueChanged(Slider* slider)
+{
+    if( slider == &gainReverbTailSlider )
+    {
+        sourceImagesHandler.reverbTailGain = gainReverbTailSlider.getValue();
+    }
+}
+
 //==============================================================================
 // (This function is called by the app startup code to create our main component)
 Component* createMainContentComponent()     { return new MainContentComponent(); }

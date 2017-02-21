@@ -37,29 +37,50 @@ DelayLine()
 ~DelayLine() {}
 
 // increase delay line size if need be (no shrinking delay line for now)
-void setSize(int newNumSamples)
+void setSize(int newNumChannels, int newNumSamples)
 {
-    if (newNumSamples > buffer.getNumSamples())
+    newNumSamples = fmax(buffer.getNumSamples(), newNumSamples);
+    
+    if( newNumSamples > buffer.getNumSamples() || newNumChannels != buffer.getNumChannels() )
     {
-        buffer.setSize(1, newNumSamples, true, true);
+        buffer.setSize(newNumChannels, newNumSamples, true, true);
     }
 }
 
 // add samples from buffer to delay line
-void addFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+// void copyFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+void copyFrom(int destChannel, const juce::AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
 {
     // either simple copy
     if ( writeIndex + numSamples <= buffer.getNumSamples() )
     {
-        buffer.copyFrom(0, writeIndex, source, 0, 0, numSamples);
+        buffer.copyFrom(destChannel, writeIndex, source, sourceChannel, 0, numSamples);
     }
     
     // or circular copy (last samples of audio buffer will go at delay line buffer begining)
     else
     {
         int numSamplesTail = buffer.getNumSamples() - writeIndex;
-        buffer.copyFrom(0, writeIndex, source, 0, 0, numSamplesTail);
-        buffer.copyFrom(0, 0, source, 0, numSamplesTail, numSamples - numSamplesTail);
+        buffer.copyFrom(destChannel, writeIndex, source, sourceChannel, 0, numSamplesTail);
+        buffer.copyFrom(destChannel, 0, source, sourceChannel, numSamplesTail, numSamples - numSamplesTail);
+    }
+}
+
+// add samples from buffer to delay line
+void addFrom(int destChannel, const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+{
+    // either simple copy
+    if ( writeIndex + numSamples <= buffer.getNumSamples() )
+    {
+        buffer.addFrom(destChannel, writeIndex, source, sourceChannel, 0, numSamples);
+    }
+    
+    // or circular copy (last samples of audio buffer will go at delay line buffer begining)
+    else
+    {
+        int numSamplesTail = buffer.getNumSamples() - writeIndex;
+        buffer.addFrom(destChannel, writeIndex, source, sourceChannel, 0, numSamplesTail);
+        buffer.addFrom(destChannel, 0, source, sourceChannel, numSamplesTail, numSamples - numSamplesTail);
     }
 }
 
@@ -73,7 +94,8 @@ void incrementWritePosition(int numSamples)
 // local equivalent of prepareToPlay
 void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    buffer.setSize(1, samplesPerBlockExpected);
+    int numChannels = buffer.getNumChannels();
+    buffer.setSize(numChannels, samplesPerBlockExpected);
     buffer.clear();
     chunkBuffer.setSize(1, samplesPerBlockExpected);
     chunkBuffer.clear();
@@ -82,7 +104,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 }
 
 // get delayed buffer out of delay line
-AudioBuffer<float> getChunk(int numSamples, int delayInSamples)
+AudioBuffer<float> getChunk(int sourceChannel, int numSamples, int delayInSamples)
 {
     
     int writePos = writeIndex - delayInSamples;
@@ -96,24 +118,24 @@ AudioBuffer<float> getChunk(int numSamples, int delayInSamples)
     
     if ( ( writePos + numSamples ) < buffer.getNumSamples() )
     { // simple copy
-        chunkBuffer.copyFrom(0, 0, buffer, 0, writePos, numSamples);
+        chunkBuffer.copyFrom(0, 0, buffer, sourceChannel, writePos, numSamples);
     }
     else
     { // circular loop
         int numSamplesTail = buffer.getNumSamples() - writePos;
-        chunkBuffer.copyFrom(0, 0, buffer, 0, writePos, numSamplesTail );
-        chunkBuffer.copyFrom(0, numSamplesTail, buffer, 0, 0, numSamples - numSamplesTail);
+        chunkBuffer.copyFrom(0, 0, buffer, sourceChannel, writePos, numSamplesTail );
+        chunkBuffer.copyFrom(0, numSamplesTail, buffer, sourceChannel, 0, numSamples - numSamplesTail);
     }
     
     return chunkBuffer;
 }
 
 // get interpolated delayed buffer out of delay line (linear interpolation between previous and next)
-AudioBuffer<float> getInterpolatedChunk(int numSamples, float delayInSamples)
+AudioBuffer<float> getInterpolatedChunk(int sourceChannel, int numSamples, float delayInSamples)
 {
     // get previous and next positions in delay line
-    chunkBufferPrev = getChunk(numSamples, ceil(delayInSamples));
-    chunkBufferNext = getChunk(numSamples, floor(delayInSamples));
+    chunkBufferPrev = getChunk(sourceChannel, numSamples, ceil(delayInSamples));
+    chunkBufferNext = getChunk(sourceChannel, numSamples, floor(delayInSamples));
     
     // apply linear interpolation gains
     chunkBufferPrev.applyGain((float)(delayInSamples-floor(delayInSamples)));

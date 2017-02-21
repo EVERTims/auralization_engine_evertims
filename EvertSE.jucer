@@ -66,6 +66,10 @@
         <FILE id="S30np0" name="evertims_logo_256.png" compile="0" resource="1"
               file="data/images/evertims_logo_256.png"/>
       </GROUP>
+      <GROUP id="{1E781F31-3E12-D5C4-C80A-7DD5FB767D3F}" name="sounds">
+        <FILE id="jSk5KN" name="impulse.wav" compile="0" resource="0" file="data/sounds/impulse.wav"
+              xcodeResource="1"/>
+      </GROUP>
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>

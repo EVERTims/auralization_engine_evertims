@@ -11,7 +11,8 @@ class FilterBank
     
 public:
 
-double localSampleRate = 44100; // default sampling rate, to be set in program that uses filter bank
+double localSampleRate; // default sampling rate, to be set in program that uses filter bank
+int localSamplesPerBlockExpected;
     
 private:
 
@@ -20,6 +21,7 @@ std::vector<std::array<IIRFilter, NUM_OCTAVE_BANDS-1> > octaveFilterBanks;
     
 AudioBuffer<float> bufferFiltered;
 AudioBuffer<float> bufferRemains;
+AudioBuffer<float> bufferBands;
     
 //==========================================================================
 // METHODS
@@ -34,8 +36,10 @@ FilterBank() {}
 void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
 {
     localSampleRate = sampleRate;
+    localSamplesPerBlockExpected = samplesPerBlockExpected;
     bufferFiltered.setSize(1, samplesPerBlockExpected);
     bufferRemains = bufferFiltered;
+    bufferBands.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
 }
 
 // Define number of frequency bands in filter-bank ( only choice is betwen 3 or 10 )
@@ -43,6 +47,10 @@ void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
 // needs its own separate filter bank (see https://forum.juce.com/t/iirfilter-help/1733/7).
 void setNumFilters( int numBands, int numSourceImages )
 {
+    // resize band buffer
+    numOctaveBands = numBands;
+    bufferBands.setSize(numBands, localSamplesPerBlockExpected);
+    
     double fc; // refers to cutoff frequency
     octaveFilterBanks.resize( numSourceImages );
     
@@ -50,8 +58,6 @@ void setNumFilters( int numBands, int numSourceImages )
     {
         if( numBands == 10 ) // 10-filter-bank
         {
-            numOctaveBands = numBands;
-            
             fc = 31.5; double fcMid;
             for( int i = 0; i < numOctaveBands-1; i++ )
             {
@@ -68,8 +74,6 @@ void setNumFilters( int numBands, int numSourceImages )
         
         else // 3-filter-bank
         {
-            numOctaveBands = 3;
-
             fc = 480;
             octaveFilterBanks[j][0].setCoefficients( IIRCoefficients::makeLowPass( localSampleRate, fc ) );
             octaveFilterBanks[j][0].reset();
@@ -82,7 +86,33 @@ void setNumFilters( int numBands, int numSourceImages )
 }
 
 int getNumFilters() { return numOctaveBands; }
+
+// Decompose source buffer into bands, return multi-channel buffer with one band per channel
+AudioBuffer<float> getBandBuffer( AudioBuffer<float> &source, int sourceImageId )
+{
+    // prepare buffers
+    bufferRemains = source;
     
+    // recursive filtering for all but last band
+    for( int i = 0; i < numOctaveBands-1; i++ )
+    {
+        // filter the remaining spectrum
+        bufferFiltered = bufferRemains;
+        octaveFilterBanks[sourceImageId][i].processSamples( bufferFiltered.getWritePointer(0), localSamplesPerBlockExpected );
+        
+        // substract just processed band from remaining spectrum
+        bufferFiltered.applyGain( -1.f );
+        bufferRemains.addFrom( 0, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
+        
+        // add filtered band to output
+        bufferBands.copyFrom( i, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
+    }
+    
+    bufferBands.copyFrom( numOctaveBands-1, 0, bufferRemains, 0, 0, localSamplesPerBlockExpected );
+    return bufferBands;
+}
+    
+// Decompose source buffer into bands, apply absorption coefficients and re-sum to source buffer
 void processBuffer( AudioBuffer<float> &source, Array<float> absorptionCoefsSingleSource, int sourceImageId )
 {
     // prepare buffers
@@ -97,25 +127,8 @@ void processBuffer( AudioBuffer<float> &source, Array<float> absorptionCoefsSing
         bufferFiltered = bufferRemains;
         octaveFilterBanks[sourceImageId][i].processSamples( bufferFiltered.getWritePointer(0), bufferFiltered.getNumSamples() );
         
-        // either get gain related to frequency band: 3-bands
-        if( numOctaveBands == 3 )
-        {
-            octaveFreqGain = 0.0f;
-            
-            if( i == 0 )
-            {
-                for( int m = 0; m < 5; m++ ) { octaveFreqGain += absorptionCoefsSingleSource[m]; }
-                octaveFreqGain = fmin(abs(1.0 - octaveFreqGain/5.f), 1.f);
-            }
-            else if( i == 1 )
-            {
-                for( int m = 5; m < 9; m++ ) { octaveFreqGain += absorptionCoefsSingleSource[m]; }
-                octaveFreqGain = fmin(abs(1.0 - octaveFreqGain/4.f), 1.f);
-            }
-        }
-        
-        // or get gain related to frequency band: 10-bands
-        else{ octaveFreqGain = fmin( abs( 1.0 - absorptionCoefsSingleSource[i] ), 1.0 ); }
+        // get gain related to frequency band
+        octaveFreqGain = fmin( abs( 1.0 - absorptionCoefsSingleSource[i] ), 1.0 );
         
         // substract just processed band from remaining spectrum (after de-applying gain)
         bufferFiltered.applyGain( -1.f );

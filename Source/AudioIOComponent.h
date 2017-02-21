@@ -41,7 +41,7 @@ TextButton audioFilePlayButton;
 TextButton audioFileStopButton;
 ToggleButton audioFileLoopToggle;
 ToggleButton adcToggle;
-Label audioFileCurrentPositionLabel;
+// Label audioFileCurrentPositionLabel;
 Slider gainMasterSlider;
     
 //==========================================================================
@@ -97,10 +97,16 @@ AudioIOComponent()
     adcToggle.setEnabled(true);
     adcToggle.addListener (this);
     
-    addAndMakeVisible (&audioFileCurrentPositionLabel);
-    audioFileCurrentPositionLabel.setText ("Making progress, every day :)", dontSendNotification);
-    audioFileCurrentPositionLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    // addAndMakeVisible (&audioFileCurrentPositionLabel);
+    // audioFileCurrentPositionLabel.setText ("Making progress, every day :)", dontSendNotification);
+    // audioFileCurrentPositionLabel.setColour(Label::textColourId, Colours::whitesmoke);
     
+    // open audio file "impulse" at startup
+    auto thisDir = File::getSpecialLocation(File::currentExecutableFile).getParentDirectory();
+    File resourceDir = thisDir.getParentDirectory().getChildFile("Resources");
+    File audioFile = resourceDir.getChildFile("impulse.wav").getFullPathName();
+    bool fileOpenedSucess = loadAudioFile( audioFile );
+    audioFilePlayButton.setEnabled ( fileOpenedSucess );
 }
 
 ~AudioIOComponent() {}
@@ -108,6 +114,7 @@ AudioIOComponent()
 //==========================================================================
 // AUDIO INPUT METHODS
 
+// open audio file from GUI
 bool openAudioFile()
 {
     bool fileOpenedSucess = false;
@@ -118,20 +125,31 @@ bool openAudioFile()
     
     if (chooser.browseForFileToOpen())
     {
-        File file (chooser.getResult());
-        AudioFormatReader* reader = formatManager.createReaderFor (file);
-        
-        if (reader != nullptr)
-        {
-            ScopedPointer<AudioFormatReaderSource> newSource = new AudioFormatReaderSource (reader, true);
-            transportSource.setSource (newSource, 0, nullptr, reader->sampleRate);
-            readerSource = newSource.release();
-            fileOpenedSucess = true;
-        }
+        File file( chooser.getResult() );
+        fileOpenedSucess = loadAudioFile( file );
     }
+    
     return fileOpenedSucess;
 }
 
+// load audio file to transport source
+bool loadAudioFile(File file)
+{
+    bool fileOpenedSucess = false;
+    
+    AudioFormatReader* reader = formatManager.createReaderFor (file);
+    
+    if (reader != nullptr)
+    {
+        ScopedPointer<AudioFormatReaderSource> newSource = new AudioFormatReaderSource (reader, true);
+        transportSource.setSource (newSource, 0, nullptr, reader->sampleRate);
+        readerSource = newSource.release();
+        fileOpenedSucess = true;
+    }
+    
+    return fileOpenedSucess;
+}
+    
 void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     transportSource.prepareToPlay (samplesPerBlockExpected, sampleRate);
@@ -254,7 +272,7 @@ void resized() override
     
     adcToggle.setBounds (pos.getX() + 10, pos.getY() + 90, 120, 20);
     
-    audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
+    // audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
 }
 
 //==========================================================================

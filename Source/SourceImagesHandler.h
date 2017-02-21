@@ -28,9 +28,9 @@ public:
     FilterBank filterBankRec;
     
     // reverb tail
-    ReverbTail reverbTailCurrent;
-    ReverbTail reverbTailFuture;
+    ReverbTail reverbTail;
     bool enableReverbTail;
+    float reverbTailGain = 1.0f;
     
 private:
     
@@ -38,6 +38,8 @@ private:
     AudioBuffer<float> workingBuffer; // working buffer
     AudioBuffer<float> workingBufferTemp; // 2nd working buffer, e.g. for crossfade mecanism
     AudioBuffer<float> clipboardBuffer; // to be used as local copy of working buffer when working buffer modified in loops
+    AudioBuffer<float> bandBuffer; // N band buffer returned by the filterbank for f(freq) absorption
+    AudioBuffer<float> tailBuffer; // FDN_ORDER band buffer returned by the FDN reverb tail
     
     AudioBuffer<float> irRecWorkingBuffer; // used for IR recording
     AudioBuffer<float> irRecWorkingBufferTemp; // used for IR recording
@@ -83,6 +85,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     workingBuffer.clear();
     workingBufferTemp = workingBuffer;
     clipboardBuffer = workingBuffer;
+    bandBuffer.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
     
     ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
     
@@ -95,8 +98,8 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     filterBank.setNumFilters( NUM_OCTAVE_BANDS, IDs.size() );
     
     // init reverb tail
-    reverbTailCurrent.prepareToPlay( samplesPerBlockExpected, sampleRate );
-    reverbTailFuture.prepareToPlay( samplesPerBlockExpected, sampleRate );
+    reverbTail.prepareToPlay( samplesPerBlockExpected, sampleRate );
+    tailBuffer.setSize(reverbTail.fdnOrder, samplesPerBlockExpected);
     
     // init IR recording filter bank (need a separate, see comment on continuous data stream in FilterBank class)
     filterBankRec.prepareToPlay( samplesPerBlockExpected, sampleRate );
@@ -107,11 +110,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 float getMaxDelayFuture()
 {
     float maxDelayTap = getMaxValue(delaysFuture);
-    if( enableReverbTail ){
-        float maxDelayTail = getMaxValue(reverbTailFuture.valuesRT60);
-        return fmax(maxDelayTap, maxDelayTail);
-    }
-    else{ return maxDelayTap; }
+    return maxDelayTap;
 }
     
 // main: loop over sources images, apply delay + room coloration + spatialization
@@ -137,12 +136,12 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         {
             // get old delay, tap from delay line, apply gain=f(delay)
             delayInFractionalSamples = delaysCurrent[j] * localSampleRate;
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
             workingBuffer.applyGain(1.0 - crossfadeGain);
             
             // get new delay, tap from delay line, apply gain=f(delay)
             delayInFractionalSamples = delaysFuture[j] * localSampleRate;
-            workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
             workingBufferTemp.applyGain(crossfadeGain);
             
             // add both buffers
@@ -152,7 +151,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         {
             // get delay, tap from delay line
             delayInFractionalSamples = (delaysCurrent[j] * localSampleRate);
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
         }
         
         //==========================================================================
@@ -161,15 +160,29 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         workingBuffer.applyGain(gainDelayLine);
         
         //==========================================================================
-        // APPLY ABSORPTION COEFFICIENTS (octave filer bank decomposition)
-        filterBank.processBuffer( workingBuffer, absorptionCoefs[j], j );
+        // APPLY ABSORPTION (FREQUENCY-BAND WISE)
         
+        // decompose in frequency bands
+        bandBuffer = filterBank.getBandBuffer( workingBuffer, j);
+        
+        // apply abs gains and recompose
+        workingBuffer.clear();
+        for( int k = 0; k < bandBuffer.getNumChannels(); k++ )
+        {
+            // apply absorption gains
+            bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, fmin(abs(1.0 - absorptionCoefs[j][k]), 1.f));
+            
+            // recompose (add-up frequency bands)
+            workingBuffer.addFrom(0, 0, bandBuffer, k, 0, localSamplesPerBlockExpected);
+        }
+
         //==========================================================================
-        // ADD SOURCE IMAGE REVERB TAIL
-        
-        // get tap time distribution
-        // create taps as 1st order ambisonic
-        // do not forget zipper effect in all that
+        // FEED REVERB TAIL FDN
+        if( enableReverbTail )
+        {
+            int busId = j % reverbTail.fdnOrder;
+            reverbTail.addToBus(busId, bandBuffer);
+        }
         
         //==========================================================================
         // AMBISONIC ENCODING
@@ -205,39 +218,33 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
             ambisonicBuffer.addFrom(k, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         }
-        
     }
     
     //==========================================================================
     // ADD REVERB TAIL
     
-    if( enableReverbTail ){
-        if( !crossfadeOver )
+    if( enableReverbTail )
+    {
+        
+        // get tail buffer
+        tailBuffer = reverbTail.getTailBuffer();
+        
+        // apply gain
+        tailBuffer.applyGain( reverbTailGain );
+        
+        // add to ambisonic channels
+        int ambiId; int fdnId;
+        for( int k = 0; k < fmin(N_AMBI_CH, reverbTail.fdnOrder); k++ )
         {
-            // DBG(String("crossfade tail: ") + String(crossfadeGain) );
-            
-            // get reverb tail past
-            workingBuffer = reverbTailCurrent.getTailBuffer(delayLine);
-            workingBuffer.applyGain( (1.0 - crossfadeGain) );
-            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
-            
-            // get reverb tail future
-            workingBuffer = reverbTailFuture.getTailBuffer(delayLine);
-            workingBuffer.applyGain( crossfadeGain );
-            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+            ambiId = k % 4; // only add reverb tail to WXYZ
+            fdnId = k % reverbTail.fdnOrder;
+            ambisonicBuffer.addFrom(ambiId, 0, tailBuffer, fdnId, 0, localSamplesPerBlockExpected);
         }
-        else{
-            workingBuffer = reverbTailCurrent.getTailBuffer(delayLine);
-            ambisonicBuffer.addFrom(0, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
-        }
-    }
-    
+        
     // TODO:
-    //      • improve crossfade in reverb tail: e.g. no need to crossfade but if room changed (i.e. should not impacted by listener pos, to check from evert values)
-    //            (still zipper noises but with very low values of crossfade increment)
-    //      • double check RT60 values and usage if correct
     //      • check why evert sometimes sends "nan" RT60 (in one or two bands when changin room / material)
-    //      • add reverb tail to save IR method
+    //      • add reverb tail to save IR method ?
+    }
     
     return ambisonicBuffer;
 }
@@ -263,16 +270,14 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     for (int j = 0; j < IDs.size(); j++)
     {
         absorptionCoefs[j] = oscHandler.getSourceImageAbsorption(IDs[j]);
+        if( filterBank.getNumFilters() == 3 )
+        {
+            absorptionCoefs[j] = from10to3bands(absorptionCoefs[j]);
+        }
     }
     
-    if( enableReverbTail ){
-        int index5dB = getIndexOf5dBLoss();
-        if( index5dB >= 0 ){
-            // DBG( String("last source image time / gain : ") + String(getMaxValue(delaysFuture) ) + String(" / ") + String(1.f/getMaxValue(pathLengths) ));
-            reverbTailFuture.updateInternals(oscHandler.getRT60Values(), 1.f/pathLengths[index5dB], delaysFuture[index5dB]);
-        }
-        // else{ DBG(String("no -5d index found, last index / val : ") + String(pathLengths.size()-1) + String(" / ") + String(1.f/pathLengths[pathLengths.size()-1])); }
-    }
+    // update reverb tail (even if not enabled, not cpu demanding and that way it's ready to use
+    reverbTail.updateInternals( oscHandler.getRT60Values() );
     
     // save (compute) new Ambisonic gains
     auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
@@ -296,7 +301,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         crossfadeOver = false;
     }
 }
-
+    
 AudioBuffer<float> getCurrentIR ()
     {
         // init buffers
@@ -346,8 +351,7 @@ AudioBuffer<float> getCurrentIR ()
 void setFilterBankSize(int numFreqBands)
 {
     filterBank.setNumFilters( numFreqBands, IDs.size() );
-    reverbTailCurrent.setFilterBankSize( numFreqBands );
-    reverbTailFuture.setFilterBankSize( numFreqBands );
+    bandBuffer.setSize( numFreqBands, localSamplesPerBlockExpected );
 }
     
 private:
@@ -358,7 +362,7 @@ void updateCrossfade()
     // either update crossfade
     if( crossfadeGain < 1.0 )
     {
-        crossfadeGain += 0.1;
+        crossfadeGain = fmin( crossfadeGain + 0.1, 1.0 );
     }
     // or stop crossfade mecanism if not already stopped
     else if (!crossfadeOver)
@@ -366,9 +370,6 @@ void updateCrossfade()
         // set past = future
         delaysCurrent = delaysFuture;
         ambisonicGainsCurrent = ambisonicGainsFuture;
-        if( enableReverbTail ){
-            reverbTailCurrent.updateInternals(reverbTailFuture.valuesRT60, reverbTailFuture.initGain, reverbTailFuture.initDelay);
-        }
         
         // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
@@ -377,34 +378,7 @@ void updateCrossfade()
     
 }
     
-int getIndexOf5dBLoss(){
-    // TODO: interpolate with up / down bounds rather than nearest to find -5dB estimate time / value
-    
-    if( pathLengths.size() == 0 ) { return -1; }
-    
-    // get / store new init delay / gain (-5dB of max init gain)
-    float maxGain = 1.f / getMinValue(pathLengths);
-    float threshold = pow(10, -5.f / 10.f) * maxGain;
-    DBG(String("maxGain: ") + String(maxGain) + String(" -5dB threshold: ") + String(threshold) );
-    float bestMatchDiff = INFINITY;
-    float diff = 0.f;
-    int bestMatchIndex = -1;
-    for (int i = 0; i < pathLengths.size(); i++)
-    {
-        // WARNING: pathLengths is not a sorted vector
-        diff = abs( (1.f / pathLengths[i]) - threshold);
-        // DBG(String(i) + String(": ") + String(diff));
-        if( diff < bestMatchDiff ) {
-            bestMatchDiff = diff;
-            bestMatchIndex = i;
-        }
-    }
-    DBG(String("-5dB index / gain / diff: ") + String(bestMatchIndex) + String(" / ") + String(1.f/pathLengths[bestMatchIndex]) + String(" / ") + String(bestMatchDiff));
-    
-    return bestMatchIndex;
-}
-    
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)
+JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)
     
 };
 
