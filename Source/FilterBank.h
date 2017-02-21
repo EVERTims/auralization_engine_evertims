@@ -94,7 +94,6 @@ AudioBuffer<float> getBandBuffer( AudioBuffer<float> &source, int sourceImageId 
     bufferRemains = source;
     
     // recursive filtering for all but last band
-    float octaveFreqGain;
     for( int i = 0; i < numOctaveBands-1; i++ )
     {
         // filter the remaining spectrum
