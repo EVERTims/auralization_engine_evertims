@@ -22,7 +22,8 @@ class MainContentComponent:
     public AudioAppComponent,
     public Button::Listener,
     public ComboBox::Listener,
-    public ChangeListener
+    public ChangeListener,
+    public Slider::Listener
 {
 
     
@@ -40,6 +41,7 @@ public:
     
     void buttonClicked (Button* button) override;
     void comboBoxChanged(ComboBox* comboBox) override;
+    void sliderValueChanged(Slider* slider) override;
     
     
 private:
@@ -61,6 +63,7 @@ private:
     ComboBox numFrequencyBandsComboBox;
     Label numFrequencyBandsLabel;
     ToggleButton reverbTailToggle;
+    Slider gainReverbTailSlider;
     
     //==========================================================================
     // AUDIO COMPONENTS

@@ -63,6 +63,16 @@ ambi2binContainer()
     numFrequencyBandsComboBox.addItem("10", 2);
     numFrequencyBandsComboBox.setSelectedId(1);
     
+    addAndMakeVisible(gainReverbTailSlider);
+    gainReverbTailSlider.setRange(0.0, 2.0);
+    gainReverbTailSlider.setValue(1.0);
+    gainReverbTailSlider.setSliderStyle(Slider::LinearHorizontal);
+    gainReverbTailSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    gainReverbTailSlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    gainReverbTailSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    gainReverbTailSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    gainReverbTailSlider.addListener(this);
+    
     addAndMakeVisible (numFrequencyBandsLabel);
     numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
     numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
@@ -285,6 +295,8 @@ void MainContentComponent::resized()
     numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
     
     reverbTailToggle.setBounds(getWidth() - 380, 140, 120, 20);
+    
+    gainReverbTailSlider.setBounds (getWidth() - 500, 110, 250, 20);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -328,6 +340,15 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         sourceImagesHandler.setFilterBankSize(numFreqBands);
     }
 }
+
+void MainContentComponent::sliderValueChanged(Slider* slider)
+{
+    if( slider == &gainReverbTailSlider )
+    {
+        sourceImagesHandler.reverbTailGain = gainReverbTailSlider.getValue();
+    }
+}
+
 //==============================================================================
 // (This function is called by the app startup code to create our main component)
 Component* createMainContentComponent()     { return new MainContentComponent(); }
