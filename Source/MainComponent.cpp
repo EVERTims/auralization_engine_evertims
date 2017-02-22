@@ -194,20 +194,17 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         // loop over Ambisonic channels
         for (int k = 0; k < N_AMBI_CH; k++)
         {
-            ambi2binFilters[ 2*k ].process(ambisonicBuffer.getWritePointer(k)); // left
-            ambi2binFilters[2*k+1].process(ambisonicBuffer2ndEar.getWritePointer(k)); // right
+            ambi2binFilters[ 2*k ].process(ambisonicBuffer.getWritePointer(k+2)); // left
+            ambi2binFilters[2*k+1].process(ambisonicBuffer2ndEar.getWritePointer(k+2)); // right
 
             // collapse left channel, collapse right channel
-            if (k > 0)
-            {
-                ambisonicBuffer.addFrom(0, 0, ambisonicBuffer.getWritePointer(k), workingBuffer.getNumSamples());
-                ambisonicBuffer2ndEar.addFrom(0, 0, ambisonicBuffer2ndEar.getWritePointer(k), workingBuffer.getNumSamples());
-            }
+            ambisonicBuffer.addFrom(0, 0, ambisonicBuffer.getWritePointer(2+k), workingBuffer.getNumSamples());
+            ambisonicBuffer2ndEar.addFrom(1, 0, ambisonicBuffer2ndEar.getWritePointer(2+k), workingBuffer.getNumSamples());
         }
         
         // final rewrite to output buffer
         bufferToFill.buffer->copyFrom(0, 0, ambisonicBuffer, 0, 0, workingBuffer.getNumSamples());
-        bufferToFill.buffer->copyFrom(1, 0, ambisonicBuffer2ndEar, 0, 0, workingBuffer.getNumSamples());
+        bufferToFill.buffer->copyFrom(1, 0, ambisonicBuffer2ndEar, 1, 0, workingBuffer.getNumSamples());
         
     }
     else

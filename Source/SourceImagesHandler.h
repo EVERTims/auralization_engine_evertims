@@ -3,6 +3,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "AmbixEncode/AmbixEncoder.h"
+#include "BinauralEncoder.h"
 #include "FilterBank.h"
 #include "ReverbTail.h"
 
@@ -32,6 +33,9 @@ public:
     bool enableReverbTail;
     float reverbTailGain = 1.0f;
     
+    // direct path to binaural
+    bool enableDirect2Binaural = true;
+    
 private:
     
     // audio buffers
@@ -40,6 +44,7 @@ private:
     AudioBuffer<float> clipboardBuffer; // to be used as local copy of working buffer when working buffer modified in loops
     AudioBuffer<float> bandBuffer; // N band buffer returned by the filterbank for f(freq) absorption
     AudioBuffer<float> tailBuffer; // FDN_ORDER band buffer returned by the FDN reverb tail
+    AudioBuffer<float> binauralBuffer; // stereo buffer to handle binaural encoder output
     
     AudioBuffer<float> irRecWorkingBuffer; // used for IR recording
     AudioBuffer<float> irRecWorkingBufferTemp; // used for IR recording
@@ -62,6 +67,9 @@ private:
     std::vector< Array<float> > ambisonicGainsCurrent; // buffer for input data
     std::vector< Array<float> > ambisonicGainsFuture; // to avoid zipper effect
     AudioBuffer<float> ambisonicBuffer; // output buffer, N (Ambisonic) channels
+    
+    // direct binaural encoding (for direct path only)
+    BinauralEncoder binauralEncoder;
     
     
 //==========================================================================
@@ -86,8 +94,10 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     workingBufferTemp = workingBuffer;
     clipboardBuffer = workingBuffer;
     bandBuffer.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
+    binauralBuffer.setSize(2, samplesPerBlockExpected);
     
-    ambisonicBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
+    // ambisonic buffer holds 2 stereo channels (first) + ambisonic channels
+    ambisonicBuffer.setSize(2 + N_AMBI_CH, samplesPerBlockExpected);
     
     // keep local copies
     localSampleRate = sampleRate;
@@ -104,6 +114,9 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     // init IR recording filter bank (need a separate, see comment on continuous data stream in FilterBank class)
     filterBankRec.prepareToPlay( samplesPerBlockExpected, sampleRate );
     filterBankRec.setNumFilters( NUM_OCTAVE_BANDS, IDs.size() ); // may as well get the best quality for recording IR
+    
+    // init binaural encoder
+    binauralEncoder.prepareToPlay( samplesPerBlockExpected, sampleRate );
 }
     
 // get max source image delay in seconds
@@ -183,6 +196,21 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             int busId = j % reverbTail.fdnOrder;
             reverbTail.addToBus(busId, bandBuffer);
         }
+
+        //==========================================================================
+        // BINAURAL ENCODING (DIRECT PATH ONLY)
+        if( enableDirect2Binaural && directPathId == IDs[j] )
+        {
+            // apply filter
+            binauralBuffer = binauralEncoder.processBuffer(workingBuffer);
+            
+            // add to output
+            ambisonicBuffer.copyFrom(0, 0, binauralBuffer, 0, 0, localSamplesPerBlockExpected);
+            ambisonicBuffer.copyFrom(1, 0, binauralBuffer, 1, 0, localSamplesPerBlockExpected);
+            
+            // skip remaining (ambisonic encoding)
+            continue;
+        }
         
         //==========================================================================
         // AMBISONIC ENCODING
@@ -216,7 +244,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             }
             
             // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
-            ambisonicBuffer.addFrom(k, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
+            ambisonicBuffer.addFrom(2+k, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         }
     }
     
@@ -238,7 +266,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         {
             ambiId = k % 4; // only add reverb tail to WXYZ
             fdnId = k % reverbTail.fdnOrder;
-            ambisonicBuffer.addFrom(ambiId, 0, tailBuffer, fdnId, 0, localSamplesPerBlockExpected);
+            ambisonicBuffer.addFrom(2+ambiId, 0, tailBuffer, fdnId, 0, localSamplesPerBlockExpected);
         }
         
     // TODO:
@@ -276,7 +304,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         }
     }
     
-    // update reverb tail (even if not enabled, not cpu demanding and that way it's ready to use
+    // update reverb tail (even if not enabled, not cpu demanding and that way it's ready to use)
     reverbTail.updateInternals( oscHandler.getRT60Values() );
     
     // save (compute) new Ambisonic gains
@@ -286,6 +314,12 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     for (int i = 0; i < IDs.size(); i++)
     {
         ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
+    }
+    
+    // update binaural encoder (even if not enabled, not cpu demanding and that way it's ready to use)
+    if( IDs.size() > 0 && directPathId > -1 )
+    {
+        binauralEncoder.setPosition(sourceImageDOAs[directPathId](0), sourceImageDOAs[directPathId](1));
     }
     
     // update filter bank size

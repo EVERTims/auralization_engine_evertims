@@ -36,6 +36,8 @@
             file="Source/Ambi2binIRContainer.h"/>
       <FILE id="VFZ1PG" name="AudioIOComponent.h" compile="0" resource="0"
             file="Source/AudioIOComponent.h"/>
+      <FILE id="vXP376" name="BinauralEncoder.h" compile="0" resource="0"
+            file="Source/BinauralEncoder.h"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
       <FILE id="Gci68m" name="FilterBank.h" compile="0" resource="0" file="Source/FilterBank.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
@@ -49,15 +51,13 @@
       <FILE id="QoD7yh" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
     </GROUP>
     <GROUP id="{F473110D-BA5F-16DB-4E0C-8A8135AFEAFF}" name="data">
-      <GROUP id="{56365D76-25CB-B471-56CB-C42E443B0B0E}" name="hoa2binIRs">
-        <FILE id="r1pXJq" name="hoa2bin_order2_IRC_1005_C_HRIR.bin" compile="0"
-              resource="0" file="data/hoa2binIRs/hoa2bin_order2_IRC_1005_C_HRIR.bin"
-              xcodeResource="1"/>
-        <FILE id="AMEQm9" name="hoa2bin_order2_IRC_1008_R_HRIR.bin" compile="0"
-              resource="0" file="data/hoa2binIRs/hoa2bin_order2_IRC_1008_R_HRIR.bin"
-              xcodeResource="1"/>
-        <FILE id="fqWADe" name="hoa2bin_order2_ClubFritz1.bin" compile="0"
-              resource="0" file="data/hoa2binIRs/hoa2bin_order2_ClubFritz1.bin"
+      <GROUP id="{EC342416-45C5-1B59-B10B-935876B05E2D}" name="irs">
+        <FILE id="q07KQW" name="ClubFritz1_hrir.bin" compile="0" resource="0"
+              file="data/irs/ClubFritz1_hrir.bin" xcodeResource="1"/>
+        <FILE id="h1ZcnC" name="hoa2bin_order2_ClubFritz1.bin" compile="0"
+              resource="0" file="data/irs/hoa2bin_order2_ClubFritz1.bin" xcodeResource="1"/>
+        <FILE id="ip67ub" name="hoa2bin_order2_IRC_1008_R_HRIR.bin" compile="0"
+              resource="0" file="data/irs/hoa2bin_order2_IRC_1008_R_HRIR.bin"
               xcodeResource="1"/>
       </GROUP>
       <GROUP id="{E6596461-6A75-A89E-D160-2311FACB6112}" name="images">
