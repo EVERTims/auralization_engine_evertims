@@ -73,9 +73,39 @@ ambi2binContainer()
     gainReverbTailSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
     gainReverbTailSlider.addListener(this);
     
+    addAndMakeVisible(gainDirectPathSlider);
+    gainDirectPathSlider.setRange(0.0, 2.0);
+    gainDirectPathSlider.setValue(1.0);
+    gainDirectPathSlider.setSliderStyle(Slider::LinearHorizontal);
+    gainDirectPathSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    gainDirectPathSlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    gainDirectPathSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    gainDirectPathSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    gainDirectPathSlider.addListener(this);
+    
     addAndMakeVisible (numFrequencyBandsLabel);
     numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
     numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
+
+    addAndMakeVisible (inputLabel);
+    inputLabel.setText ("Inputs", dontSendNotification);
+    inputLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    inputLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
+
+    addAndMakeVisible (parameterLabel);
+    parameterLabel.setText ("Parameters", dontSendNotification);
+    parameterLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    parameterLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
+
+    addAndMakeVisible (logLabel);
+    logLabel.setText ("Logs", dontSendNotification);
+    logLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    logLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
+    
+    addAndMakeVisible (directPathLabel);
+    directPathLabel.setText ("Direct Path", dontSendNotification);
+    directPathLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    directPathLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
     
     addAndMakeVisible (&reverbTailToggle);
     reverbTailToggle.setButtonText ("Reverb tail");
@@ -83,13 +113,14 @@ ambi2binContainer()
     reverbTailToggle.setEnabled(true);
     reverbTailToggle.addListener(this);
     reverbTailToggle.setToggleState(true, juce::sendNotification);
+
+    addAndMakeVisible (&enableDirectToBinaural);
+    enableDirectToBinaural.setButtonText ("Direct to binaural");
+    enableDirectToBinaural.setColour(ToggleButton::textColourId, Colours::whitesmoke);
+    enableDirectToBinaural.setEnabled(true);
+    enableDirectToBinaural.addListener(this);
+    enableDirectToBinaural.setToggleState(true, juce::sendNotification);
     
-    addAndMakeVisible (&skipDirectPathToggle);
-    skipDirectPathToggle.setButtonText ("Disable direct path");
-    skipDirectPathToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    skipDirectPathToggle.setEnabled(true);
-    skipDirectPathToggle.addListener(this);
-    skipDirectPathToggle.setToggleState(false, juce::sendNotification);
 }
 
 MainContentComponent::~MainContentComponent()
@@ -274,34 +305,47 @@ void MainContentComponent::paint (Graphics& g)
     // background
     g.fillAll (Colour(PixelARGB(240,30,30,30)));
     
+    // parameters box
+    g.setOpacity(1.0f);
+    g.setColour(Colours::whitesmoke);
+    g.drawRoundedRectangle(10.f, 155.f, getWidth()-20.f, 130.f, 0.0f, 1.0f);
+    
     // logo image
-    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/1.7) - (logoImage.getHeight()/2) ));
+    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/ 1.45) - (logoImage.getHeight()/2) ));
     
     // signature
     g.setColour(Colours::white);
     g.setFont(11.f);
-    g.drawFittedText("Designed by D. Poirier-Quinot & M. Noisternig, IRCAM, 2016", getWidth() - 285, getHeight()-15, 275, 15, Justification::right, 2);
+    g.drawFittedText("Designed by D. Poirier-Quinot & M. Noisternig, IRCAM, 2017", getWidth() - 285, getHeight()-15, 275, 15, Justification::right, 2);
     
 }
 
 void MainContentComponent::resized()
 {
-    // resize sub-components
-    audioIOComponent.setBounds(10, 10, getWidth()-20, 160);
+    // audio IO box
+    inputLabel.setBounds(30, 3, 50, 15);
+    audioIOComponent.setBounds(10, 10, getWidth()-20, 130);
     
-    // resize local GUI elements
-    
+    // parameters box
     int thirdWidthIoComponent = (int)((getWidth() - 20)/ 3) - 20; // lazy to change all to add that to audioIOComponent GUI for now
-    saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 80, thirdWidthIoComponent, 40);
-    logTextBox.setBounds (8, 180, getWidth() - 16, getHeight() - 195);
     
-    numFrequencyBandsComboBox.setBounds(getWidth() - 70, 140, 50, 20);
-    numFrequencyBandsLabel.setBounds(getWidth() - 250, 140, 180, 20);
+    parameterLabel.setBounds(30, 147, 80, 15);
     
-    skipDirectPathToggle.setBounds(200, 110, 140, 20);
+    reverbTailToggle.setBounds(30, 170, 120, 20);
+    gainReverbTailSlider.setBounds (180, 170, 440, 20);
+    
+    directPathLabel.setBounds(30, 200, 120, 20);
+    gainDirectPathSlider.setBounds (140, 200, 330, 20);
+    enableDirectToBinaural.setBounds (480, 200, 140, 20);
 
-    reverbTailToggle.setBounds(30, 140, 120, 20);
-    gainReverbTailSlider.setBounds (150, 140, 250, 20);
+    numFrequencyBandsLabel.setBounds(30, 245, 220, 20);
+    numFrequencyBandsComboBox.setBounds(210, 245, 80, 20);
+
+    saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 240, thirdWidthIoComponent, 30);
+    
+    // log box
+    logLabel.setBounds(30, 286, 40, 20);
+    logTextBox.setBounds (8, 300, getWidth() - 16, getHeight() - 316);
 
 }
 
@@ -332,10 +376,11 @@ void MainContentComponent::buttonClicked (Button* button)
     {
         sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
         updateOnOscReveive(localSampleRate); // require delay line size update
+        gainReverbTailSlider.setEnabled(reverbTailToggle.getToggleState());
     }
-    if( button == &skipDirectPathToggle )
+    if( button == &enableDirectToBinaural )
     {
-        sourceImagesHandler.skipDirectPath = skipDirectPathToggle.getToggleState();
+        sourceImagesHandler.enableDirectToBinaural = enableDirectToBinaural.getToggleState();
     }
 }
 
@@ -356,6 +401,10 @@ void MainContentComponent::sliderValueChanged(Slider* slider)
     if( slider == &gainReverbTailSlider )
     {
         sourceImagesHandler.reverbTailGain = gainReverbTailSlider.getValue();
+    }
+    if( slider == &gainDirectPathSlider )
+    {
+        sourceImagesHandler.directPathGain = gainDirectPathSlider.getValue();
     }
 }
 

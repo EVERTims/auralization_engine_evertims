@@ -42,7 +42,8 @@ TextButton audioFileStopButton;
 ToggleButton audioFileLoopToggle;
 ToggleButton adcToggle;
 // Label audioFileCurrentPositionLabel;
-Slider gainMasterSlider;
+Slider gainAudioFileSlider;
+Slider gainAdcSlider;
     
 //==========================================================================
 // METHODS
@@ -76,14 +77,23 @@ AudioIOComponent()
     audioFileStopButton.setColour (TextButton::buttonColourId, Colours::darkred);
     audioFileStopButton.setEnabled (false);
     
-    addAndMakeVisible (&gainMasterSlider);
-    gainMasterSlider.setRange(0.1, 4.0);
-    gainMasterSlider.setValue(1.0);
-    gainMasterSlider.setSliderStyle(Slider::LinearHorizontal);
-    gainMasterSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
-    gainMasterSlider.setColour(Slider::textBoxTextColourId, Colours::white);
-    gainMasterSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
-    gainMasterSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    addAndMakeVisible (&gainAudioFileSlider);
+    gainAudioFileSlider.setRange(0.0, 4.0);
+    gainAudioFileSlider.setValue(1.0);
+    gainAudioFileSlider.setSliderStyle(Slider::LinearHorizontal);
+    gainAudioFileSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    gainAudioFileSlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    gainAudioFileSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    gainAudioFileSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+   
+    addAndMakeVisible (&gainAdcSlider);
+    gainAdcSlider.setRange(0.0, 2.0);
+    gainAdcSlider.setValue(1.0);
+    gainAdcSlider.setSliderStyle(Slider::LinearHorizontal);
+    gainAdcSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    gainAdcSlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    gainAdcSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    gainAdcSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
     
     addAndMakeVisible (&audioFileLoopToggle);
     audioFileLoopToggle.setButtonText ("Loop");
@@ -171,16 +181,19 @@ void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
         // stereo downmix to mono
         bufferToFill.buffer->applyGain(0.5f);
         bufferToFill.buffer->addFrom(0, 0, bufferToFill.buffer->getWritePointer(1), bufferToFill.buffer->getNumSamples());
+        
+        // apply gain
+        bufferToFill.buffer->applyGain(gainAudioFileSlider.getValue());
     }
     
     // copy adc inputs (stored in adcBuffer) to output
     if (adcToggle.getToggleState())
     {
+        // apply gain
+        adcBuffer.applyGain(gainAdcSlider.getValue());
+        // add to output
         bufferToFill.buffer->addFrom(0, 0, adcBuffer, 0, 0, bufferToFill.buffer->getNumSamples());
     }
-    
-    // apply master gain
-    bufferToFill.buffer->applyGain(gainMasterSlider.getValue());
     
     return;
 }
@@ -253,14 +266,11 @@ void paint(Graphics& g) override
     g.setOpacity(1.0f);
     g.setColour(Colours::whitesmoke);
     g.drawRoundedRectangle(0.f, 0.f, w, h, 0.0f, 2.0f);
-    
 }
 
 void resized() override
 {
     auto pos = getPosition();
-    
-    DBG(String(pos.getY() + 10));
     
     int thirdWidth = (int)(getWidth() / 3) - 20;
     audioFileOpenButton.setBounds (pos.getX() + 10, pos.getY() + 10, thirdWidth, 40);
@@ -268,9 +278,10 @@ void resized() override
     audioFileStopButton.setBounds (40 + 2*thirdWidth, pos.getY() + 10, thirdWidth, 40);
     
     audioFileLoopToggle.setBounds (pos.getX() + 10, pos.getY() + 60, 60, 20);
-    gainMasterSlider.setBounds    (pos.getX() + 70 + 10, audioFileLoopToggle.getY(), getWidth() - thirdWidth - 120, 20);
+    gainAudioFileSlider.setBounds (pos.getX() + 160, audioFileLoopToggle.getY(), 440, 20);
     
     adcToggle.setBounds (pos.getX() + 10, pos.getY() + 90, 120, 20);
+    gainAdcSlider.setBounds (pos.getX() + 160, adcToggle.getY(), 440, 20);
     
     // audioFileCurrentPositionLabel.setBounds (10, 130, getWidth() - 20, 20);
 }

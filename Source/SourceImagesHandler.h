@@ -22,7 +22,6 @@ public:
     std::vector<float> pathLengths; // in meters
     int numSourceImages;
     int directPathId;
-    bool skipDirectPath;
     
     // octave filter bank
     FilterBank filterBank;
@@ -34,7 +33,8 @@ public:
     float reverbTailGain = 1.0f;
     
     // direct path to binaural
-    bool enableDirect2Binaural = true;
+    float directPathGain = 1.0f;
+    bool enableDirectToBinaural = true;
     
 private:
     
@@ -139,8 +139,6 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     // loop over sources images
     for( int j = 0; j < numSourceImages; j++ )
     {
-        // skip rendering direct path
-        if( skipDirectPath && (directPathId == IDs[j]) ){ continue; }
         
         //==========================================================================
         // GET DELAYED BUFFER
@@ -196,10 +194,17 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             int busId = j % reverbTail.fdnOrder;
             reverbTail.addToBus(busId, bandBuffer);
         }
-
+        
+        //==========================================================================
+        // SET DIRECT PATH GAIN
+        if( directPathId == IDs[j] )
+        {
+            workingBuffer.applyGain(directPathGain);
+        }
+        
         //==========================================================================
         // BINAURAL ENCODING (DIRECT PATH ONLY)
-        if( enableDirect2Binaural && directPathId == IDs[j] )
+        if( enableDirectToBinaural && directPathId == IDs[j] )
         {
             // apply filter
             binauralBuffer = binauralEncoder.processBuffer(workingBuffer);

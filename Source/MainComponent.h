@@ -63,8 +63,13 @@ private:
     ComboBox numFrequencyBandsComboBox;
     Label numFrequencyBandsLabel;
     ToggleButton reverbTailToggle;
-    ToggleButton skipDirectPathToggle;
+    ToggleButton enableDirectToBinaural;
     Slider gainReverbTailSlider;
+    Slider gainDirectPathSlider;
+    Label inputLabel;
+    Label parameterLabel;
+    Label directPathLabel;
+    Label logLabel;
     
     //==========================================================================
     // AUDIO COMPONENTS
