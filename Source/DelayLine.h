@@ -95,7 +95,7 @@ void incrementWritePosition(int numSamples)
 void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
     int numChannels = buffer.getNumChannels();
-    buffer.setSize(numChannels, samplesPerBlockExpected);
+    buffer.setSize(numChannels, 2*samplesPerBlockExpected);
     buffer.clear();
     chunkBuffer.setSize(1, samplesPerBlockExpected);
     chunkBuffer.clear();
