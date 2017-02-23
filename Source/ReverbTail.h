@@ -163,6 +163,11 @@ AudioBuffer<float> getTailBuffer()
     return tailBuffer;
 }
 
+void clear()
+{
+    reverbBusBuffers.clear();
+    delayLine.clear();
+}
     
 private:
   

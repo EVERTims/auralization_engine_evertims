@@ -149,6 +149,11 @@ AudioBuffer<float> getInterpolatedChunk(int sourceChannel, int numSamples, float
     return chunkBuffer;
 }
 
+// remove all content from delay line main buffer
+void clear()
+{
+    buffer.clear();
+}
 
 JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayLine)
     

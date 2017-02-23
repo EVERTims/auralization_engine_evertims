@@ -36,6 +36,9 @@ public:
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
     
+    void getNextAudioBlockProcess( AudioBuffer<float> *const audioBufferToFill );
+    void recordIr();
+    
     void paint (Graphics& g) override;
     void resized() override;
     
@@ -52,8 +55,10 @@ private:
     
     //==========================================================================
     // MISC.
-    int localSampleRate;
+    double localSampleRate;
+    int localSamplesPerBlockExpected;
     OSCHandler oscHandler; // receive OSC messages, ready them for other components
+    bool isRecordingIr = false;
     
     //==========================================================================
     // GUI ELEMENTS
@@ -64,6 +69,7 @@ private:
     Label numFrequencyBandsLabel;
     ToggleButton reverbTailToggle;
     ToggleButton enableDirectToBinaural;
+    ToggleButton enableLog;
     Slider gainReverbTailSlider;
     Slider gainDirectPathSlider;
     Label inputLabel;
@@ -76,6 +82,8 @@ private:
 
     // buffers
     AudioBuffer<float> workingBuffer; // working buffer
+    AudioBuffer<float> recordingBufferOutput; // recording buffer
+    AudioBuffer<float> recordingBufferInput; // recording buffer
     
     // audio player (GUI + audio reader + adc input)
     AudioIOComponent audioIOComponent;

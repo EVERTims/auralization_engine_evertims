@@ -103,7 +103,7 @@ ambi2binContainer()
     logLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
     
     addAndMakeVisible (directPathLabel);
-    directPathLabel.setText ("Direct Path", dontSendNotification);
+    directPathLabel.setText ("Direct path", dontSendNotification);
     directPathLabel.setColour(Label::textColourId, Colours::whitesmoke);
     directPathLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
     
@@ -121,6 +121,13 @@ ambi2binContainer()
     enableDirectToBinaural.addListener(this);
     enableDirectToBinaural.setToggleState(true, juce::sendNotification);
     
+    addAndMakeVisible (&enableLog);
+    enableLog.setButtonText ("Enable logs");
+    enableLog.setColour(ToggleButton::textColourId, Colours::whitesmoke);
+    enableLog.setEnabled(true);
+    enableLog.addListener(this);
+    enableLog.setToggleState(true, juce::sendNotification);
+
 }
 
 MainContentComponent::~MainContentComponent()
@@ -147,6 +154,7 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     
     // keep track of sample rate
     localSampleRate = sampleRate;
+    localSamplesPerBlockExpected = samplesPerBlockExpected;
     
     // init delay line
     delayLine.prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -162,14 +170,27 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     }
 }
 
-// Audio Processing
+// Audio Processing (Dummy)
 void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
-    
     // fill buffer with audiofile data
     audioIOComponent.getNextAudioBlock(bufferToFill);
     
-    workingBuffer.copyFrom(0, 0, bufferToFill.buffer->getWritePointer(0), workingBuffer.getNumSamples());
+    // execute main audio processing
+    if( !isRecordingIr )
+    {
+        getNextAudioBlockProcess( bufferToFill.buffer );
+    }
+    else
+    {
+        bufferToFill.clearActiveBufferRegion();
+    }
+}
+
+// Audio Processing: split from getNextAudioBlock to use it for recording IR
+void MainContentComponent::getNextAudioBlockProcess( AudioBuffer<float> *const audioBufferToFill )
+{
+    workingBuffer.copyFrom(0, 0, audioBufferToFill->getWritePointer(0), workingBuffer.getNumSamples());
     
     //==========================================================================
     // SOURCE IMAGE PROCESSING
@@ -198,7 +219,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         
         // add current audio buffer to delay line
         delayLine.copyFrom(0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
-                
+        
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
         // arbitrary: apply gain to compensate for loss from filterbank, cheaper to apply
@@ -227,30 +248,30 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         {
             ambi2binFilters[ 2*k ].process(ambisonicBuffer.getWritePointer(k+2)); // left
             ambi2binFilters[2*k+1].process(ambisonicBuffer2ndEar.getWritePointer(k+2)); // right
-
+            
             // collapse left channel, collapse right channel
             ambisonicBuffer.addFrom(0, 0, ambisonicBuffer.getWritePointer(2+k), workingBuffer.getNumSamples());
             ambisonicBuffer2ndEar.addFrom(1, 0, ambisonicBuffer2ndEar.getWritePointer(2+k), workingBuffer.getNumSamples());
         }
         
         // final rewrite to output buffer
-        bufferToFill.buffer->copyFrom(0, 0, ambisonicBuffer, 0, 0, workingBuffer.getNumSamples());
-        bufferToFill.buffer->copyFrom(1, 0, ambisonicBuffer2ndEar, 1, 0, workingBuffer.getNumSamples());
-        
+        audioBufferToFill->copyFrom(0, 0, ambisonicBuffer, 0, 0, workingBuffer.getNumSamples());
+        audioBufferToFill->copyFrom(1, 0, ambisonicBuffer2ndEar, 1, 0, workingBuffer.getNumSamples());
     }
+    
     else
     {
         //==========================================================================
         // if no source image, simply rewrite to output buffer (TODO: remove stupid double copy)
-        bufferToFill.buffer->copyFrom(0, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
-        bufferToFill.buffer->copyFrom(1, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
+        audioBufferToFill->copyFrom(0, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
+        audioBufferToFill->copyFrom(1, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
     }
     
     
     //==========================================================================
     // get write pointer to output
-    auto outL = bufferToFill.buffer->getWritePointer(0);
-    auto outR = bufferToFill.buffer->getWritePointer(1);
+    auto outL = audioBufferToFill->getWritePointer(0);
+    auto outR = audioBufferToFill->getWritePointer(1);
     // Loop over samples
     for (int i = 0; i < workingBuffer.getNumSamples(); i++)
     {
@@ -261,6 +282,63 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     
 }
 
+// record current Room impulse Response to disk
+void MainContentComponent::recordIr()
+{
+    // estimate output buffer size
+    auto rt60 = oscHandler.getRT60Values();
+    float maxDelay = getMaxValue(rt60);
+    int maxDelayInSamp = ceil(maxDelay * localSampleRate);
+    DBG(String("max estimated delay: ") + String(maxDelay));
+    
+    // init
+    recordingBufferInput.setSize(2, localSamplesPerBlockExpected);
+    recordingBufferInput.clear();
+    recordingBufferOutput.setSize(2, 2*maxDelayInSamp);
+    recordingBufferOutput.clear();
+    
+    // prepare impulse response buffer
+    recordingBufferInput.getWritePointer(0)[0] = 1.0f;
+    
+    // clear delay lines / fdn buffers of main thread
+    delayLine.clear();
+    sourceImagesHandler.reverbTail.clear();
+    
+    // pass impulse imput into processing loop until IR faded below threshold
+    float rms = 1.0f;
+    int bufferId = 0;
+    while( rms >= 0.0001f || bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
+    {
+        // clear impulse after first round
+        if( bufferId >= 1 ){ recordingBufferInput.clear(); }
+        
+        // execute main audio processing
+        getNextAudioBlockProcess( &recordingBufferInput );
+        
+        // add to output buffer
+        for( int k = 0; k < 2; k++ )
+        {
+            recordingBufferOutput.addFrom(k, bufferId*localSamplesPerBlockExpected, recordingBufferInput, k, 0, localSamplesPerBlockExpected);
+        }
+        
+        // update current RMS level
+        rms = recordingBufferInput.getRMSLevel(0, 0, localSamplesPerBlockExpected) + recordingBufferInput.getRMSLevel(0, 0, localSamplesPerBlockExpected);
+        rms *= 0.5;
+        
+        // increment
+        bufferId += 1;
+    }
+    
+    // resize output
+    recordingBufferOutput.setSize(2, bufferId*localSamplesPerBlockExpected, true);
+    
+    // save output
+    audioIOComponent.saveIR(recordingBufferOutput, localSampleRate);
+    
+    // unlock main audio thread
+    isRecordingIr = false;
+}
+
 void MainContentComponent::releaseResources()
 {
     // This will be called when the audio device stops, or when it is being
@@ -268,9 +346,9 @@ void MainContentComponent::releaseResources()
     
     audioIOComponent.transportSource.releaseResources();
     
-    // clear delay line buffers
-    delayLine.buffer.clear();
-    delayLine.chunkBuffer.clear();
+    // clear all "delay line" like buffers
+    delayLine.clear();
+    sourceImagesHandler.reverbTail.clear();
 }
 
 
@@ -346,14 +424,17 @@ void MainContentComponent::resized()
     // log box
     logLabel.setBounds(30, 286, 40, 20);
     logTextBox.setBounds (8, 300, getWidth() - 16, getHeight() - 316);
-
+    enableLog.setBounds(getWidth() - 110, 300, 100, 30);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
 {
     if (broadcaster == &oscHandler)
     {
-        logTextBox.setText(oscHandler.getMapContent());
+        if( enableLog.getToggleState() )
+        {
+            logTextBox.setText(oscHandler.getMapContent());
+        }
         updateOnOscReveive(localSampleRate);
     }
 }
@@ -366,7 +447,9 @@ void MainContentComponent::buttonClicked (Button* button)
     {
         if ( sourceImagesHandler.IDs.size() > 0 )
         {
-            audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
+            isRecordingIr = true;
+            recordIr();
+            // audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
         }
         else {
             AlertWindow::showMessageBoxAsync ( AlertWindow::NoIcon, "Impulse Response not saved", "No source images registered from raytracing client \n(Empty IR)", "OK");
@@ -382,6 +465,12 @@ void MainContentComponent::buttonClicked (Button* button)
     {
         sourceImagesHandler.enableDirectToBinaural = enableDirectToBinaural.getToggleState();
     }
+    if( button == &enableLog )
+    {
+        if( button->getToggleState() ){ logTextBox.setText(oscHandler.getMapContent()); }
+        else{ logTextBox.setText( String("") ); };
+    }
+
 }
 
 void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
