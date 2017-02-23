@@ -14,19 +14,21 @@ NumFreqBands = 3;
 
 % Define Response Time -60dB (time after which impulse reduced to -60dB of its initial power)
 % RT60vect = 4*[ 0.39, 0.39, 0.39, 0.35, 0.28, 0.27, 0.26, 0.25, 0.25, 0.25 ]; % Response Time -60dB in sec
-RT60vect = [ 0.52 0.52 0.52];
+RT60vect = 5*[ 1 1 1 ];
 RT60 = mean(RT60vect);
 FsVect = [];
 for i = 1:length(RT60vect); FsVect = [FsVect 31.5 * 2^(i-1)]; end
 c = 343; % sound speed
 
 % load audio in
-% [in,Fs] = audioread('VMH1 Claps & Snares 023.wav');
-[in,Fs] = audioread('VMH1 Claps & Snares 012.wav'); 
-in = in(:,1); % stereo to mono
-in = 0.2 * in / max(abs(in)); % normalization
 
-% in = [1; zeros(9, 1)];
+% [in,Fs] = audioread('VMH1 Claps & Snares 023.wav');
+
+% [in,Fs] = audioread('VMH1 Claps & Snares 012.wav'); 
+% in = in(:,1); % stereo to mono
+% in = 0.2 * in / max(abs(in)); % normalization
+
+in = [1; zeros(9, 1)]; Fs = 44100;
 
 
 %% Define feedback Matrix
@@ -42,8 +44,13 @@ in = 0.2 * in / max(abs(in)); % normalization
 % A = (g/sqrt(2)) * [0 1 1 0; -1 0 0 -1; 1 0 0 -1; 0 1 -1 0];
 % A = AA; % DEBUG
 
-% hadamard feedback matrix
-A = (1/(2^(sqrt(NumFeedbackLine)/2))) * hadamard(NumFeedbackLine);
+% % hadamard feedback matrix
+% A = (1/(2^(sqrt(NumFeedbackLine)/2))) * hadamard(NumFeedbackLine);
+
+% householder matrix as proposed in Jot's thesis, see also 
+% https://ccrma.stanford.edu/~jos/pasp/Householder_Feedback_Matrix.html
+A = 0.5*(diag([2 2 2 2]) - ones(4,4));
+A = 0.5*[A -A -A -A; -A A -A -A; -A -A A -A; -A -A -A A];
 
 % % export matrix
 % for i = 1:size(A,1);
@@ -121,17 +128,17 @@ title('resulting attenuation after Nth passage through FDN for each band');
 subplot(122),plot(k), title('gains S.I.');
 leg = cellstr(num2str(delaysSamp', 'del = %.1f')); legend(leg);
 
-% export gains
-for i = 1:NumFeedbackLine;
-    fprintf('fdnGains[%ld] = %.3f;\n', i-1,kmean(i));
-end
-
-% export gains (freq specific)
-for i = 1:NumFreqBands;
-    for j = 1:NumFeedbackLine;
-        fprintf('fdnGains[%ld][%ld] = %.5f;\n', i-1,j-1,k(i,j));
-    end
-end
+% % export gains
+% for i = 1:NumFeedbackLine;
+%     fprintf('fdnGains[%ld] = %.3f;\n', i-1,kmean(i));
+% end
+% 
+% % export gains (freq specific)
+% for i = 1:NumFreqBands;
+%     for j = 1:NumFeedbackLine;
+%         fprintf('fdnGains[%ld][%ld] = %.5f;\n', i-1,j-1,k(i,j));
+%     end
+% end
 %% design freq. specific filters
 % % see [1], part: DELAY-LINE DAMPING FILTER DESIGN
 % w = FsVect * pi / Fs;
