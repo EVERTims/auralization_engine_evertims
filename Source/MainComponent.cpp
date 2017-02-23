@@ -179,7 +179,8 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     // execute main audio processing
     if( !isRecordingIr )
     {
-        getNextAudioBlockProcess( bufferToFill.buffer );
+        processAmbisonicBuffer( bufferToFill.buffer );
+        fillNextAudioBlock( bufferToFill.buffer );
     }
     else
     {
@@ -188,7 +189,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
 }
 
 // Audio Processing: split from getNextAudioBlock to use it for recording IR
-void MainContentComponent::getNextAudioBlockProcess( AudioBuffer<float> *const audioBufferToFill )
+void MainContentComponent::processAmbisonicBuffer( AudioBuffer<float> *const audioBufferToFill )
 {
     workingBuffer.copyFrom(0, 0, audioBufferToFill->getWritePointer(0), workingBuffer.getNumSamples());
     
@@ -222,27 +223,31 @@ void MainContentComponent::getNextAudioBlockProcess( AudioBuffer<float> *const a
         
         // loop over sources images, apply delay + room coloration + spatialization
         ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
-        // arbitrary: apply gain to compensate for loss from filterbank, cheaper to apply
-        // here than in sourceImagesHandler on each source image individually
-        ambisonicBuffer.applyGain( 2.f );
         
         // increment delay line write position
         delayLine.incrementWritePosition(workingBuffer.getNumSamples());
-        
-        
+    }
+    
+}
+
+void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBufferToFill )
+{
+    
+    if ( sourceImagesHandler.IDs.size() > 0 )
+    {
         //==========================================================================
         // Spatialization: Ambisonic decoding + virtual speaker approach + binaural
-        
+
         // DEBUG: check Ambisonic gains
         // String debugLog = "";
         // for (int k = 0; k < N_AMBI_CH; k++) {// N_AMBI_CH
         //     debugLog += String(k) + String(": ") + String(round2(sourceImageAmbisonicGains[0][k], 2)) + String("\t ");
         // }
         // DBG(debugLog);
-        
+
         // duplicate channel before filtering for two ears
         ambisonicBuffer2ndEar = ambisonicBuffer;
-        
+
         // loop over Ambisonic channels
         for (int k = 0; k < N_AMBI_CH; k++)
         {
@@ -253,7 +258,7 @@ void MainContentComponent::getNextAudioBlockProcess( AudioBuffer<float> *const a
             ambisonicBuffer.addFrom(0, 0, ambisonicBuffer.getWritePointer(2+k), workingBuffer.getNumSamples());
             ambisonicBuffer2ndEar.addFrom(1, 0, ambisonicBuffer2ndEar.getWritePointer(2+k), workingBuffer.getNumSamples());
         }
-        
+
         // final rewrite to output buffer
         audioBufferToFill->copyFrom(0, 0, ambisonicBuffer, 0, 0, workingBuffer.getNumSamples());
         audioBufferToFill->copyFrom(1, 0, ambisonicBuffer2ndEar, 1, 0, workingBuffer.getNumSamples());
@@ -269,17 +274,14 @@ void MainContentComponent::getNextAudioBlockProcess( AudioBuffer<float> *const a
     
     
     //==========================================================================
-    // get write pointer to output
+    // CLIP OUTPUT (DEBUG PRECAUTION)
     auto outL = audioBufferToFill->getWritePointer(0);
     auto outR = audioBufferToFill->getWritePointer(1);
-    // Loop over samples
     for (int i = 0; i < workingBuffer.getNumSamples(); i++)
     {
-        // DEBUG PRECAUTION
         outL[i] = clipOutput(outL[i]);
         outR[i] = clipOutput(outR[i]);
     }
-    
 }
 
 // record current Room impulse Response to disk
@@ -289,13 +291,17 @@ void MainContentComponent::recordIr()
     auto rt60 = oscHandler.getRT60Values();
     float maxDelay = getMaxValue(rt60);
     int maxDelayInSamp = ceil(maxDelay * localSampleRate);
-    DBG(String("max estimated delay: ") + String(maxDelay));
     
     // init
     recordingBufferInput.setSize(2, localSamplesPerBlockExpected);
     recordingBufferInput.clear();
     recordingBufferOutput.setSize(2, 2*maxDelayInSamp);
     recordingBufferOutput.clear();
+    recordingBufferAmbisonicOutput.setSize(N_AMBI_CH, 2*maxDelayInSamp);
+    
+    // define remapping order for ambisonic IR exported to follow ACN convention
+    // (TODO: clean + procedural way to gerenate remapping, eventually remap original lib)
+    int ambiChannelExportRemapping [N_AMBI_CH] = { 0, 3, 2, 1, 8, 7, 6, 5, 4 };
     
     // prepare impulse response buffer
     recordingBufferInput.getWritePointer(0)[0] = 1.0f;
@@ -312,28 +318,36 @@ void MainContentComponent::recordIr()
         // clear impulse after first round
         if( bufferId >= 1 ){ recordingBufferInput.clear(); }
         
-        // execute main audio processing
-        getNextAudioBlockProcess( &recordingBufferInput );
+        // execute main audio processing: fill ambisonic buffer
+        processAmbisonicBuffer( &recordingBufferInput );
         
-        // add to output buffer
+        // add to output ambisonic buffer
+        for( int k = 0; k < N_AMBI_CH; k++ )
+        {
+            recordingBufferAmbisonicOutput.addFrom(ambiChannelExportRemapping[k], bufferId*localSamplesPerBlockExpected, ambisonicBuffer, k+2, 0, localSamplesPerBlockExpected);
+        }
+        
+        // ambisonic to stereo
+        fillNextAudioBlock( &recordingBufferInput );
+        
+        // add to output stereo buffer
         for( int k = 0; k < 2; k++ )
         {
             recordingBufferOutput.addFrom(k, bufferId*localSamplesPerBlockExpected, recordingBufferInput, k, 0, localSamplesPerBlockExpected);
         }
         
-        // update current RMS level
-        rms = recordingBufferInput.getRMSLevel(0, 0, localSamplesPerBlockExpected) + recordingBufferInput.getRMSLevel(0, 0, localSamplesPerBlockExpected);
-        rms *= 0.5;
-        
         // increment
         bufferId += 1;
+        rms = recordingBufferInput.getRMSLevel(0, 0, localSamplesPerBlockExpected) + recordingBufferInput.getRMSLevel(0, 0, localSamplesPerBlockExpected);
+        rms *= 0.5;
     }
     
     // resize output
     recordingBufferOutput.setSize(2, bufferId*localSamplesPerBlockExpected, true);
     
     // save output
-    audioIOComponent.saveIR(recordingBufferOutput, localSampleRate);
+    audioIOComponent.saveIR(recordingBufferAmbisonicOutput, localSampleRate, String("Evertims_IR_Recording_ambi_") + String(AMBI_ORDER) + String("_order"));
+    audioIOComponent.saveIR(recordingBufferOutput, localSampleRate, "Evertims_IR_Recording_binaural");
     
     // unlock main audio thread
     isRecordingIr = false;

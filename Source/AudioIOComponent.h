@@ -201,10 +201,10 @@ void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 //==========================================================================
 // AUDIO SAVE METHODS
 
-void saveIR(const AudioBuffer<float> &source, double sampleRate)
+void saveIR(const AudioBuffer<float> &source, double sampleRate, String fileName)
 {
     const File file (File::getSpecialLocation (File::userDesktopDirectory)
-                     .getNonexistentChildFile ("Evertims_IR_Recording", ".wav"));
+                     .getNonexistentChildFile (fileName, ".wav"));
     
     // Create an OutputStream to write to our destination file...
     file.deleteFile();

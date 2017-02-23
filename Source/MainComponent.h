@@ -36,7 +36,9 @@ public:
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
     
-    void getNextAudioBlockProcess( AudioBuffer<float> *const audioBufferToFill );
+    // void getNextAudioBlockProcess( AudioBuffer<float> *const audioBufferToFill );
+    void processAmbisonicBuffer( AudioBuffer<float> *const audioBufferToFill );
+    void fillNextAudioBlock( AudioBuffer<float> *const audioBufferToFill );
     void recordIr();
     
     void paint (Graphics& g) override;
@@ -83,6 +85,7 @@ private:
     // buffers
     AudioBuffer<float> workingBuffer; // working buffer
     AudioBuffer<float> recordingBufferOutput; // recording buffer
+    AudioBuffer<float> recordingBufferAmbisonicOutput; // recording buffer
     AudioBuffer<float> recordingBufferInput; // recording buffer
     
     // audio player (GUI + audio reader + adc input)
