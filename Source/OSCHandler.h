@@ -34,12 +34,12 @@ public:
 OSCHandler()
 {
     // specify here on which UDP port number to receive incoming OSC messages
-    DBG("instantiating OSC Handler...");
-    if (! connect (port))
+    if( !connect(port) )
+    {
         showConnectionErrorMessage ("Error: (OSC) could not connect to localhost@" + String(port) + ".");
+    }
     
     addListener (this);
-    
     valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
 }
 
@@ -224,7 +224,7 @@ void oscMessageReceived (const OSCMessage& msg) override
     else if( pR60.matches(msgAdress) )
     {
         for( int i = 0; i < msg.size(); i++ ){ valuesR60[i] = msg[i].getFloat32(); }
-        DBG(String("r60: ") + String(valuesR60[0]) + String(", ") + String(valuesR60[1]) + String(", ") + String(valuesR60[2]) + String(", ") + String(valuesR60[3]) + String(", ") + String(valuesR60[4]) + String(", ") + String(valuesR60[5]) + String(", ") + String(valuesR60[6]) + String(", ") + String(valuesR60[7]) + String(", ") + String(valuesR60[8]) + String(", ") + String(valuesR60[9]) + String(" "));
+//        DBG(String("r60: ") + String(valuesR60[0]) + String(", ") + String(valuesR60[1]) + String(", ") + String(valuesR60[2]) + String(", ") + String(valuesR60[3]) + String(", ") + String(valuesR60[4]) + String(", ") + String(valuesR60[5]) + String(", ") + String(valuesR60[6]) + String(", ") + String(valuesR60[7]) + String(", ") + String(valuesR60[8]) + String(", ") + String(valuesR60[9]) + String(" "));
     }
     
     //    else {

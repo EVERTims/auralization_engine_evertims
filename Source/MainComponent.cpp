@@ -35,7 +35,7 @@ ambi2binContainer()
     // local GUI elements
     saveIrButton.setButtonText ("Save IR to Desktop");
     saveIrButton.addListener (this);
-    saveIrButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::grey);
     saveIrButton.setEnabled (true);
     addAndMakeVisible (&saveIrButton);
     
@@ -82,6 +82,30 @@ ambi2binContainer()
     gainDirectPathSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
     gainDirectPathSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
     gainDirectPathSlider.addListener(this);
+
+    addAndMakeVisible(gainEarlySlider);
+    gainEarlySlider.setRange(0.0, 2.0);
+    gainEarlySlider.setValue(1.0);
+    gainEarlySlider.setSliderStyle(Slider::LinearHorizontal);
+    gainEarlySlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    gainEarlySlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    gainEarlySlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    gainEarlySlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    gainEarlySlider.addListener(this);
+    
+    addAndMakeVisible(crossfadeStepSlider);
+    crossfadeStepSlider.setRange(0.001, 1.0);
+    crossfadeStepSlider.setValue(0.1);
+    crossfadeStepSlider.setSliderStyle(Slider::RotaryVerticalDrag);
+    crossfadeStepSlider.setColour(Slider::rotarySliderFillColourId, Colours::white);
+    crossfadeStepSlider.setColour(Slider::rotarySliderOutlineColourId, Colours::darkgrey);
+    crossfadeStepSlider.setRotaryParameters(10 / 8.f * 3.1416, 22 / 8.f * 3.1416, true);
+    crossfadeStepSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+    crossfadeStepSlider.setColour(Slider::textBoxTextColourId, Colours::white);
+    crossfadeStepSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+    crossfadeStepSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    crossfadeStepSlider.setSkewFactor(0.7);
+    crossfadeStepSlider.addListener(this);
     
     addAndMakeVisible (numFrequencyBandsLabel);
     numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
@@ -106,6 +130,16 @@ ambi2binContainer()
     directPathLabel.setText ("Direct path", dontSendNotification);
     directPathLabel.setColour(Label::textColourId, Colours::whitesmoke);
     directPathLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
+
+    addAndMakeVisible (earlyLabel);
+    earlyLabel.setText ("Early reflections", dontSendNotification);
+    earlyLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    earlyLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
+    
+    addAndMakeVisible (crossfadeLabel);
+    crossfadeLabel.setText ("Crossfade", dontSendNotification);
+    crossfadeLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    crossfadeLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
     
     addAndMakeVisible (&reverbTailToggle);
     reverbTailToggle.setButtonText ("Reverb tail");
@@ -400,7 +434,7 @@ void MainContentComponent::paint (Graphics& g)
     // parameters box
     g.setOpacity(1.0f);
     g.setColour(Colours::whitesmoke);
-    g.drawRoundedRectangle(10.f, 155.f, getWidth()-20.f, 130.f, 0.0f, 1.0f);
+    g.drawRoundedRectangle(10.f, 155.f, getWidth()-20.f, 150.f, 0.0f, 1.0f);
     
     // logo image
     g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/ 1.45) - (logoImage.getHeight()/2) ));
@@ -423,22 +457,28 @@ void MainContentComponent::resized()
     
     parameterLabel.setBounds(30, 147, 80, 15);
     
-    reverbTailToggle.setBounds(30, 170, 120, 20);
-    gainReverbTailSlider.setBounds (180, 170, 440, 20);
+    directPathLabel.setBounds(30, 170, 120, 20);
+    gainDirectPathSlider.setBounds (140, 170, 330, 20);
+    enableDirectToBinaural.setBounds (480, 170, 140, 20);
+
+    earlyLabel.setBounds(30, 200, 120, 20);
+    gainEarlySlider.setBounds (180, 200, 440, 20);
+
+    reverbTailToggle.setBounds(30, 230, 120, 20);
+    gainReverbTailSlider.setBounds (180, 230, 440, 20);
+
+    crossfadeLabel.setBounds(30, 270, 80, 20);
+    crossfadeStepSlider.setBounds(110, 255, 80, 50);
     
-    directPathLabel.setBounds(30, 200, 120, 20);
-    gainDirectPathSlider.setBounds (140, 200, 330, 20);
-    enableDirectToBinaural.setBounds (480, 200, 140, 20);
-
-    numFrequencyBandsLabel.setBounds(30, 245, 220, 20);
-    numFrequencyBandsComboBox.setBounds(210, 245, 80, 20);
-
-    saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 240, thirdWidthIoComponent, 30);
+    numFrequencyBandsLabel.setBounds(195, 270, 200, 20);
+    numFrequencyBandsComboBox.setBounds(380, 270, 40, 20);
+    
+    saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
     
     // log box
-    logLabel.setBounds(30, 286, 40, 20);
-    logTextBox.setBounds (8, 300, getWidth() - 16, getHeight() - 316);
-    enableLog.setBounds(getWidth() - 110, 300, 100, 30);
+    logLabel.setBounds(30, 306, 40, 20);
+    logTextBox.setBounds (8, 320, getWidth() - 16, getHeight() - 336);
+    enableLog.setBounds(getWidth() - 110, 320, 100, 30);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -508,6 +548,15 @@ void MainContentComponent::sliderValueChanged(Slider* slider)
     if( slider == &gainDirectPathSlider )
     {
         sourceImagesHandler.directPathGain = gainDirectPathSlider.getValue();
+    }
+    if( slider == &gainEarlySlider )
+    {
+        sourceImagesHandler.earlyGain = slider->getValue();
+    }
+    if( slider == &crossfadeStepSlider )
+    {
+        sourceImagesHandler.crossfadeStep = slider->getValue();
+        sourceImagesHandler.binauralEncoder.crossfadeStep = slider->getValue();
     }
 }
 

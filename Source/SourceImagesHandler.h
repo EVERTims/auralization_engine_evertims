@@ -21,7 +21,7 @@ public:
     std::vector<float> delaysFuture; // in seconds
     std::vector<float> pathLengths; // in meters
     int numSourceImages;
-    int directPathId;
+    float earlyGain = 1.f;
     
     // octave filter bank
     FilterBank filterBank;
@@ -33,8 +33,15 @@ public:
     float reverbTailGain = 1.0f;
     
     // direct path to binaural
+    int directPathId;
     float directPathGain = 1.0f;
     bool enableDirectToBinaural = true;
+    
+    // misc.
+    float crossfadeStep = 0.1f;
+    
+    // direct binaural encoding (for direct path only)
+    BinauralEncoder binauralEncoder;
     
 private:
     
@@ -67,9 +74,6 @@ private:
     std::vector< Array<float> > ambisonicGainsCurrent; // buffer for input data
     std::vector< Array<float> > ambisonicGainsFuture; // to avoid zipper effect
     AudioBuffer<float> ambisonicBuffer; // output buffer, N (Ambisonic) channels
-    
-    // direct binaural encoding (for direct path only)
-    BinauralEncoder binauralEncoder;
     
     
 //==========================================================================
@@ -180,7 +184,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         workingBuffer.clear();
         for( int k = 0; k < bandBuffer.getNumChannels(); k++ )
         {
-            // apply absorption gains
+            // apply absorption gains (TODO: sometimes crashes here at startup because absorptionCoefs data is null pointer)
             bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, fmin(abs(1.0 - absorptionCoefs[j][k]), 1.f));
             
             // recompose (add-up frequency bands)
@@ -196,10 +200,14 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         }
         
         //==========================================================================
-        // SET DIRECT PATH GAIN
+        // APPLY DIRECT PATH / EARLY GAINS
         if( directPathId == IDs[j] )
         {
             workingBuffer.applyGain(directPathGain);
+        }
+        else
+        {
+            workingBuffer.applyGain(earlyGain);
         }
         
         //==========================================================================
@@ -401,7 +409,7 @@ void updateCrossfade()
     // either update crossfade
     if( crossfadeGain < 1.0 )
     {
-        crossfadeGain = fmin( crossfadeGain + 0.1, 1.0 );
+        crossfadeGain = fmin( crossfadeGain + crossfadeStep, 1.0 );
     }
     // or stop crossfade mecanism if not already stopped
     else if (!crossfadeOver)

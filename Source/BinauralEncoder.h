@@ -19,6 +19,7 @@ class BinauralEncoder
     
 public:
     
+float crossfadeStep = 0.1f;    
     
 private:
 

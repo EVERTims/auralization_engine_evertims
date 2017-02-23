@@ -74,11 +74,14 @@ private:
     ToggleButton enableLog;
     Slider gainReverbTailSlider;
     Slider gainDirectPathSlider;
+    Slider gainEarlySlider;
+    Slider crossfadeStepSlider;
     Label inputLabel;
     Label parameterLabel;
     Label directPathLabel;
+    Label earlyLabel;
     Label logLabel;
-    
+    Label crossfadeLabel;
     //==========================================================================
     // AUDIO COMPONENTS
 
