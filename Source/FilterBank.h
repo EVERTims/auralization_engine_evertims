@@ -11,19 +11,19 @@ class FilterBank
     
 public:
 
-double localSampleRate; // default sampling rate, to be set in program that uses filter bank
-int localSamplesPerBlockExpected;
-    
+    int numOctaveBands = 0;
+    int numIndptStream = 0;
+
 private:
 
-int numOctaveBands = 0;
-int numIndptStream = 0;
-    
-std::vector<std::array<IIRFilter, NUM_OCTAVE_BANDS-1> > octaveFilterBanks;
-    
-AudioBuffer<float> bufferFiltered;
-AudioBuffer<float> bufferRemains;
-AudioBuffer<float> bufferBands;
+    double localSampleRate;
+    int localSamplesPerBlockExpected;
+        
+    std::vector<std::array<IIRFilter, NUM_OCTAVE_BANDS-1> > octaveFilterBanks;
+        
+    AudioBuffer<float> bufferFiltered;
+    AudioBuffer<float> bufferRemains;
+    AudioBuffer<float> bufferBands;
     
 //==========================================================================
 // METHODS
@@ -44,9 +44,9 @@ void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
     bufferBands.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
 }
 
-// Define number of frequency bands in filter-bank ( only choice is betwen 3 or 10 )
-// NOTE: a filter is stateful, and needs to be given a continuous stream of audio, so each source image
-// needs its own separate filter bank (see e.g. https://forum.juce.com/t/iirfilter-help/1733/7 ).
+// Define number of frequency bands in filter-bank (only choice is betwen 3 or 10)
+// NOTE: a filter is stateful, and needs to be given a continuous stream of audio. Hence, each source
+// image needs its own separate filter bank (see e.g. https://forum.juce.com/t/iirfilter-help/1733/7 ).
 void setNumFilters( int numBands, int numSourceImages )
 {
     // skip if nothing has changed
@@ -56,21 +56,22 @@ void setNumFilters( int numBands, int numSourceImages )
     numOctaveBands = numBands;
     numIndptStream = numSourceImages;
     bufferBands.setSize(numBands, localSamplesPerBlockExpected);
-    
-    double fc; // refers to cutoff frequency
     octaveFilterBanks.resize( numSourceImages );
     
+    // loop over bands of each filterbank
+    double fc; // cutoff frequency
+    double fcMid;
     for( int j = 0; j < numSourceImages; j++ )
     {
         if( numBands == 10 ) // 10-filter-bank
         {
-            fc = 31.5; double fcMid;
+            fc = 31.5;
             for( int i = 0; i < numOctaveBands-1; i++ )
             {
-                // get lowpass cut-off freq (in between would be Fc for bandpass, arbitrary choice)
-                if( i < numOctaveBands - 2 ) fcMid = fc + ( 2*fc - fc )/2;
-                // last is not mid between next and current but between max and current
-                else fcMid = fc + ( 20000 - fc )/2;
+                // get lowpass cut-off freq (in between "would be Fc" for bandpass, arbitrary choice)
+                if( i < numOctaveBands - 2 ){ fcMid = fc + ( 2*fc - fc )/2; }
+                // last fcMid is not "mid between next and current" but "between max and current"
+                else{ fcMid = fc + ( 20000 - fc )/2; }
                 
                 octaveFilterBanks[j][i].setCoefficients( IIRCoefficients::makeLowPass( localSampleRate, fcMid ) );
                 // octaveFilterBanks[j][i].reset();
@@ -90,14 +91,6 @@ void setNumFilters( int numBands, int numSourceImages )
         }
     }
 }
-    
-    // reset all filters to change number of bands
-    void setNumBands( int numBands )
-    {
-        
-    }
-
-int getNumFilters() { return numOctaveBands; }
 
 // Decompose source buffer into bands, return multi-channel buffer with one band per channel
 AudioBuffer<float> getBandBuffer( AudioBuffer<float> &source, int sourceImageId )

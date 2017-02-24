@@ -11,18 +11,17 @@ class DelayLine
     
 public:
 
-int writeIndex;
-AudioBuffer<float> buffer;
-AudioBuffer<float> chunkBuffer;
-    
-
 private:
 
-int chunkReadIndex;
-AudioBuffer<float> chunkBufferPrev;
-AudioBuffer<float> chunkBufferNext;
-
+    int writeIndex;
+    int chunkReadIndex;
     
+    AudioBuffer<float> buffer;
+    AudioBuffer<float> chunkBuffer;
+    
+    AudioBuffer<float> chunkBufferPrev;
+    AudioBuffer<float> chunkBufferNext;
+
 //==========================================================================
 // METHODS
     
@@ -36,7 +35,19 @@ DelayLine()
 
 ~DelayLine() {}
 
-// increase delay line size if need be (no shrinking delay line for now)
+// local equivalent of prepareToPlay
+void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+{
+    buffer.setSize(buffer.getNumChannels(), 2*samplesPerBlockExpected);
+    buffer.clear();
+    
+    chunkBuffer.setSize(1, samplesPerBlockExpected);
+    chunkBuffer.clear();
+    chunkBufferPrev = chunkBuffer;
+    chunkBufferNext = chunkBuffer;
+}
+
+// increase delay line size if need be (no shrinking delay line size for now)
 void setSize(int newNumChannels, int newNumSamples)
 {
     newNumSamples = fmax(buffer.getNumSamples(), newNumSamples);
@@ -47,8 +58,7 @@ void setSize(int newNumChannels, int newNumSamples)
     }
 }
 
-// add samples from buffer to delay line
-// void copyFrom(const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+// add samples from buffer to delay line (replace)
 void copyFrom(int destChannel, const juce::AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
 {
     // either simple copy
@@ -66,7 +76,7 @@ void copyFrom(int destChannel, const juce::AudioBuffer<float> &source, int sourc
     }
 }
 
-// add samples from buffer to delay line
+// add samples from buffer to delay line (add)
 void addFrom(int destChannel, const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
 {
     // either simple copy
@@ -84,23 +94,11 @@ void addFrom(int destChannel, const AudioBuffer<float> &source, int sourceChanne
     }
 }
 
-// increment write position, apply circular shift if needed
+// increment write position, apply circular shift if need be
 void incrementWritePosition(int numSamples)
 {
     writeIndex += numSamples;
     writeIndex %= buffer.getNumSamples();
-}
-
-// local equivalent of prepareToPlay
-void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
-{
-    int numChannels = buffer.getNumChannels();
-    buffer.setSize(numChannels, 2*samplesPerBlockExpected);
-    buffer.clear();
-    chunkBuffer.setSize(1, samplesPerBlockExpected);
-    chunkBuffer.clear();
-    chunkBufferPrev = chunkBuffer;
-    chunkBufferNext = chunkBuffer;
 }
 
 // get delayed buffer out of delay line
@@ -117,11 +115,13 @@ AudioBuffer<float> getChunk(int sourceChannel, int numSamples, int delayInSample
     }
     
     if ( ( writePos + numSamples ) < buffer.getNumSamples() )
-    { // simple copy
+    {
+        // simple copy
         chunkBuffer.copyFrom(0, 0, buffer, sourceChannel, writePos, numSamples);
     }
     else
-    { // circular loop
+    {
+        // circular loop
         int numSamplesTail = buffer.getNumSamples() - writePos;
         chunkBuffer.copyFrom(0, 0, buffer, sourceChannel, writePos, numSamplesTail );
         chunkBuffer.copyFrom(0, numSamplesTail, buffer, sourceChannel, 0, numSamples - numSamplesTail);

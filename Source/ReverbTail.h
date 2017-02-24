@@ -43,8 +43,10 @@ public:
     
 ReverbTail() {
     
+    // init local attributes
     valuesRT60.resize( numOctaveBands, 0.0f );
-
+    
+    // define FDN parameters
     defineFdnFeedbackMatrix();
     updateFdnParameters();
 }
@@ -69,6 +71,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     localSamplesPerBlockExpected = samplesPerBlockExpected;
 }
 
+// update FDN gains and cie based on new RT60 values
 void updateInternals( std::vector<float> rt60Values )
 {
     // store new RT60 values
@@ -85,6 +88,7 @@ void updateInternals( std::vector<float> rt60Values )
 // add source image to reverberation bus for latter use
 void addToBus( int busId, AudioBuffer<float> source )
 {
+    // If main thread operates with 3 bands
     if( source.getNumChannels() == 3 )
     {
         for( int k = 0; k < source.getNumChannels(); k++ )
@@ -92,9 +96,19 @@ void addToBus( int busId, AudioBuffer<float> source )
             reverbBusBuffers.addFrom(k*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected);
         }
     }
-    else{ // from 10 to 3 bands
-        for( int k = 0; k < 5; k++ ){ reverbBusBuffers.addFrom(0*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected); }
-        for( int k = 5; k < 9; k++ ){ reverbBusBuffers.addFrom(1*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected); }
+    // If main thread operates with 10 bands (reduce to 3 here)
+    else{
+        // low frequencies
+        for( int k = 0; k < 5; k++ )
+        {
+            reverbBusBuffers.addFrom(0*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected);
+        }
+        // mid frequencies
+        for( int k = 5; k < 9; k++ )
+        {
+            reverbBusBuffers.addFrom(1*fdnOrder+busId, 0, source, k, 0, localSamplesPerBlockExpected);
+        }
+        // last band
         reverbBusBuffers.addFrom(2*fdnOrder+busId, 0, source, 9, 0, localSamplesPerBlockExpected);
     }
 }
@@ -163,6 +177,7 @@ AudioBuffer<float> getTailBuffer()
     return tailBuffer;
 }
 
+// clear content from FDN buffer
 void clear()
 {
     reverbBusBuffers.clear();
@@ -173,9 +188,9 @@ private:
   
 void updateFdnParameters(){
     
-    // Define FDN delays
-    // TO DO: delay values should be based on dist min / max (see pd patch / Sabine formula)
-    // but that would require estimation of room volume / surface
+    // Define FDN delays (put here even if static define to be ready for TODO)
+    // TODO: delay values should be based on dist min / max (Sabine formula).
+    // would require estimation of room volume / surface in EVERTims
     fdnDelays[0] = 0.011995;
     fdnDelays[1] = 0.019070;
     fdnDelays[2] = 0.021791;
@@ -193,7 +208,7 @@ void updateFdnParameters(){
     fdnDelays[14] = 0.156213;
     fdnDelays[15] = 0.179615;
     
-    // Define FDN gains
+    // Define FDN gains based on new delays
     for (int bandId = 0; bandId < numOctaveBands; bandId++)
     {
         for (int fdnId = 0; fdnId < fdnOrder; fdnId++)
@@ -465,7 +480,7 @@ void defineFdnFeedbackMatrix(){
     fdnFeedbackMatrix[15][15] = 0.250;
 }
     
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ReverbTail)
+JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ReverbTail)
     
 };
 

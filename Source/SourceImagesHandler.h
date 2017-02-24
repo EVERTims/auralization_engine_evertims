@@ -321,7 +321,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     for (int j = 0; j < IDs.size(); j++)
     {
         absorptionCoefsFuture[j] = oscHandler.getSourceImageAbsorption(IDs[j]);
-        if( filterBank.getNumFilters() == 3 )
+        if( filterBank.numOctaveBands == 3 )
         {
             absorptionCoefsFuture[j] = from10to3bands(absorptionCoefsFuture[j]);
         }
@@ -346,7 +346,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     }
     
     // update filter bank size
-    filterBank.setNumFilters( filterBank.getNumFilters(), IDs.size() );
+    filterBank.setNumFilters( filterBank.numOctaveBands, IDs.size() );
     
     // update number of valid source images
     numSourceImages = IDs.size();

@@ -12,7 +12,7 @@ class Ambi2binIRContainer
 
 public:
 
-std::array< std::array < std::array<float, AMBI2BIN_IR_LENGTH>, 2>, N_AMBI_CH> ambi2binIrDict;
+    std::array< std::array < std::array<float, AMBI2BIN_IR_LENGTH>, 2>, N_AMBI_CH> ambi2binIrDict;
 
 //==========================================================================
 // METHODS
@@ -21,48 +21,15 @@ public:
 
 Ambi2binIRContainer()
 {
-    
-    // open HRIR file
-    auto thisDir = File::getSpecialLocation(File::currentExecutableFile).getParentDirectory();
-    
-    DBG(thisDir.getFullPathName());
-    
-    File resourceDir; bool resourceDirDefined = false;
-    if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Mac"))
-    {
-        resourceDir = thisDir.getParentDirectory().getChildFile("Resources");
-        resourceDirDefined = true;
-    }
-    else if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win"))
-    {
-        resourceDir = thisDir.getChildFile("data");
-        resourceDirDefined = true;
-    }
-    else
-    {
-        DBG("OS not handled yet");
-    }
-    
-    if (!resourceDirDefined) // skip loading
-    {
-        DBG("Ambi2bin IR not loaded: resource directory not found");
-    }
-    
     // load HRIR, ITD, ILD, etc.
-    try
-    {
-        loadIR(resourceDir.getChildFile("hoa2bin_order2_IRC_1008_R_HRIR.bin").getFullPathName());
-    }
-    catch (std::ios_base::failure&)
-    {
-        DBG("Ambi2bin IR not loaded: failed to open file");
-    }
+    File hoa2binFile = getFileFromString("hoa2bin_order2_IRC_1008_R_HRIR.bin");
+    loadIR( hoa2binFile );
 }
 
 ~Ambi2binIRContainer(){}
 
-// load ABIRs from file
-void loadIR(String filename)
+// load Ambisonic to binaural room impulse response from file
+void loadIR(File filename)
 {
     FileInputStream istream(filename);
     if (istream.openedOk())
@@ -80,9 +47,7 @@ void loadIR(String filename)
             }
         }
     }
-    else
-        throw std::ios_base::failure("Failed to open ABIR file");
-    
+    else{ throw std::ios_base::failure("Failed to open ABIR file"); }
 }
 
 

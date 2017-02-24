@@ -161,7 +161,6 @@ ambi2binContainer()
     enableLog.setEnabled(true);
     enableLog.addListener(this);
     enableLog.setToggleState(true, juce::sendNotification);
-
 }
 
 MainContentComponent::~MainContentComponent()
@@ -204,7 +203,8 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     }
 }
 
-// Audio Processing (Dummy)
+// Audio Processing (split in "processAmbisonicBuffer" and "fillNextAudioBlock" to enable
+// IR recording: using the same methods as the main thread)
 void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
     // fill buffer with audiofile data
@@ -216,6 +216,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
         processAmbisonicBuffer( bufferToFill.buffer );
         fillNextAudioBlock( bufferToFill.buffer );
     }
+    // simply clear output buffer
     else
     {
         bufferToFill.clearActiveBufferRegion();
@@ -226,6 +227,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     if( sourceImageHandlerNeedsUpdate && sourceImagesHandler.crossfadeOver )
     {
         sourceImagesHandler.updateFromOscHandler(oscHandler);
+        requireDelayLineSizeUpdate = true;
         sourceImageHandlerNeedsUpdate = false;
     }
 }
@@ -275,18 +277,11 @@ void MainContentComponent::processAmbisonicBuffer( AudioBuffer<float> *const aud
 void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBufferToFill )
 {
     
+    //==========================================================================
+    // SPATIALISATION: Ambisonic decoding + virtual speaker approach + binaural
+    
     if ( sourceImagesHandler.IDs.size() > 0 )
     {
-        //==========================================================================
-        // Spatialization: Ambisonic decoding + virtual speaker approach + binaural
-
-        // DEBUG: check Ambisonic gains
-        // String debugLog = "";
-        // for (int k = 0; k < N_AMBI_CH; k++) {// N_AMBI_CH
-        //     debugLog += String(k) + String(": ") + String(round2(sourceImageAmbisonicGains[0][k], 2)) + String("\t ");
-        // }
-        // DBG(debugLog);
-
         // duplicate channel before filtering for two ears
         ambisonicBuffer2ndEar = ambisonicBuffer;
 
@@ -306,10 +301,10 @@ void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBu
         audioBufferToFill->copyFrom(1, 0, ambisonicBuffer2ndEar, 1, 0, workingBuffer.getNumSamples());
     }
     
+    //==========================================================================
+    // if no source image, simply rewrite to output buffer (TODO: remove stupid double copy)
     else
     {
-        //==========================================================================
-        // if no source image, simply rewrite to output buffer (TODO: remove stupid double copy)
         audioBufferToFill->copyFrom(0, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
         audioBufferToFill->copyFrom(1, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
     }
@@ -411,7 +406,7 @@ void MainContentComponent::releaseResources()
 //==============================================================================
 // ADDITIONAL AUDIO ROUTINES
 
-// CRUDE DEBUG PRECAUTION - restrain output in [-1.0; 1.0]
+// CRUDE DEBUG PRECAUTION - clip output in [-1.0; 1.0]
 float MainContentComponent::clipOutput(float input)
 {
     if (std::abs(input) > 1.0f)
@@ -423,20 +418,25 @@ float MainContentComponent::clipOutput(float input)
         return input;
 }
 
-void MainContentComponent::updateOnOscReveive(int sampleRate)
+// method called when new OSC messages are available
+void MainContentComponent::updateOnOscReveive()
 {
-    // update source images attributes based on latest received OSC info
+    // if sourceImagesHandler not in the midst of an update
     if( sourceImagesHandler.crossfadeOver )
     {
+        // update source images attributes based on latest received OSC info
         sourceImagesHandler.updateFromOscHandler(oscHandler);
+        
+        // now that everything is ready: set update flag, to resize delay line at next audio loop
+        requireDelayLineSizeUpdate = true;
     }
+    // otherwise, flag that an update is required
     else{ sourceImageHandlerNeedsUpdate = true; }
-    
-    // now that everything is ready: set update flag, to resize delay line at next audio loop
-    requireDelayLineSizeUpdate = true;
 }
 
 //==============================================================================
+// GRAPHIC METHODS
+
 void MainContentComponent::paint (Graphics& g)
 {
     // background
@@ -454,7 +454,6 @@ void MainContentComponent::paint (Graphics& g)
     g.setColour(Colours::white);
     g.setFont(11.f);
     g.drawFittedText("Designed by D. Poirier-Quinot & M. Noisternig, IRCAM, 2017", getWidth() - 285, getHeight()-15, 275, 15, Justification::right, 2);
-    
 }
 
 void MainContentComponent::resized()
@@ -492,6 +491,9 @@ void MainContentComponent::resized()
     enableLog.setBounds(getWidth() - 120, 320, 100, 30);
 }
 
+//==============================================================================
+// LISTENER METHODS
+
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
 {
     if (broadcaster == &oscHandler)
@@ -500,11 +502,9 @@ void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaste
         {
             logTextBox.setText(oscHandler.getMapContent());
         }
-        updateOnOscReveive(localSampleRate);
+        updateOnOscReveive();
     }
 }
-
-//==============================================================================
 
 void MainContentComponent::buttonClicked (Button* button)
 {
@@ -522,7 +522,7 @@ void MainContentComponent::buttonClicked (Button* button)
     if( button == &reverbTailToggle )
     {
         sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
-        updateOnOscReveive(localSampleRate); // require delay line size update
+        updateOnOscReveive(); // require delay line size update
         gainReverbTailSlider.setEnabled(reverbTailToggle.getToggleState());
     }
     if( button == &enableDirectToBinaural )
@@ -572,4 +572,4 @@ void MainContentComponent::sliderValueChanged(Slider* slider)
 
 //==============================================================================
 // (This function is called by the app startup code to create our main component)
-Component* createMainContentComponent()     { return new MainContentComponent(); }
+Component* createMainContentComponent() { return new MainContentComponent(); }

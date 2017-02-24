@@ -19,12 +19,12 @@ class OSCHandler :
     
 private:
     
-int port = 3860;
+    int port = 3860;
 
-std::map<int,EL_ImageSource> sourceImageMap;
-std::map<String,EL_Source> sourceMap;
-std::map<String,EL_Listener> listenerMap;
-std::vector<float> valuesR60;
+    std::map<int,EL_ImageSource> sourceImageMap;
+    std::map<String,EL_Source> sourceMap;
+    std::map<String,EL_Listener> listenerMap;
+    std::vector<float> valuesR60;
 
 //==========================================================================
 // METHODS
@@ -33,7 +33,7 @@ public:
 
 OSCHandler()
 {
-    // specify here on which UDP port number to receive incoming OSC messages
+    // if failed to connect
     if( !connect(port) )
     {
         showConnectionErrorMessage ("Error: (OSC) could not connect to localhost@" + String(port) + ".");
@@ -45,7 +45,6 @@ OSCHandler()
 
 ~OSCHandler() {}
 
-// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
 std::vector<int> getSourceImageIDs()
 {
     std::vector<int> IDs;
@@ -59,7 +58,6 @@ std::vector<int> getSourceImageIDs()
     return IDs;
 }
 
-// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
 std::vector<float> getSourceImageDelays()
 {
     std::vector<float> delays;
@@ -73,7 +71,6 @@ std::vector<float> getSourceImageDelays()
     return delays;
 }
 
-// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
 std::vector<float> getSourceImagePathsLength()
 {
     std::vector<float> pathLength;
@@ -87,7 +84,7 @@ std::vector<float> getSourceImagePathsLength()
     return pathLength;
 }
 
-// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
+// get Direction Of Arrivals
 std::vector<Eigen::Vector3f> getSourceImageDOAs()
 {
     Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
@@ -105,7 +102,6 @@ std::vector<Eigen::Vector3f> getSourceImageDOAs()
     return doas;
 }
 
-// TODO: SETUP FOR MULTI-USER / MULTI-SOURCE
 Array<float> getSourceImageAbsorption(int sourceID)
 {
     return sourceImageMap.find(sourceID)->second.absorption;
@@ -115,7 +111,7 @@ std::vector<float> getRT60Values()
 {
     return valuesR60;
 }
-    
+
 int getDirectPathId()
 {
     for(auto const &ent1 : sourceImageMap) {
@@ -126,6 +122,7 @@ int getDirectPathId()
     return -1;
 }
 
+// return string with full content of local attributes for GUI log window
 String getMapContent()
 {
     String output;
@@ -161,9 +158,6 @@ String getMapContent()
     std::vector<Eigen::Vector3f> posSph = getSourceImageDOAs();
     int i = 0;
     for(auto const &ent1 : sourceImageMap) {
-        // ent1.first is the first key
-        // Eigen::Vector3f posSph = cartesianToSpherical(ent1.second.positionRelectionLast - listenerPos);
-        
         output += String("Source Image: ") + String(ent1.first) + String(", \t posLast:  [ ") +
         String(round2(ent1.second.positionRelectionLast(0), nDecimals)) + String(", ") +
         String(round2(ent1.second.positionRelectionLast(1), nDecimals)) + String(", ") +
@@ -191,8 +185,6 @@ void oscMessageReceived (const OSCMessage& msg) override
     
     OSCAddress msgAdress(msg.getAddressPattern().toString());
     
-    // DBG(String("osc msg: ") + msg.getAddressPattern().toString() + String(" size: ") + String(msg.size()) + String(" id: ") + String(msg[0].getInt32()));
-    
     if ( (pIn.matches(msgAdress) || pUpd.matches(msgAdress) ) && msg.size() == 19){
         // format: [ /in pathID order r1x r1y r1z rNx rNy rNz dist abs1 .. abs9 ]
         
@@ -200,14 +192,10 @@ void oscMessageReceived (const OSCMessage& msg) override
         source.ID = msg[0].getInt32();
         source.reflectionOrder = msg[1].getInt32();
         
-        //        for (int i = 1; i < 3; i++)
-        //            source.positionRelectionFirst[i] = msg[2+i].getFloat32();
         source.positionRelectionFirst(0) = msg[2].getFloat32();
         source.positionRelectionFirst(1) = msg[3].getFloat32();
         source.positionRelectionFirst(2) = msg[4].getFloat32();
         
-        //        for (int i = 1; i < 3; i++)
-        //            source.positionRelectionLast[i] = msg[5+i].getFloat32();
         source.positionRelectionLast(0) = msg[5].getFloat32();
         source.positionRelectionLast(1) = msg[6].getFloat32();
         source.positionRelectionLast(2) = msg[7].getFloat32();
@@ -215,7 +203,9 @@ void oscMessageReceived (const OSCMessage& msg) override
         source.totalPathDistance = msg[8].getFloat32();
         
         for (int i = 0; i < 10; i++)
+        {
             source.absorption.insert(i, msg[9+i].getFloat32());
+        }
         
         // insert or update
         sourceImageMap[source.ID] = source;
@@ -224,7 +214,6 @@ void oscMessageReceived (const OSCMessage& msg) override
     else if( pR60.matches(msgAdress) )
     {
         for( int i = 0; i < msg.size(); i++ ){ valuesR60[i] = msg[i].getFloat32(); }
-//        DBG(String("r60: ") + String(valuesR60[0]) + String(", ") + String(valuesR60[1]) + String(", ") + String(valuesR60[2]) + String(", ") + String(valuesR60[3]) + String(", ") + String(valuesR60[4]) + String(", ") + String(valuesR60[5]) + String(", ") + String(valuesR60[6]) + String(", ") + String(valuesR60[7]) + String(", ") + String(valuesR60[8]) + String(", ") + String(valuesR60[9]) + String(" "));
     }
     
     //    else {
@@ -238,10 +227,10 @@ void oscMessageReceived (const OSCMessage& msg) override
     //        }
     //    }
     
-    sendChangeMessage ();
-    
+    sendChangeMessage();
 }
 
+// process received OSC bundle
 void oscBundleReceived (const OSCBundle & bundle) override
 {
     OSCAddressPattern pSource("/source");

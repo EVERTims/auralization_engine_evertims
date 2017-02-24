@@ -174,3 +174,32 @@ inline Array<float> from10to3bands(Array<float> vect10bands)
     
     return vect3bands;
 }
+
+// return full file path (in resources dir, depends on OS)
+inline File getFileFromString(String fileName)
+{
+    auto thisDir = File::getSpecialLocation(File::currentExecutableFile).getParentDirectory();
+    
+    File resourceDir; bool resourceDirDefined = false;
+    if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Mac"))
+    {
+        resourceDir = thisDir.getParentDirectory().getChildFile("Resources");
+        resourceDirDefined = true;
+    }
+    else if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win"))
+    {
+        resourceDir = thisDir.getChildFile("data");
+        resourceDirDefined = true;
+    }
+    else
+    {
+        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "Cannot locate file (OS non supported)", fileName, "OK");
+    }
+    
+    if (!resourceDirDefined) // skip loading
+    {
+        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "Cannot locate file", fileName, "OK");
+    }
+    
+    return resourceDir.getChildFile(fileName).getFullPathName();
+}

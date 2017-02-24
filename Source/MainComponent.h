@@ -25,7 +25,6 @@ class MainContentComponent:
     public ChangeListener,
     public Slider::Listener
 {
-
     
 public:
     
@@ -36,7 +35,6 @@ public:
     void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill) override;
     void releaseResources() override;
     
-    // void getNextAudioBlockProcess( AudioBuffer<float> *const audioBufferToFill );
     void processAmbisonicBuffer( AudioBuffer<float> *const audioBufferToFill );
     void fillNextAudioBlock( AudioBuffer<float> *const audioBufferToFill );
     void recordIr();
@@ -48,11 +46,10 @@ public:
     void comboBoxChanged(ComboBox* comboBox) override;
     void sliderValueChanged(Slider* slider) override;
     
-    
 private:
     
     void changeListenerCallback (ChangeBroadcaster* source) override;
-    void updateOnOscReveive(int sampleRate);
+    void updateOnOscReveive();
     float clipOutput(float input);
     
     //==========================================================================
@@ -82,6 +79,7 @@ private:
     Label earlyLabel;
     Label logLabel;
     Label crossfadeLabel;
+    
     //==========================================================================
     // AUDIO COMPONENTS
 

@@ -19,36 +19,36 @@ class BinauralEncoder
     
 public:
     
-float crossfadeStep = 0.1f;    
+    float crossfadeStep = 0.1f;
     
 private:
 
-// format buffer to hold the HRIR of a given position
-using HrirBuffer = std::array < std::array<float, HRIR_LENGTH>, 2 >;
+    // format buffer to hold the HRIR of a given position
+    using HrirBuffer = std::array < std::array<float, HRIR_LENGTH>, 2 >;
 
-// holds all HRIR as loaded from HRIR
-std::map<int, std::array<HrirBuffer, N_ELEV_VALUES>> hrirDict;
+    // holds all HRIR as loaded from HRIR
+    std::map<int, std::array<HrirBuffer, N_ELEV_VALUES>> hrirDict;
 
-// current HRIR data
-HrirBuffer hrir;
-    
-// HRIR FIR filters
-FIRFilter hrirFir[2];
-FIRFilter hrirFirFuture[2];
-    
-// array holding index for hrir linear interpolation
-std::array<int, 2> azimId;
-std::array<int, 2> elevId;
-    
-// stereo output buffer
-AudioBuffer<float> stereoBuffer;
-AudioBuffer<float> stereoBufferCopy;
-    
-// misc.
-double localSampleRate;
-int localSamplesPerBlockExpected;
-float crossfadeGain = 0.f;
-bool crossfadeOver = true;
+    // current HRIR data
+    HrirBuffer hrir;
+
+    // HRIR FIR filters
+    FIRFilter hrirFir[2];
+    FIRFilter hrirFirFuture[2];
+
+    // array holding index for hrir linear interpolation
+    std::array<int, 2> azimId;
+    std::array<int, 2> elevId;
+
+    // stereo output buffer
+    AudioBuffer<float> stereoBuffer;
+    AudioBuffer<float> stereoBufferCopy;
+
+    // misc.
+    double localSampleRate;
+    int localSamplesPerBlockExpected;
+    float crossfadeGain = 0.f;
+    bool crossfadeOver = true;
 
 //==========================================================================
 // METHODS
@@ -82,7 +82,8 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
 }
- 
+
+// binaural encoding of source 1st channel (mono)
 AudioBuffer<float> processBuffer( AudioBuffer<float> &source )
 {
     // update crossfade
@@ -95,7 +96,7 @@ AudioBuffer<float> processBuffer( AudioBuffer<float> &source )
         
         if( crossfadeOver )
         {
-            // process buffer
+            // simply apply FIR
             hrirFir[i].process(stereoBuffer.getWritePointer(i));
         }
         else
@@ -103,7 +104,7 @@ AudioBuffer<float> processBuffer( AudioBuffer<float> &source )
             // duplicate input buffer
             stereoBufferCopy = stereoBuffer;
             
-            // process buffers
+            // apply past and future FIRs
             hrirFir[i].process(stereoBuffer.getWritePointer(i));
             hrirFirFuture[i].process(stereoBufferCopy.getWritePointer(i));
             
@@ -116,7 +117,8 @@ AudioBuffer<float> processBuffer( AudioBuffer<float> &source )
     
     return stereoBuffer;
 }
-    
+
+// update crossfade mecanism
 void updateCrossfade()
 {
     // either update crossfade
@@ -138,7 +140,8 @@ void updateCrossfade()
         crossfadeOver = true;
     }
 }
-    
+
+// set current HRIR filters
 void setPosition(double azim, double elev)
 {
     // get azim / elev indices in hrir array along with associated gains for panning across HRIR
@@ -192,44 +195,11 @@ void setPosition(double azim, double elev)
 }
     
 private:
-    
-File getFileFromString(String fileName)
-{
 
-    // open HRIR file
-    auto thisDir = File::getSpecialLocation(File::currentExecutableFile).getParentDirectory();
-    
-    DBG(thisDir.getFullPathName());
-    
-    File resourceDir; bool resourceDirDefined = false;
-    if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Mac"))
-    {
-        resourceDir = thisDir.getParentDirectory().getChildFile("Resources");
-        resourceDirDefined = true;
-    }
-    else if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win"))
-    {
-        resourceDir = thisDir.getChildFile("data");
-        resourceDirDefined = true;
-    }
-    else
-    {
-        DBG("OS not handled yet");
-    }
-    
-    if (!resourceDirDefined) // skip loading
-    {
-        DBG("Ambi2bin IR not loaded: resource directory not found");
-    }
-    
-    return resourceDir.getChildFile(fileName).getFullPathName();
-    
-    
-}
-    
+// load a given HRIR set
 void loadHrir(File hrirFile)
 {
-    // Load HRIRs
+    // open file
     FileInputStream istream_hrir(hrirFile);
     if( istream_hrir.openedOk() )
     {
@@ -237,11 +207,16 @@ void loadHrir(File hrirFile)
         bool rewriteHrirDict = false;
         if (hrirDict.size() > 0){ rewriteHrirDict = true; }
         
+        // loop over array first dimension (azim values)
         for (int j = 0; j < N_AZIM_VALUES; ++j) // loop azim
         {
+            // resize
             if (!rewriteHrirDict)
+            {
                 hrirDict.insert(std::make_pair(j, std::array<HrirBuffer, N_ELEV_VALUES>()));
+            }
             
+            // loop over elev values
             for (int i = 0; i < N_ELEV_VALUES; ++i) // loop elev
             {
                 istream_hrir.read(hrirDict[j][i][0].data(), HRIR_LENGTH * sizeof(float));
@@ -249,11 +224,11 @@ void loadHrir(File hrirFile)
             }
         }
     }
+    // if file failed to open
     else{ throw std::ios_base::failure("Failed to open HRIR file"); }
-    DBG("HRIR loaded");
 }
     
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BinauralEncoder)
+JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (BinauralEncoder)
     
 };
 
