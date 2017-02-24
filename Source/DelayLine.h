@@ -138,9 +138,9 @@ AudioBuffer<float> getInterpolatedChunk(int sourceChannel, int numSamples, float
     chunkBufferNext = getChunk(sourceChannel, numSamples, floor(delayInSamples));
     
     // apply linear interpolation gains
-    chunkBufferPrev.applyGain((float)(delayInSamples-floor(delayInSamples)));
-    chunkBufferNext.applyGain((float)(ceil(delayInSamples)-delayInSamples));
-    // DBG(String(delayInSamples-floor(delayInSamples)) + String(" ") + String(ceil(delayInSamples)-delayInSamples));
+    float gainPrev = (float)(delayInSamples-floor(delayInSamples));
+    chunkBufferPrev.applyGain( gainPrev );
+    chunkBufferNext.applyGain( 1.f - gainPrev );
     
     // sum buffer in output
     chunkBuffer = chunkBufferPrev;
