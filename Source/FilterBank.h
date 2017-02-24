@@ -112,41 +112,6 @@ AudioBuffer<float> getBandBuffer( AudioBuffer<float> &source, int sourceImageId 
     return bufferBands;
 }
     
-// Decompose source buffer into bands, apply absorption coefficients and re-sum to source buffer
-void processBuffer( AudioBuffer<float> &source, Array<float> absorptionCoefsSingleSource, int sourceImageId )
-{
-    // prepare buffers
-    bufferRemains = source;
-    source.clear();
-    
-    // recursive filtering for all but last band
-    float octaveFreqGain;
-    for( int i = 0; i < numOctaveBands-1; i++ )
-    {
-        // filter the remaining spectrum
-        bufferFiltered = bufferRemains;
-        octaveFilterBanks[sourceImageId][i].processSamples( bufferFiltered.getWritePointer(0), bufferFiltered.getNumSamples() );
-        
-        // get gain related to frequency band
-        octaveFreqGain = fmin( abs( 1.0 - absorptionCoefsSingleSource[i] ), 1.0 );
-        
-        // substract just processed band from remaining spectrum (after de-applying gain)
-        bufferFiltered.applyGain( -1.f );
-        bufferRemains.addFrom( 0, 0, bufferFiltered, 0, 0, source.getNumSamples() );
-        
-        // apply gain related to frequency band (and compensate for neg unit gain applyed above)
-        bufferFiltered.applyGain( -octaveFreqGain );
-        
-        // add filtered band to output
-        source.addFrom( 0, 0, bufferFiltered, 0, 0, source.getNumSamples() );
-    }
-    
-    // add last band to output (after applying corresponding abs. coef)
-    octaveFreqGain = fmin( abs( 1.0 - absorptionCoefsSingleSource[9] ), 1.0 );
-    bufferRemains.applyGain(octaveFreqGain);
-    source.addFrom( 0, 0, bufferRemains, 0, 0, source.getNumSamples() );
-}
-    
 JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FilterBank)
     
 };
