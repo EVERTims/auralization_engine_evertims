@@ -25,7 +25,6 @@ public:
     
     // octave filter bank
     FilterBank filterBank;
-    FilterBank filterBankRec;
     
     // reverb tail
     ReverbTail reverbTail;
@@ -52,11 +51,6 @@ private:
     AudioBuffer<float> bandBuffer; // N band buffer returned by the filterbank for f(freq) absorption
     AudioBuffer<float> tailBuffer; // FDN_ORDER band buffer returned by the FDN reverb tail
     AudioBuffer<float> binauralBuffer; // stereo buffer to handle binaural encoder output
-    
-    AudioBuffer<float> irRecWorkingBuffer; // used for IR recording
-    AudioBuffer<float> irRecWorkingBufferTemp; // used for IR recording
-    AudioBuffer<float> irRecAmbisonicBuffer; // used for IR recording
-    AudioBuffer<float> irRecClipboardBuffer;
     
     // misc.
     double localSampleRate;
@@ -114,10 +108,6 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     // init reverb tail
     reverbTail.prepareToPlay( samplesPerBlockExpected, sampleRate );
     tailBuffer.setSize(reverbTail.fdnOrder, samplesPerBlockExpected);
-    
-    // init IR recording filter bank (need a separate, see comment on continuous data stream in FilterBank class)
-    filterBankRec.prepareToPlay( samplesPerBlockExpected, sampleRate );
-    filterBankRec.setNumFilters( NUM_OCTAVE_BANDS, IDs.size() ); // may as well get the best quality for recording IR
     
     // init binaural encoder
     binauralEncoder.prepareToPlay( samplesPerBlockExpected, sampleRate );
@@ -348,52 +338,6 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         crossfadeOver = false;
     }
 }
-    
-AudioBuffer<float> getCurrentIR ()
-    {
-        // init buffers
-        float maxDelay = getMaxValue(delaysCurrent);
-        // TODO: acount for impact of absorption on maxDelay required (if it does make sense..)
-        int irNumSamples = (int) (maxDelay*1.1 * localSampleRate);
-        irRecWorkingBuffer.setSize(1, irNumSamples);
-        irRecWorkingBufferTemp = irRecWorkingBuffer;
-        irRecAmbisonicBuffer.setSize(N_AMBI_CH, irNumSamples);
-        irRecAmbisonicBuffer.clear();
-        
-        // define remapping order for ambisonic IR exported to follow ACN convention
-        // (TODO: clean + procedural way to gerenate remapping, eventually remap original lib)
-        int ambiChannelExportRemapping [N_AMBI_CH] = { 0, 3, 2, 1, 8, 7, 6, 5, 4 };
-        
-        // loop over sources images
-        for( int j = 0; j < IDs.size(); j++ )
-        {
-            // reset working buffer
-            irRecWorkingBuffer.clear();
-            
-            // write IR taps to buffer
-            int tapSample = (int) (delaysCurrent[j] * localSampleRate);
-            float tapGain = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
-            irRecWorkingBuffer.setSample(0, tapSample, tapGain);
-            
-            // apply material absorption (update filter bank size first, to match number of source image)
-            filterBankRec.setNumFilters( filterBankRec.getNumFilters(), IDs.size() );
-            filterBankRec.processBuffer( irRecWorkingBuffer, absorptionCoefs[j], j );
-            
-            // Ambisonic encoding
-            irRecClipboardBuffer = irRecWorkingBuffer;
-            for( int k = 0; k < N_AMBI_CH; k++ )
-            {
-                // get clean (no ambisonic gain applied) input buffer
-                irRecWorkingBuffer = irRecClipboardBuffer;
-                // apply ambisonic gains
-                irRecWorkingBuffer.applyGain(ambisonicGainsCurrent[j][k]);
-                // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
-                irRecAmbisonicBuffer.addFrom(ambiChannelExportRemapping[k], 0, irRecWorkingBuffer, 0, 0, irRecWorkingBuffer.getNumSamples());
-            }
-        }
-        
-        return irRecAmbisonicBuffer;
-    }
     
 void setFilterBankSize(int numFreqBands)
 {
