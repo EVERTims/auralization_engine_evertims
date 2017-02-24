@@ -55,20 +55,20 @@ AudioIOComponent()
     
     // INIT GUI ELEMENTS
     addAndMakeVisible (&audioFileOpenButton);
-    audioFileOpenButton.setButtonText ("Open...");
+    audioFileOpenButton.setButtonText ("OPEN...");
     audioFileOpenButton.addListener (this);
-    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::grey);
+    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::antiquewhite);
     
     addAndMakeVisible (&audioFilePlayButton);
-    audioFilePlayButton.setButtonText ("Play");
+    audioFilePlayButton.setButtonText ("PLAY");
     audioFilePlayButton.addListener (this);
-    audioFilePlayButton.setColour (TextButton::buttonColourId, Colours::darkgreen);
+    audioFilePlayButton.setColour (TextButton::buttonColourId, Colours::seagreen);
     audioFilePlayButton.setEnabled (false);
     
     addAndMakeVisible (&audioFileStopButton);
-    audioFileStopButton.setButtonText ("Stop");
+    audioFileStopButton.setButtonText ("STOP");
     audioFileStopButton.addListener (this);
-    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::darkred);
+    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::firebrick);
     audioFileStopButton.setEnabled (false);
     
     addAndMakeVisible (&gainAudioFileSlider);

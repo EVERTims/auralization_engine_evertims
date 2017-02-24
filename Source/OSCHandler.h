@@ -125,7 +125,7 @@ int getDirectPathId()
 // return string with full content of local attributes for GUI log window
 String getMapContent()
 {
-    String output;
+    String output = String("\n");
     int nDecimals = 2;
     
     for(auto const &ent1 : listenerMap) {

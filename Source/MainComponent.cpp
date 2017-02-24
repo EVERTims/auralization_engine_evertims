@@ -35,7 +35,7 @@ ambi2binContainer()
     // local GUI elements
     saveIrButton.setButtonText ("Save IR to Desktop");
     saveIrButton.addListener (this);
-    saveIrButton.setColour (TextButton::buttonColourId, Colours::grey);
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
     saveIrButton.setEnabled (true);
     addAndMakeVisible (&saveIrButton);
     
@@ -486,7 +486,7 @@ void MainContentComponent::resized()
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
     
     // log box
-    logLabel.setBounds(30, 306, 40, 20);
+    logLabel.setBounds(30, 309, 40, 20);
     logTextBox.setBounds (8, 320, getWidth() - 16, getHeight() - 336);
     enableLog.setBounds(getWidth() - 120, 320, 100, 30);
 }
