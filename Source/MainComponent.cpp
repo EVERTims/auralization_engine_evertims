@@ -94,7 +94,7 @@ ambi2binContainer()
     gainEarlySlider.addListener(this);
     
     addAndMakeVisible(crossfadeStepSlider);
-    crossfadeStepSlider.setRange(0.001, 1.0);
+    crossfadeStepSlider.setRange(0.001, 0.2);
     crossfadeStepSlider.setValue(0.1);
     crossfadeStepSlider.setSliderStyle(Slider::RotaryVerticalDrag);
     crossfadeStepSlider.setColour(Slider::rotarySliderFillColourId, Colours::white);
@@ -137,7 +137,7 @@ ambi2binContainer()
     earlyLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
     
     addAndMakeVisible (crossfadeLabel);
-    crossfadeLabel.setText ("Crossfade", dontSendNotification);
+    crossfadeLabel.setText ("Crossfade factor", dontSendNotification);
     crossfadeLabel.setColour(Label::textColourId, Colours::whitesmoke);
     crossfadeLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
     
@@ -219,6 +219,14 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     else
     {
         bufferToFill.clearActiveBufferRegion();
+    }
+    
+    // check if source images need update (i.e. update called by OSC handler
+    // while source images in the midst of a crossfade
+    if( sourceImageHandlerNeedsUpdate && sourceImagesHandler.crossfadeOver )
+    {
+        sourceImagesHandler.updateFromOscHandler(oscHandler);
+        sourceImageHandlerNeedsUpdate = false;
     }
 }
 
@@ -417,9 +425,12 @@ float MainContentComponent::clipOutput(float input)
 
 void MainContentComponent::updateOnOscReveive(int sampleRate)
 {
-    
     // update source images attributes based on latest received OSC info
-    sourceImagesHandler.updateFromOscHandler(oscHandler);
+    if( sourceImagesHandler.crossfadeOver )
+    {
+        sourceImagesHandler.updateFromOscHandler(oscHandler);
+    }
+    else{ sourceImageHandlerNeedsUpdate = true; }
     
     // now that everything is ready: set update flag, to resize delay line at next audio loop
     requireDelayLineSizeUpdate = true;
@@ -437,7 +448,7 @@ void MainContentComponent::paint (Graphics& g)
     g.drawRoundedRectangle(10.f, 155.f, getWidth()-20.f, 150.f, 0.0f, 1.0f);
     
     // logo image
-    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/ 1.45) - (logoImage.getHeight()/2) ));
+    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/ 1.4) - (logoImage.getHeight()/2) ));
     
     // signature
     g.setColour(Colours::white);
@@ -467,7 +478,7 @@ void MainContentComponent::resized()
     reverbTailToggle.setBounds(30, 230, 120, 20);
     gainReverbTailSlider.setBounds (180, 230, 440, 20);
 
-    crossfadeLabel.setBounds(30, 270, 80, 20);
+    crossfadeLabel.setBounds(30, 258, 80, 40);
     crossfadeStepSlider.setBounds(110, 255, 80, 50);
     
     numFrequencyBandsLabel.setBounds(195, 270, 200, 20);
@@ -478,7 +489,7 @@ void MainContentComponent::resized()
     // log box
     logLabel.setBounds(30, 306, 40, 20);
     logTextBox.setBounds (8, 320, getWidth() - 16, getHeight() - 336);
-    enableLog.setBounds(getWidth() - 110, 320, 100, 30);
+    enableLog.setBounds(getWidth() - 120, 320, 100, 30);
 }
 
 void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaster)
@@ -503,7 +514,6 @@ void MainContentComponent::buttonClicked (Button* button)
         {
             isRecordingIr = true;
             recordIr();
-            // audioIOComponent.saveIR(sourceImagesHandler.getCurrentIR(), localSampleRate);
         }
         else {
             AlertWindow::showMessageBoxAsync ( AlertWindow::NoIcon, "Impulse Response not saved", "No source images registered from raytracing client \n(Empty IR)", "OK");

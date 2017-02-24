@@ -100,6 +100,7 @@ private:
     
     // sources images
     SourceImagesHandler sourceImagesHandler;
+    bool sourceImageHandlerNeedsUpdate = false;
     
     // Ambisonic to binaural decoding
     AudioBuffer<float> ambisonicBuffer;

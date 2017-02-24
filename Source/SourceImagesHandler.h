@@ -36,8 +36,9 @@ public:
     float directPathGain = 1.0f;
     bool enableDirectToBinaural = true;
     
-    // misc.
+    // crossfade mecanism
     float crossfadeStep = 0.1f;
+    bool crossfadeOver = true;
     
     // direct binaural encoding (for direct path only)
     BinauralEncoder binauralEncoder;
@@ -58,7 +59,6 @@ private:
     
     // crossfade mecanism
     float crossfadeGain = 0.0;
-    bool crossfadeOver = true;
     
     // octave filter bank
     std::vector< Array<float> > absorptionCoefs; // buffer for input data
@@ -283,9 +283,6 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 // update local attributes based on latest received OSC info
 void updateFromOscHandler(OSCHandler& oscHandler)
 {
-    // lame mecanism to avoid changing future gains if crossfade not over yet
-    while(!crossfadeOver) sleep(0.001);
-    
     // make sure not to use non-valid source image ID in audio thread during update
     auto IDsTemp = oscHandler.getSourceImageIDs();
     numSourceImages = min(IDs.size(), IDsTemp.size());
