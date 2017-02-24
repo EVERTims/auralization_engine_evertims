@@ -19,7 +19,8 @@ public:
     std::vector<int> IDs;
     std::vector<float> delaysCurrent; // in seconds
     std::vector<float> delaysFuture; // in seconds
-    std::vector<float> pathLengths; // in meters
+    std::vector<float> pathLengthsCurrent; // in meters
+    std::vector<float> pathLengthsFuture; // in meters
     int numSourceImages;
     float earlyGain = 1.f;
     
@@ -61,7 +62,8 @@ private:
     float crossfadeGain = 0.0;
     
     // octave filter bank
-    std::vector< Array<float> > absorptionCoefs; // buffer for input data
+    std::vector< Array<float> > absorptionCoefsCurrent; // room frequency absorption coefficients
+    std::vector< Array<float> > absorptionCoefsFuture;
     
     // ambisonic encoding
     AmbixEncoder ambisonicEncoder;
@@ -161,8 +163,17 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
         //==========================================================================
         // APPLY GAIN BASED ON SOURCE IMAGE PATH LENGTH
-        float gainDelayLine = fmin( 1.0, fmax( 0.0, 1.0/pathLengths[j] ));
-        workingBuffer.applyGain(gainDelayLine);
+        float gainDelayLine = 0.0f;
+        if( !crossfadeOver )
+        {
+            gainDelayLine = (1.0 - crossfadeGain) * (1.0/pathLengthsCurrent[j])
+                            + crossfadeGain * (1.0/pathLengthsFuture[j]);
+        }
+        else
+        {
+            gainDelayLine = 1.0/pathLengthsCurrent[j];
+        }
+        workingBuffer.applyGain( fmin( 1.0, fmax( 0.0, gainDelayLine )) );
         
         //==========================================================================
         // APPLY ABSORPTION (FREQUENCY-BAND WISE)
@@ -172,15 +183,30 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
         // apply abs gains and recompose
         workingBuffer.clear();
+        float absorptionCoef = 0.f;
         for( int k = 0; k < bandBuffer.getNumChannels(); k++ )
         {
+            // apply crossfade
+            if( !crossfadeOver )
+            {
+                absorptionCoef = (1.0 - crossfadeGain) * absorptionCoefsCurrent[j][k]
+                                + crossfadeGain * absorptionCoefsFuture[j][k];
+            }
+            else
+            {
+                absorptionCoef = absorptionCoefsCurrent[j][k];
+            }
+            
+            // bound and get 1-abs
+            absorptionCoef = fmin( 1.0, fmax( 0.0,  1.f - absorptionCoef ));
+            
             // apply absorption gains (TODO: sometimes crashes here at startup because absorptionCoefs data is null pointer)
-            bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, fmin(abs(1.0 - absorptionCoefs[j][k]), 1.f));
+            bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, absorptionCoef);
             
             // recompose (add-up frequency bands)
             workingBuffer.addFrom(0, 0, bandBuffer, k, 0, localSamplesPerBlockExpected);
         }
-
+        
         //==========================================================================
         // FEED REVERB TAIL FDN
         if( enableReverbTail )
@@ -271,10 +297,6 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             fdnId = k % reverbTail.fdnOrder;
             ambisonicBuffer.addFrom(2+ambiId, 0, tailBuffer, fdnId, 0, localSamplesPerBlockExpected);
         }
-        
-    // TODO:
-    //      • check why evert sometimes sends "nan" RT60 (in one or two bands when changin room / material)
-    //      • add reverb tail to save IR method ?
     }
     
     return ambisonicBuffer;
@@ -292,15 +314,16 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     directPathId = oscHandler.getDirectPathId();
     delaysFuture = oscHandler.getSourceImageDelays();
     delaysCurrent.resize(delaysFuture.size(), 0.0f);
-    pathLengths = oscHandler.getSourceImagePathsLength();
-    // TODO: add crossfade mecanism to absorption coefficients if zipper effect perceived at material change
-    absorptionCoefs.resize(IDs.size());
+    pathLengthsFuture = oscHandler.getSourceImagePathsLength();
+    pathLengthsCurrent.resize(pathLengthsFuture.size(), 10000.0f);
+    absorptionCoefsFuture.resize(IDs.size());
+    absorptionCoefsCurrent.resize(IDs.size());
     for (int j = 0; j < IDs.size(); j++)
     {
-        absorptionCoefs[j] = oscHandler.getSourceImageAbsorption(IDs[j]);
+        absorptionCoefsFuture[j] = oscHandler.getSourceImageAbsorption(IDs[j]);
         if( filterBank.getNumFilters() == 3 )
         {
-            absorptionCoefs[j] = from10to3bands(absorptionCoefs[j]);
+            absorptionCoefsFuture[j] = from10to3bands(absorptionCoefsFuture[j]);
         }
     }
     
@@ -357,13 +380,14 @@ void updateCrossfade()
     {
         // set past = future
         delaysCurrent = delaysFuture;
+        pathLengthsCurrent = pathLengthsFuture;
         ambisonicGainsCurrent = ambisonicGainsFuture;
+        absorptionCoefsCurrent = absorptionCoefsFuture;
         
         // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
         crossfadeOver = true;
     }
-    
 }
     
 JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (SourceImagesHandler)
