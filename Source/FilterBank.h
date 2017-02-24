@@ -16,7 +16,9 @@ int localSamplesPerBlockExpected;
     
 private:
 
-int numOctaveBands;
+int numOctaveBands = 0;
+int numIndptStream = 0;
+    
 std::vector<std::array<IIRFilter, NUM_OCTAVE_BANDS-1> > octaveFilterBanks;
     
 AudioBuffer<float> bufferFiltered;
@@ -44,11 +46,15 @@ void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
 
 // Define number of frequency bands in filter-bank ( only choice is betwen 3 or 10 )
 // NOTE: a filter is stateful, and needs to be given a continuous stream of audio, so each source image
-// needs its own separate filter bank (see https://forum.juce.com/t/iirfilter-help/1733/7).
+// needs its own separate filter bank (see e.g. https://forum.juce.com/t/iirfilter-help/1733/7 ).
 void setNumFilters( int numBands, int numSourceImages )
 {
+    // skip if nothing has changed
+    if( numBands == numOctaveBands && numSourceImages == numIndptStream ){ return; }
+    
     // resize band buffer
     numOctaveBands = numBands;
+    numIndptStream = numSourceImages;
     bufferBands.setSize(numBands, localSamplesPerBlockExpected);
     
     double fc; // refers to cutoff frequency
@@ -67,7 +73,7 @@ void setNumFilters( int numBands, int numSourceImages )
                 else fcMid = fc + ( 20000 - fc )/2;
                 
                 octaveFilterBanks[j][i].setCoefficients( IIRCoefficients::makeLowPass( localSampleRate, fcMid ) );
-                octaveFilterBanks[j][i].reset();
+                // octaveFilterBanks[j][i].reset();
                 fc *= 2;
             }
         }
@@ -76,14 +82,20 @@ void setNumFilters( int numBands, int numSourceImages )
         {
             fc = 480;
             octaveFilterBanks[j][0].setCoefficients( IIRCoefficients::makeLowPass( localSampleRate, fc ) );
-            octaveFilterBanks[j][0].reset();
+            // octaveFilterBanks[j][0].reset(); // removed all resets to avoid zipper noise when changing existing filters, may need to re-add them
 
             fc = 8200;
             octaveFilterBanks[j][1].setCoefficients( IIRCoefficients::makeLowPass( localSampleRate, fc ) );
-            octaveFilterBanks[j][1].reset();
+            // octaveFilterBanks[j][1].reset();
         }
     }
 }
+    
+    // reset all filters to change number of bands
+    void setNumBands( int numBands )
+    {
+        
+    }
 
 int getNumFilters() { return numOctaveBands; }
 
