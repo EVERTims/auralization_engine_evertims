@@ -174,6 +174,19 @@ String getMapContent()
     return output;
 }
 
+// reset all internals
+void clear( bool force)
+{
+    sourceImageMap.clear();
+    valuesR60.clear();
+    valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
+    
+    if( force )
+    {
+        sourceMap.clear();
+        listenerMap.clear();
+    }
+}
     
 private:
 

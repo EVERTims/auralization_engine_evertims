@@ -38,6 +38,12 @@ ambi2binContainer()
     saveIrButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
     saveIrButton.setEnabled (true);
     addAndMakeVisible (&saveIrButton);
+
+    clearSourceImageButton.setButtonText ("Clear");
+    clearSourceImageButton.addListener (this);
+    clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
+    clearSourceImageButton.setEnabled (true);
+    addAndMakeVisible (&clearSourceImageButton);
     
     addAndMakeVisible (logTextBox);
     logTextBox.setMultiLine (true);
@@ -472,11 +478,13 @@ void MainContentComponent::resized()
     enableDirectToBinaural.setBounds (480, 170, 140, 20);
 
     earlyLabel.setBounds(30, 200, 120, 20);
-    gainEarlySlider.setBounds (180, 200, 440, 20);
+    gainEarlySlider.setBounds (180, 200, 380, 20);
 
     reverbTailToggle.setBounds(30, 230, 120, 20);
-    gainReverbTailSlider.setBounds (180, 230, 440, 20);
+    gainReverbTailSlider.setBounds (180, 230, 380, 20);
 
+    clearSourceImageButton.setBounds(getWidth() - 80, 200, 50, 50);
+    
     crossfadeLabel.setBounds(30, 258, 80, 40);
     crossfadeStepSlider.setBounds(110, 255, 80, 50);
     
@@ -533,6 +541,12 @@ void MainContentComponent::buttonClicked (Button* button)
     {
         if( button->getToggleState() ){ logTextBox.setText(oscHandler.getMapContent()); }
         else{ logTextBox.setText( String("") ); };
+    }
+    if( button == &clearSourceImageButton )
+    {
+        oscHandler.clear(false);
+        updateOnOscReveive();
+        logTextBox.setText(oscHandler.getMapContent());
     }
 
 }
