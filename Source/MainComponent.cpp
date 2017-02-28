@@ -42,7 +42,7 @@ ambi2binContainer()
     clearSourceImageButton.setButtonText ("Clear");
     clearSourceImageButton.addListener (this);
     clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
-    clearSourceImageButton.setEnabled (true);
+    clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler  
     addAndMakeVisible (&clearSourceImageButton);
     
     addAndMakeVisible (logTextBox);
@@ -246,7 +246,7 @@ void MainContentComponent::processAmbisonicBuffer( AudioBuffer<float> *const aud
     //==========================================================================
     // SOURCE IMAGE PROCESSING
     
-    if ( sourceImagesHandler.IDs.size() > 0 )
+    if ( sourceImagesHandler.numSourceImages > 0 )
     {
         
         //==========================================================================
@@ -286,7 +286,7 @@ void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBu
     //==========================================================================
     // SPATIALISATION: Ambisonic decoding + virtual speaker approach + binaural
     
-    if ( sourceImagesHandler.IDs.size() > 0 )
+    if ( sourceImagesHandler.numSourceImages > 0 )
     {
         // duplicate channel before filtering for two ears
         ambisonicBuffer2ndEar = ambisonicBuffer;
@@ -518,7 +518,7 @@ void MainContentComponent::buttonClicked (Button* button)
 {
     if (button == &saveIrButton)
     {
-        if ( sourceImagesHandler.IDs.size() > 0 )
+        if ( sourceImagesHandler.numSourceImages > 0 )
         {
             isRecordingIr = true;
             recordIr();

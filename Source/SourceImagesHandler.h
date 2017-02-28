@@ -306,6 +306,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 void updateFromOscHandler(OSCHandler& oscHandler)
 {
     // make sure not to use non-valid source image ID in audio thread during update
+    // (clumsy, not thread safe, TO CLEAN)
     auto IDsTemp = oscHandler.getSourceImageIDs();
     numSourceImages = min(IDs.size(), IDsTemp.size());
     
