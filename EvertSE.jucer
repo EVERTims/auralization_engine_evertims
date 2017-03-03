@@ -39,6 +39,8 @@
       <FILE id="vXP376" name="BinauralEncoder.h" compile="0" resource="0"
             file="Source/BinauralEncoder.h"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
+      <FILE id="gIGgnk" name="DirectivityHandler.h" compile="0" resource="0"
+            file="Source/DirectivityHandler.h"/>
       <FILE id="Gci68m" name="FilterBank.h" compile="0" resource="0" file="Source/FilterBank.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="l9hY4R" name="MainComponent.cpp" compile="1" resource="0"
@@ -51,6 +53,16 @@
       <FILE id="QoD7yh" name="Utils.h" compile="0" resource="0" file="Source/Utils.h"/>
     </GROUP>
     <GROUP id="{F473110D-BA5F-16DB-4E0C-8A8135AFEAFF}" name="data">
+      <GROUP id="{C1CC0D36-5AE7-3548-1003-DCC29035F564}" name="directivity">
+        <FILE id="TO3UQ0" name="directional.sofa" compile="0" resource="0"
+              file="data/directivity/directional.sofa" xcodeResource="1"/>
+      </GROUP>
+      <GROUP id="{E6596461-6A75-A89E-D160-2311FACB6112}" name="images">
+        <FILE id="c3T5di" name="evertims_logo_512.png" compile="0" resource="1"
+              file="data/images/evertims_logo_512.png"/>
+        <FILE id="S30np0" name="evertims_logo_256.png" compile="0" resource="1"
+              file="data/images/evertims_logo_256.png"/>
+      </GROUP>
       <GROUP id="{EC342416-45C5-1B59-B10B-935876B05E2D}" name="irs">
         <FILE id="q07KQW" name="ClubFritz1_hrir.bin" compile="0" resource="0"
               file="data/irs/ClubFritz1_hrir.bin" xcodeResource="1"/>
@@ -60,12 +72,6 @@
               resource="0" file="data/irs/hoa2bin_order2_IRC_1008_R_HRIR.bin"
               xcodeResource="1"/>
       </GROUP>
-      <GROUP id="{E6596461-6A75-A89E-D160-2311FACB6112}" name="images">
-        <FILE id="c3T5di" name="evertims_logo_512.png" compile="0" resource="1"
-              file="data/images/evertims_logo_512.png"/>
-        <FILE id="S30np0" name="evertims_logo_256.png" compile="0" resource="1"
-              file="data/images/evertims_logo_256.png"/>
-      </GROUP>
       <GROUP id="{1E781F31-3E12-D5C4-C80A-7DD5FB767D3F}" name="sounds">
         <FILE id="jSk5KN" name="impulse.wav" compile="0" resource="0" file="data/sounds/impulse.wav"
               xcodeResource="1"/>
@@ -73,12 +79,16 @@
     </GROUP>
   </MAINGROUP>
   <EXPORTFORMATS>
-    <XCODE_MAC targetFolder="Builds/MacOSX" bigIcon="c3T5di" smallIcon="S30np0">
+    <XCODE_MAC targetFolder="Builds/MacOSX" bigIcon="c3T5di" smallIcon="S30np0"
+               externalLibraries="resample&#10;mysofa">
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="EvertSE"
-                       headerPath="../../libs/eigen-eigen-7403112d5871"/>
+                       headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/local/include"
+                       libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
+                       osxCompatibility="default"/>
         <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="EvertSE"
-                       headerPath="../../libs/eigen-eigen-7403112d5871&#10;"/>
+                       headerPath="../../lib/eigen-eigen-7403112d5871" libraryPath=""
+                       osxArchitecture="default"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../../../Applications/JUCE/modules"/>
