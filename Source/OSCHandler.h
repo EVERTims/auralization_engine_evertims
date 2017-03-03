@@ -84,7 +84,7 @@ std::vector<float> getSourceImagePathsLength()
     return pathLength;
 }
 
-// get Direction Of Arrivals
+// get Direction Of Arrivals (relative to listener orientation)
 std::vector<Eigen::Vector3f> getSourceImageDOAs()
 {
     Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
@@ -102,6 +102,24 @@ std::vector<Eigen::Vector3f> getSourceImageDOAs()
     return doas;
 }
 
+// get Direction Of Departure (relative to source orientation
+std::vector<Eigen::Vector3f> getSourceImageDODs()
+{
+    Eigen::Vector3f sourcePos = sourceMap.begin()->second.position;
+    Eigen::Matrix3f sourceRotationMatrix = sourceMap.begin()->second.rotationMatrix;
+    
+    std::vector<Eigen::Vector3f> dods;
+    dods.resize(sourceImageMap.size());
+    
+    int i = 0;
+    for(auto const &ent1 : sourceImageMap) {
+        Eigen::Vector3f posSph = cartesianToSpherical( sourceRotationMatrix * ( ent1.second.positionRelectionFirst - sourcePos ) );
+        dods[i] = posSph;
+        i ++;
+    }
+    return dods;
+}
+    
 Array<float> getSourceImageAbsorption(int sourceID)
 {
     return sourceImageMap.find(sourceID)->second.absorption;
@@ -272,6 +290,14 @@ void oscBundleReceived (const OSCBundle & bundle) override
             source.position(0) = msg[1].getFloat32();
             source.position(1) = msg[2].getFloat32();
             source.position(2) = msg[3].getFloat32();
+
+            for (int j = 0; j < 3; j++)
+            {
+                for (int k = 0; k < 3; k++)
+                {
+                    source.rotationMatrix(j,k) = msg[4+ (3*j + k)].getFloat32();
+                }
+            }
             
             // insert or update
             sourceMap[source.name] = source;

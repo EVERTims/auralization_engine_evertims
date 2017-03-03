@@ -31,6 +31,7 @@ struct EL_Source
 {
     String name;
     Eigen::Vector3f position;
+    Eigen::Matrix3f rotationMatrix;
 };
 
 struct EL_Listener
