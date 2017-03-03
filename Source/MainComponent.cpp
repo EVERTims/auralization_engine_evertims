@@ -477,7 +477,7 @@ void MainContentComponent::paint (Graphics& g)
     // signature
     g.setColour(Colours::white);
     g.setFont(11.f);
-    g.drawFittedText("Designed by D. Poirier-Quinot & M. Noisternig, IRCAM, 2017", getWidth() - 285, getHeight()-15, 275, 15, Justification::right, 2);
+    g.drawFittedText("designed by D. Poirier-Quinot, M. Noisternig, and Brian F.G. Katz (2017)", getWidth() - 335, getHeight()-15, 325, 15, Justification::right, 2);
 }
 
 void MainContentComponent::resized()
