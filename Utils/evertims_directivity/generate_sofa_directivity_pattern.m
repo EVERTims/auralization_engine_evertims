@@ -27,11 +27,11 @@ sofa_struct_ref = SOFAload(filename_in);
 sofa_struct = SOFAgetConventions('SimpleFreeFieldHRIR');
 
 % init fields
-filename = 'directional.sofa';
+filename = 'omni.sofa';
 sofa_struct.GLOBAL_Comment = 'Directivity Magnitude across frequency bands, not using GeneralTF awaiting libmysofa update';
 sofa_struct.GLOBAL_History = 'Created with the generate_sofa_directivity_pattern.m script for EVERTims';
 sofa_struct.GLOBAL_Organization = 'EVERTims';
-sofa_struct.GLOBAL_Title = 'Omnidirectional';
+sofa_struct.GLOBAL_Title = 'OmniDirectional';
 
 %% Create measurement grid
 gridStep = 15;
@@ -69,13 +69,13 @@ N = 10; % num frequency bands
 
 % define directivity values
 r = ones( size(sofa_struct.SourcePosition,1), N );
-omni = r(:,1);
-directional = (1 + cosd( srcPos(:,1) )) .* cosd( srcPos(:,2) );
-% more and more diretional as freq increases
-for i = 1:N;
-    g = (i-1) / (N-1); fprintf('%ld %ld \n', i, g);
-    r(:,i) =  g * directional + (1-g) * omni;
-end
+% omni = r(:,1);
+% directional = (1 + cosd( srcPos(:,1) )) .* cosd( srcPos(:,2) );
+% % more and more diretional as freq increases
+% for i = 1:N;
+%     g = (i-1) / (N-1); fprintf('%ld %ld \n', i, g);
+%     r(:,i) =  g * directional + (1-g) * omni;
+% end
 i = 0*r;
 
 % r(:,2) = r(:,3);

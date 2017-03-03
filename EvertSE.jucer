@@ -56,6 +56,8 @@
       <GROUP id="{C1CC0D36-5AE7-3548-1003-DCC29035F564}" name="directivity">
         <FILE id="TO3UQ0" name="directional.sofa" compile="0" resource="0"
               file="data/directivity/directional.sofa" xcodeResource="1"/>
+        <FILE id="Dz1MJA" name="omni.sofa" compile="0" resource="0" file="data/directivity/omni.sofa"
+              xcodeResource="1"/>
       </GROUP>
       <GROUP id="{E6596461-6A75-A89E-D160-2311FACB6112}" name="images">
         <FILE id="c3T5di" name="evertims_logo_512.png" compile="0" resource="1"

@@ -67,6 +67,8 @@ private:
     Image logoImage;
     ComboBox numFrequencyBandsComboBox;
     Label numFrequencyBandsLabel;
+    ComboBox srcDirectivityComboBox;
+    Label srcDirectivityLabel;
     ToggleButton reverbTailToggle;
     ToggleButton enableDirectToBinaural;
     ToggleButton enableLog;

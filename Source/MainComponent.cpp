@@ -59,15 +59,29 @@ ambi2binContainer()
     
     addAndMakeVisible(numFrequencyBandsComboBox);
     numFrequencyBandsComboBox.setEditableText (false);
-    numFrequencyBandsComboBox.setJustificationType (Justification::centred);
+    numFrequencyBandsComboBox.setJustificationType (Justification::right);
     numFrequencyBandsComboBox.setColour(ComboBox::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
     numFrequencyBandsComboBox.setColour(ComboBox::buttonColourId, Colour(PixelARGB(200,30,30,30)));
     numFrequencyBandsComboBox.setColour(ComboBox::outlineColourId, Colour(PixelARGB(200,30,30,30)));
     numFrequencyBandsComboBox.setColour(ComboBox::textColourId, Colours::whitesmoke);
+    numFrequencyBandsComboBox.setColour(ComboBox::arrowColourId, Colours::whitesmoke);
     numFrequencyBandsComboBox.addListener(this);
     numFrequencyBandsComboBox.addItem("3", 1);
     numFrequencyBandsComboBox.addItem("10", 2);
     numFrequencyBandsComboBox.setSelectedId(1);
+    
+    addAndMakeVisible(srcDirectivityComboBox);
+    srcDirectivityComboBox.setEditableText (false);
+    srcDirectivityComboBox.setJustificationType (Justification::right);
+    srcDirectivityComboBox.setColour(ComboBox::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
+    srcDirectivityComboBox.setColour(ComboBox::buttonColourId, Colour(PixelARGB(200,30,30,30)));
+    srcDirectivityComboBox.setColour(ComboBox::outlineColourId, Colour(PixelARGB(200,30,30,30)));
+    srcDirectivityComboBox.setColour(ComboBox::textColourId, Colours::whitesmoke);
+    srcDirectivityComboBox.setColour(ComboBox::arrowColourId, Colours::whitesmoke);
+    srcDirectivityComboBox.addListener(this);
+    srcDirectivityComboBox.addItem("omni", 1);
+    srcDirectivityComboBox.addItem("directional", 2);
+    srcDirectivityComboBox.setSelectedId(1);
     
     addAndMakeVisible(gainReverbTailSlider);
     gainReverbTailSlider.setRange(0.0, 2.0);
@@ -114,9 +128,13 @@ ambi2binContainer()
     crossfadeStepSlider.addListener(this);
     
     addAndMakeVisible (numFrequencyBandsLabel);
-    numFrequencyBandsLabel.setText ("Num. absorption freq. bands", dontSendNotification);
+    numFrequencyBandsLabel.setText ("Num. absorption freq. bands:", dontSendNotification);
     numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
 
+    addAndMakeVisible (srcDirectivityLabel);
+    srcDirectivityLabel.setText ("Source directivity:", dontSendNotification);
+    srcDirectivityLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    
     addAndMakeVisible (inputLabel);
     inputLabel.setText ("Inputs", dontSendNotification);
     inputLabel.setColour(Label::textColourId, Colours::whitesmoke);
@@ -488,8 +506,11 @@ void MainContentComponent::resized()
     crossfadeLabel.setBounds(30, 258, 80, 40);
     crossfadeStepSlider.setBounds(110, 255, 80, 50);
     
-    numFrequencyBandsLabel.setBounds(195, 270, 200, 20);
-    numFrequencyBandsComboBox.setBounds(380, 270, 40, 20);
+    numFrequencyBandsLabel.setBounds(190, 260, 200, 20);
+    numFrequencyBandsComboBox.setBounds(370, 260, 50, 20);
+    
+    srcDirectivityLabel.setBounds(190, 280, 200, 20);
+    srcDirectivityComboBox.setBounds(320, 280, 100, 20);
     
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
     
@@ -560,6 +581,18 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         else numFreqBands = 10;
         
         sourceImagesHandler.setFilterBankSize(numFreqBands);
+    }
+    if (comboBox == &srcDirectivityComboBox)
+    {
+        // load new file
+        string filename;
+        if( comboBox->getSelectedId() == 1 ) filename = "omni.sofa";
+        else filename = "directional.sofa";
+        const char *fileChar = filename.c_str();
+        sourceImagesHandler.directivityHandler.loadFile( fileChar );
+        
+        // update 
+        updateOnOscReveive();
     }
 }
 

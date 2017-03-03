@@ -38,11 +38,7 @@ public:
     
 DirectivityHandler()
 {
-    // load data (TO USE WHEN DIRECTIONAL ADDED TO DEPS)
-    File hrirFile = getFileFromString("directional.sofa");
-    String path = hrirFile.getFullPathName();
-    const char *filename = path.getCharPointer();
-    loadFile( filename );
+
     
     // print info
     // printGains( 2, 15 );
@@ -57,15 +53,23 @@ DirectivityHandler()
     mysofa_close( hrtf );
 }
   
-void loadFile( const char *filename )
+void loadFile( string filenameStr )
 {
-    // init
-    int err;
+    // get file path
+    File hrirFile = getFileFromString(filenameStr);
+    
+    // convert to fit libmysofa expected input format
+    String path = hrirFile.getFullPathName();
+    const char *filename = path.getCharPointer();
+    
     // load
+    int err;
     hrtf = mysofa_open(filename, sampleRate, &filter_length, &err);
+    
+    // warn if error
     if(hrtf==NULL)
     {
-        std::cout << "failed to load sofa file: \n " << filename << "\n erno: " << err << std::endl;
+        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "failed to file", filenameStr, "OK");
     }
 }
 

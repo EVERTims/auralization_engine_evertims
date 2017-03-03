@@ -45,6 +45,9 @@ public:
     // direct binaural encoding (for direct path only)
     BinauralEncoder binauralEncoder;
     
+    // source / listener directivity
+    DirectivityHandler directivityHandler;
+    
 private:
     
     // audio buffers
@@ -73,7 +76,6 @@ private:
     AudioBuffer<float> ambisonicBuffer; // output buffer, N (Ambisonic) channels
     
     // source / listener directivity
-    DirectivityHandler directivityHandler;
     std::vector< Array<float> > directivityGainsCurrent; // source directivity gains
     std::vector< Array<float> > directivityGainsFuture;
     
