@@ -89,8 +89,9 @@
                        libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
                        osxCompatibility="default"/>
         <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="EvertSE"
-                       headerPath="../../lib/eigen-eigen-7403112d5871" libraryPath=""
-                       osxArchitecture="default"/>
+                       headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/local/include"
+                       libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
+                       osxCompatibility="default"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../../../Applications/JUCE/modules"/>
