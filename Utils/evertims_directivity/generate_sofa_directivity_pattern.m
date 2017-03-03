@@ -65,19 +65,24 @@ plot3( X, Y, Z, '.', 'MarkerSize', 15 ); title(sprintf('measurement grid step: %
 % define frequency bands (NOT STORED SINCE USING SimpleFreeFieldHRIR, TODO when switching to GeneralTF)
 % freq_v = [ 300; 4000; 8000 ];
 % sofa_struct.N = freq_v; % not 100% sure that's where it goes...
-N = 3; % num frequency bands
+N = 10; % num frequency bands
 
 % define directivity values
 r = ones( size(sofa_struct.SourcePosition,1), N );
-r(:,3) = (1 + cosd( srcPos(:,1) )) .* cosd( srcPos(:,2) ); % third band is directional
-r(:,2) = ( r(:,1) + r(:,3) ) / 2; % second band half omni / directional
+omni = r(:,1);
+directional = (1 + cosd( srcPos(:,1) )) .* cosd( srcPos(:,2) );
+% more and more diretional as freq increases
+for i = 1:N;
+    g = (i-1) / (N-1); fprintf('%ld %ld \n', i, g);
+    r(:,i) =  g * directional + (1-g) * omni;
+end
 i = 0*r;
 
 % r(:,2) = r(:,3);
 % r(:,2) = r(:,3);
 
 % plot
-freqId = 3;
+freqId = 10;
 [X,Y,Z] = sph2cart( deg2rad(srcPos(:,1)), deg2rad(srcPos(:,2)), r(:, freqId));
 plot3( X, Y, Z, '.', 'MarkerSize',15 ); title('real'); grid;
 

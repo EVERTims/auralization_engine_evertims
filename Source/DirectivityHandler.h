@@ -18,7 +18,7 @@ public:
     
 private:
     
-    const static int FILTER_LENGTH = 3; // num frequency bands
+    const static int FILTER_LENGTH = 10; // num frequency bands
     int filter_length = FILTER_LENGTH;
     float sampleRate = 48000; // dummy, just made it fit .sofa file to avoid resampling
     struct MYSOFA_EASY *hrtf;

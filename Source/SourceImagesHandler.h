@@ -74,7 +74,8 @@ private:
     
     // source / listener directivity
     DirectivityHandler directivityHandler;
-    std::vector< Array<float> > directivityGainsCurrent;
+    std::vector< Array<float> > directivityGainsCurrent; // source directivity gains
+    std::vector< Array<float> > directivityGainsFuture;
     
 //==========================================================================
 // METHODS
@@ -196,8 +197,9 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             {
                 absorptionCoef = (1.0 - crossfadeGain) * absorptionCoefsCurrent[j][k]
                                 + crossfadeGain * absorptionCoefsFuture[j][k];
-                
-                dirGain = directivityGainsCurrent[j][k]; // only using real part here
+
+                dirGain = (1.0 - crossfadeGain) * directivityGainsCurrent[j][k]
+                        + crossfadeGain * directivityGainsFuture[j][k];
             }
             else
             {
@@ -217,7 +219,10 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             
             // recompose (add-up frequency bands)
             workingBuffer.addFrom(0, 0, bandBuffer, k, 0, localSamplesPerBlockExpected);
+            
+            // if( directPathId == IDs[j] ){ std::cout << " " << dirGain; }
         }
+        // if( directPathId == IDs[j] ){ std::cout << endl; }
         
         //==========================================================================
         // FEED REVERB TAIL FDN
@@ -329,6 +334,8 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     delaysCurrent.resize(delaysFuture.size(), 0.0f);
     pathLengthsFuture = oscHandler.getSourceImagePathsLength();
     pathLengthsCurrent.resize(pathLengthsFuture.size(), 10000.0f);
+    
+    // update absorption coefficients
     absorptionCoefsFuture.resize(IDs.size());
     absorptionCoefsCurrent.resize(IDs.size());
     for (int j = 0; j < IDs.size(); j++)
@@ -337,6 +344,19 @@ void updateFromOscHandler(OSCHandler& oscHandler)
         if( filterBank.numOctaveBands == 3 )
         {
             absorptionCoefsFuture[j] = from10to3bands(absorptionCoefsFuture[j]);
+        }
+    }
+    
+    // update directivity gains
+    auto sourceImageDODs = oscHandler.getSourceImageDODs();
+    directivityGainsCurrent.resize(IDs.size());
+    directivityGainsFuture.resize(IDs.size());
+    for (int j = 0; j < IDs.size(); j++)
+    {
+        directivityGainsFuture[j] = directivityHandler.getGains(sourceImageDODs[j](0), sourceImageDODs[j](1));
+        if( filterBank.numOctaveBands == 3 )
+        {
+            directivityGainsFuture[j] = from10to3bands(directivityGainsFuture[j]);
         }
     }
     
@@ -351,14 +371,6 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     {
         ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
     }
-    
-    // save (compute) new directivity gains
-    directivityGainsCurrent.resize(IDs.size());
-    for (int i = 0; i < IDs.size(); i++)
-    {
-        directivityGainsCurrent[i] = directivityHandler.getGains(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
-    }
-    
     
     // update binaural encoder (even if not enabled, not cpu demanding and that way it's ready to use)
     if( IDs.size() > 0 && directPathId > -1 )
@@ -404,6 +416,7 @@ void updateCrossfade()
         pathLengthsCurrent = pathLengthsFuture;
         ambisonicGainsCurrent = ambisonicGainsFuture;
         absorptionCoefsCurrent = absorptionCoefsFuture;
+        directivityGainsCurrent = directivityGainsFuture;
         
         // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
