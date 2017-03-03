@@ -68,8 +68,6 @@
       <GROUP id="{EC342416-45C5-1B59-B10B-935876B05E2D}" name="irs">
         <FILE id="q07KQW" name="ClubFritz1_hrir.bin" compile="0" resource="0"
               file="data/irs/ClubFritz1_hrir.bin" xcodeResource="1"/>
-        <FILE id="h1ZcnC" name="hoa2bin_order2_ClubFritz1.bin" compile="0"
-              resource="0" file="data/irs/hoa2bin_order2_ClubFritz1.bin" xcodeResource="1"/>
         <FILE id="ip67ub" name="hoa2bin_order2_IRC_1008_R_HRIR.bin" compile="0"
               resource="0" file="data/irs/hoa2bin_order2_IRC_1008_R_HRIR.bin"
               xcodeResource="1"/>
