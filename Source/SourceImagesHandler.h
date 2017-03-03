@@ -6,6 +6,7 @@
 #include "BinauralEncoder.h"
 #include "FilterBank.h"
 #include "ReverbTail.h"
+#include "DirectivityHandler.h"
 
 class SourceImagesHandler
 {
@@ -71,6 +72,9 @@ private:
     std::vector< Array<float> > ambisonicGainsFuture; // to avoid zipper effect
     AudioBuffer<float> ambisonicBuffer; // output buffer, N (Ambisonic) channels
     
+    // source / listener directivity
+    DirectivityHandler directivityHandler;
+    std::vector< Array<float> > directivityGainsCurrent;
     
 //==========================================================================
 // METHODS
@@ -176,14 +180,15 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         workingBuffer.applyGain( fmin( 1.0, fmax( 0.0, gainDelayLine )) );
         
         //==========================================================================
-        // APPLY ABSORPTION (FREQUENCY-BAND WISE)
+        // APPLY FREQUENCY SPECIFIC GAINS (ABSORPTION, DIRECTIVITY)
         
         // decompose in frequency bands
         bandBuffer = filterBank.getBandBuffer( workingBuffer, j);
         
-        // apply abs gains and recompose
+        // apply absorption gains and recompose
         workingBuffer.clear();
         float absorptionCoef = 0.f;
+        float dirGain = 0.f;
         for( int k = 0; k < bandBuffer.getNumChannels(); k++ )
         {
             // apply crossfade
@@ -191,17 +196,24 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             {
                 absorptionCoef = (1.0 - crossfadeGain) * absorptionCoefsCurrent[j][k]
                                 + crossfadeGain * absorptionCoefsFuture[j][k];
+                
+                dirGain = directivityGainsCurrent[j][k]; // only using real part here
             }
             else
             {
                 absorptionCoef = absorptionCoefsCurrent[j][k];
+                dirGain = directivityGainsCurrent[j][k]; // only using real part here
             }
             
-            // bound and get 1-abs
+            // bound gains
             absorptionCoef = fmin( 1.0, fmax( 0.0,  1.f - absorptionCoef ));
+            dirGain = fmin( 1.0, fmax( 0.0, dirGain ));
             
             // apply absorption gains (TODO: sometimes crashes here at startup because absorptionCoefs data is null pointer)
             bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, absorptionCoef);
+            
+            // apply directivity gain (TODO: merge with absorption gain above)
+            bandBuffer.applyGain(k, 0, localSamplesPerBlockExpected, dirGain);
             
             // recompose (add-up frequency bands)
             workingBuffer.addFrom(0, 0, bandBuffer, k, 0, localSamplesPerBlockExpected);
@@ -339,6 +351,14 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     {
         ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
     }
+    
+    // save (compute) new directivity gains
+    directivityGainsCurrent.resize(IDs.size());
+    for (int i = 0; i < IDs.size(); i++)
+    {
+        directivityGainsCurrent[i] = directivityHandler.getGains(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
+    }
+    
     
     // update binaural encoder (even if not enabled, not cpu demanding and that way it's ready to use)
     if( IDs.size() > 0 && directPathId > -1 )
