@@ -581,6 +581,9 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         else numFreqBands = 10;
         
         sourceImagesHandler.setFilterBankSize(numFreqBands);
+        
+        // update
+        updateOnOscReveive();
     }
     if (comboBox == &srcDirectivityComboBox)
     {
