@@ -441,7 +441,7 @@ void MainContentComponent::paint (Graphics& g)
     g.drawRoundedRectangle(10.f, 155.f, getWidth()-20.f, 150.f, 0.0f, 1.0f);
     
     // logo image
-    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), (int)( ( getHeight()/ 1.4) - (logoImage.getHeight()/2) ));
+    g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), 380);
     
     // signature
     g.setColour(Colours::white);
@@ -461,27 +461,27 @@ void MainContentComponent::resized()
     parameterLabel.setBounds(30, 147, 80, 15);
     
     directPathLabel.setBounds(30, 170, 120, 20);
-    gainDirectPathSlider.setBounds (140, 170, 330, 20);
-    enableDirectToBinaural.setBounds (480, 170, 140, 20);
+    gainDirectPathSlider.setBounds (140, 170, getWidth() - 320, 20);
+    enableDirectToBinaural.setBounds ( getWidth() - 170, 170, 140, 20);
 
     earlyLabel.setBounds(30, 200, 120, 20);
-    gainEarlySlider.setBounds (180, 200, 380, 20);
+    gainEarlySlider.setBounds (180, 200, getWidth() - 270, 20);
 
     reverbTailToggle.setBounds(30, 230, 120, 20);
-    gainReverbTailSlider.setBounds (180, 230, 380, 20);
+    gainReverbTailSlider.setBounds (180, 230, getWidth() - 270, 20);
 
     clearSourceImageButton.setBounds(getWidth() - 80, 200, 50, 50);
     
-    crossfadeLabel.setBounds(30, 258, 80, 40);
-    crossfadeStepSlider.setBounds(110, 255, 80, 50);
-    
-    numFrequencyBandsLabel.setBounds(190, 260, 200, 20);
-    numFrequencyBandsComboBox.setBounds(370, 260, 50, 20);
-    
-    srcDirectivityLabel.setBounds(190, 280, 200, 20);
-    srcDirectivityComboBox.setBounds(320, 280, 100, 20);
-    
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
+    
+    crossfadeStepSlider.setBounds(0.2*getWidth(), 255, 80, 50);
+    crossfadeLabel.setBounds(30, 258, crossfadeStepSlider.getX() - 60, 40);
+    
+    numFrequencyBandsLabel.setBounds(190, 260, getWidth() - 450, 20);
+    numFrequencyBandsComboBox.setBounds(saveIrButton.getX()-60, 260, 50, 20);
+    
+    srcDirectivityLabel.setBounds(190, 280, getWidth() - 450, 20);
+    srcDirectivityComboBox.setBounds(saveIrButton.getX()-110, 280, 100, 20);
     
     // log box
     logLabel.setBounds(30, 309, 40, 20);

@@ -275,10 +275,10 @@ void resized() override
     audioFileStopButton.setBounds (40 + 2*thirdWidth, pos.getY() + 10, thirdWidth, 40);
     
     audioFileLoopToggle.setBounds (pos.getX() + 10, pos.getY() + 60, 60, 20);
-    gainAudioFileSlider.setBounds (pos.getX() + 160, audioFileLoopToggle.getY(), 440, 20);
+    gainAudioFileSlider.setBounds (pos.getX() + 160, audioFileLoopToggle.getY(), getWidth() - 190, 20);
     
     adcToggle.setBounds (pos.getX() + 10, pos.getY() + 90, 120, 20);
-    gainAdcSlider.setBounds (pos.getX() + 160, adcToggle.getY(), 440, 20);
+    gainAdcSlider.setBounds (pos.getX() + 160, adcToggle.getY(), getWidth() - 190, 20);
 }
 
 //==========================================================================
