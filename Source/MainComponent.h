@@ -12,6 +12,7 @@
 
 #include <vector>
 #include <array>
+#include <unordered_map>
 
 //==============================================================================
 /*
@@ -83,6 +84,11 @@ private:
     Label logLabel;
     Label crossfadeLabel;
     
+    std::unordered_map<Button*, std::string> buttonMap;
+    std::unordered_map<ComboBox*, Array< std::string > > comboBoxMap;
+    std::unordered_map<Slider*, Array< double > > sliderMap;
+    std::unordered_map<Label*, std::string> labelMap;
+    std::unordered_map<ToggleButton*, std::string> toggleMap;
     //==========================================================================
     // AUDIO COMPONENTS
 

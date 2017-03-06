@@ -32,19 +32,7 @@ ambi2binContainer()
     logoImage = ImageCache::getFromMemory(BinaryData::evertims_logo_512_png, BinaryData::evertims_logo_512_pngSize);
     logoImage = logoImage.rescaled(logoImage.getWidth()/2, logoImage.getHeight()/2);
     
-    // local GUI elements
-    saveIrButton.setButtonText ("Save IR to Desktop");
-    saveIrButton.addListener (this);
-    saveIrButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
-    saveIrButton.setEnabled (true);
-    addAndMakeVisible (&saveIrButton);
-
-    clearSourceImageButton.setButtonText ("Clear");
-    clearSourceImageButton.addListener (this);
-    clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
-    clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler  
-    addAndMakeVisible (&clearSourceImageButton);
-    
+    // init log text box
     addAndMakeVisible (logTextBox);
     logTextBox.setMultiLine (true);
     logTextBox.setReturnKeyStartsNewLine (true);
@@ -57,134 +45,115 @@ ambi2binContainer()
     logTextBox.setColour (TextEditor::outlineColourId, Colours::whitesmoke);
     logTextBox.setColour (TextEditor::shadowColourId, Colours::darkorange);
     
-    addAndMakeVisible(numFrequencyBandsComboBox);
-    numFrequencyBandsComboBox.setEditableText (false);
-    numFrequencyBandsComboBox.setJustificationType (Justification::right);
-    numFrequencyBandsComboBox.setColour(ComboBox::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
-    numFrequencyBandsComboBox.setColour(ComboBox::buttonColourId, Colour(PixelARGB(200,30,30,30)));
-    numFrequencyBandsComboBox.setColour(ComboBox::outlineColourId, Colour(PixelARGB(200,30,30,30)));
-    numFrequencyBandsComboBox.setColour(ComboBox::textColourId, Colours::whitesmoke);
-    numFrequencyBandsComboBox.setColour(ComboBox::arrowColourId, Colours::whitesmoke);
-    numFrequencyBandsComboBox.addListener(this);
-    numFrequencyBandsComboBox.addItem("3", 1);
-    numFrequencyBandsComboBox.addItem("10", 2);
-    numFrequencyBandsComboBox.setSelectedId(1);
+    // init text buttons
+    buttonMap.insert({
+        { &saveIrButton, "Save IR to Desktop" },
+        { &clearSourceImageButton, "Clear" }
+    });
+    for (auto& pair : buttonMap)
+    {
+        auto& obj = pair.first;
+        const auto& param = pair.second;
+        obj->setButtonText(param);
+        obj->addListener (this);
+        obj->setEnabled (true);
+        addAndMakeVisible(obj);
+    }
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
+    clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
+    clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler
     
-    addAndMakeVisible(srcDirectivityComboBox);
-    srcDirectivityComboBox.setEditableText (false);
-    srcDirectivityComboBox.setJustificationType (Justification::right);
-    srcDirectivityComboBox.setColour(ComboBox::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
-    srcDirectivityComboBox.setColour(ComboBox::buttonColourId, Colour(PixelARGB(200,30,30,30)));
-    srcDirectivityComboBox.setColour(ComboBox::outlineColourId, Colour(PixelARGB(200,30,30,30)));
-    srcDirectivityComboBox.setColour(ComboBox::textColourId, Colours::whitesmoke);
-    srcDirectivityComboBox.setColour(ComboBox::arrowColourId, Colours::whitesmoke);
-    srcDirectivityComboBox.addListener(this);
-    srcDirectivityComboBox.addItem("omni", 1);
-    srcDirectivityComboBox.addItem("directional", 2);
-    srcDirectivityComboBox.setSelectedId(1);
+    // init combo boxes
+    comboBoxMap.insert({
+        { &numFrequencyBandsComboBox, {"3", "10"} },
+        { &srcDirectivityComboBox, {"omni", "directional"} },
+    });
+    for (auto& pair : comboBoxMap)
+    {
+        auto& obj = pair.first;
+        const auto& param = pair.second;
+        addAndMakeVisible(obj);
+        obj->setEditableText(false);
+        obj->setJustificationType(Justification::right);
+        obj->setColour(ComboBox::backgroundColourId, Colour(PixelARGB(200,30,30,30)));
+        obj->setColour(ComboBox::buttonColourId, Colour(PixelARGB(200,30,30,30)));
+        obj->setColour(ComboBox::outlineColourId, Colour(PixelARGB(200,30,30,30)));
+        obj->setColour(ComboBox::textColourId, Colours::whitesmoke);
+        obj->setColour(ComboBox::arrowColourId, Colours::whitesmoke);
+        obj->addListener (this);
+        for( int i = 0; i < param.size(); i++ ){ obj->addItem(param[i], i+1); }
+        obj->setSelectedId(1);
+    }
     
-    addAndMakeVisible(gainReverbTailSlider);
-    gainReverbTailSlider.setRange(0.0, 2.0);
-    gainReverbTailSlider.setValue(1.0);
-    gainReverbTailSlider.setSliderStyle(Slider::LinearHorizontal);
-    gainReverbTailSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
-    gainReverbTailSlider.setColour(Slider::textBoxTextColourId, Colours::white);
-    gainReverbTailSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
-    gainReverbTailSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
-    gainReverbTailSlider.addListener(this);
-    
-    addAndMakeVisible(gainDirectPathSlider);
-    gainDirectPathSlider.setRange(0.0, 2.0);
-    gainDirectPathSlider.setValue(1.0);
-    gainDirectPathSlider.setSliderStyle(Slider::LinearHorizontal);
-    gainDirectPathSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
-    gainDirectPathSlider.setColour(Slider::textBoxTextColourId, Colours::white);
-    gainDirectPathSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
-    gainDirectPathSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
-    gainDirectPathSlider.addListener(this);
-
-    addAndMakeVisible(gainEarlySlider);
-    gainEarlySlider.setRange(0.0, 2.0);
-    gainEarlySlider.setValue(1.0);
-    gainEarlySlider.setSliderStyle(Slider::LinearHorizontal);
-    gainEarlySlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
-    gainEarlySlider.setColour(Slider::textBoxTextColourId, Colours::white);
-    gainEarlySlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
-    gainEarlySlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
-    gainEarlySlider.addListener(this);
-    
-    addAndMakeVisible(crossfadeStepSlider);
-    crossfadeStepSlider.setRange(0.001, 0.2);
-    crossfadeStepSlider.setValue(0.1);
+    // init sliders
+    sliderMap.insert({
+        { &gainReverbTailSlider, { 0.0, 2.0, 1.0} }, // min, max, value
+        { &gainDirectPathSlider, { 0.0, 2.0, 1.0} },
+        { &gainEarlySlider, { 0.0, 2.0, 1.0} },
+        { &crossfadeStepSlider, { 0.001, 0.2, 0.1} }
+    });
+    for (auto& pair : sliderMap)
+    {
+        auto& obj = pair.first;
+        const auto& param = pair.second;
+        addAndMakeVisible(obj);
+        obj->setRange( param[0], param[1] );
+        obj->setValue( param[2] );
+        obj->setSliderStyle(Slider::LinearHorizontal);
+        obj->setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+        obj->setColour(Slider::textBoxTextColourId, Colours::white);
+        obj->setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
+        obj->setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+        obj->addListener(this);
+    }
     crossfadeStepSlider.setSliderStyle(Slider::RotaryVerticalDrag);
     crossfadeStepSlider.setColour(Slider::rotarySliderFillColourId, Colours::white);
     crossfadeStepSlider.setColour(Slider::rotarySliderOutlineColourId, Colours::darkgrey);
     crossfadeStepSlider.setRotaryParameters(10 / 8.f * 3.1416, 22 / 8.f * 3.1416, true);
-    crossfadeStepSlider.setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
-    crossfadeStepSlider.setColour(Slider::textBoxTextColourId, Colours::white);
-    crossfadeStepSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
-    crossfadeStepSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
     crossfadeStepSlider.setSkewFactor(0.7);
-    crossfadeStepSlider.addListener(this);
     
-    addAndMakeVisible (numFrequencyBandsLabel);
-    numFrequencyBandsLabel.setText ("Num. absorption freq. bands:", dontSendNotification);
-    numFrequencyBandsLabel.setColour(Label::textColourId, Colours::whitesmoke);
-
-    addAndMakeVisible (srcDirectivityLabel);
-    srcDirectivityLabel.setText ("Source directivity:", dontSendNotification);
-    srcDirectivityLabel.setColour(Label::textColourId, Colours::whitesmoke);
-    
-    addAndMakeVisible (inputLabel);
-    inputLabel.setText ("Inputs", dontSendNotification);
-    inputLabel.setColour(Label::textColourId, Colours::whitesmoke);
+    // init labels
+    labelMap.insert({
+        { &numFrequencyBandsLabel, "Num. absorption freq. bands:" },
+        { &srcDirectivityLabel, "Source directivity:" },
+        { &inputLabel, "Inputs" },
+        { &parameterLabel, "Parameters" },
+        { &logLabel, "Logs" },
+        { &directPathLabel, "Direct path" },
+        { &earlyLabel, "Early reflections" },
+        { &crossfadeLabel, "Crossfade factor" }
+    });
+    for (auto& pair : labelMap)
+    {
+        auto& obj = pair.first;
+        const auto& param = pair.second;
+        addAndMakeVisible(obj);
+        obj->setText( param, dontSendNotification );
+        obj->setColour(Label::textColourId, Colours::whitesmoke);
+        
+    }
     inputLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
-
-    addAndMakeVisible (parameterLabel);
-    parameterLabel.setText ("Parameters", dontSendNotification);
-    parameterLabel.setColour(Label::textColourId, Colours::whitesmoke);
     parameterLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
-
-    addAndMakeVisible (logLabel);
-    logLabel.setText ("Logs", dontSendNotification);
-    logLabel.setColour(Label::textColourId, Colours::whitesmoke);
     logLabel.setColour(Label::backgroundColourId, Colour(30, 30, 30));
     
-    addAndMakeVisible (directPathLabel);
-    directPathLabel.setText ("Direct path", dontSendNotification);
-    directPathLabel.setColour(Label::textColourId, Colours::whitesmoke);
-    directPathLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
-
-    addAndMakeVisible (earlyLabel);
-    earlyLabel.setText ("Early reflections", dontSendNotification);
-    earlyLabel.setColour(Label::textColourId, Colours::whitesmoke);
-    earlyLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
+    // init toggles
+    toggleMap.insert({
+        { &reverbTailToggle, "Reverb tail" },
+        { &enableDirectToBinaural, "Direct to binaural" },
+        { &enableLog, "Enable logs" }
+    });
+    for (auto& pair : toggleMap)
+    {
+        auto& obj = pair.first;
+        const auto& param = pair.second;
+        addAndMakeVisible(obj);
+        obj->setButtonText( param );
+        obj->setColour(ToggleButton::textColourId, Colours::whitesmoke);
+        obj->setEnabled(true);
+        obj->addListener(this);
+        obj->setToggleState(true, juce::sendNotification);
+    }
     
-    addAndMakeVisible (crossfadeLabel);
-    crossfadeLabel.setText ("Crossfade factor", dontSendNotification);
-    crossfadeLabel.setColour(Label::textColourId, Colours::whitesmoke);
-    crossfadeLabel.setColour(Label::backgroundColourId, Colours::transparentBlack);
-    
-    addAndMakeVisible (&reverbTailToggle);
-    reverbTailToggle.setButtonText ("Reverb tail");
-    reverbTailToggle.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    reverbTailToggle.setEnabled(true);
-    reverbTailToggle.addListener(this);
-    reverbTailToggle.setToggleState(true, juce::sendNotification);
-
-    addAndMakeVisible (&enableDirectToBinaural);
-    enableDirectToBinaural.setButtonText ("Direct to binaural");
-    enableDirectToBinaural.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    enableDirectToBinaural.setEnabled(true);
-    enableDirectToBinaural.addListener(this);
-    enableDirectToBinaural.setToggleState(true, juce::sendNotification);
-    
-    addAndMakeVisible (&enableLog);
-    enableLog.setButtonText ("Enable logs");
-    enableLog.setColour(ToggleButton::textColourId, Colours::whitesmoke);
-    enableLog.setEnabled(true);
-    enableLog.addListener(this);
-    enableLog.setToggleState(true, juce::sendNotification);
 }
 
 MainContentComponent::~MainContentComponent()
