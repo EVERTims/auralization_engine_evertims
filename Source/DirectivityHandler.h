@@ -18,10 +18,10 @@ public:
     
 private:
     
-    const static int FILTER_LENGTH = 10; // num frequency bands
-    int filter_length = FILTER_LENGTH;
+    const static int FILTER_LENGTH = 10; // num frequency bands expected
+    int filter_length; // num freq bands in file
     float sampleRate = 48000; // dummy, just made it fit .sofa file to avoid resampling
-    struct MYSOFA_EASY *hrtf;
+    struct MYSOFA_EASY *sofaEasyStruct;
     
     // to comply with libmysofa notations
     float leftIR[FILTER_LENGTH]; // gain real
@@ -38,19 +38,14 @@ public:
     
 DirectivityHandler()
 {
-
-    
     // print info
     // printGains( 2, 15 );
-    
-    // resize
-    dirGains.resize( 2 * FILTER_LENGTH );
 }
         
 ~DirectivityHandler()
 {
     // free sofa structure
-    mysofa_close( hrtf );
+    mysofa_close( sofaEasyStruct );
 }
   
 void loadFile( string filenameStr )
@@ -64,13 +59,25 @@ void loadFile( string filenameStr )
     
     // load
     int err;
-    hrtf = mysofa_open(filename, sampleRate, &filter_length, &err);
+    filter_length = 0;
+    sofaEasyStruct = mysofa_open(filename, sampleRate, &filter_length, &err);
     
-    // warn if error
-    if(hrtf==NULL)
-    {
-        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "failed to file", filenameStr, "OK");
-    }
+    // to remove once libmysofa updated (right now the filter_length value is not updated when passed to mysofa_open
+    filter_length = sofaEasyStruct->hrtf->N;
+    DBG(filter_length);
+    // check if file loaded correctly
+    jassert( sofaEasyStruct != NULL );
+    
+    // check if expected size matches actual
+    jassert( filter_length == FILTER_LENGTH );
+    
+    // resize locals
+    dirGains.resize( 2 * filter_length );
+    
+    // DEBUG
+    double azim = 0.3;
+    double elev = 0;
+    getGains( azim, elev );
 }
 
 Array<float>  getGains(double azim, double elev)
@@ -85,8 +92,7 @@ Array<float>  getGains(double azim, double elev)
     float z = sinf(elev);
     
     // get interpolated gain value
-    mysofa_getfilter_float(hrtf, x, y, z, leftIR, rightIR, &leftDelay, &rightDelay);
-    // mysofa_getfilter_float(hrtf, x, y, z, gainsReal, gainsImag, &leftDelay, &rightDelay);
+    mysofa_getfilter_float( sofaEasyStruct, x, y, z, leftIR, rightIR, &leftDelay, &rightDelay );
     
     // fill output
     for( int i = 0; i < FILTER_LENGTH; i++ )
@@ -103,8 +109,8 @@ void printGains(int bandId, int step)
     // query
     float leftIR[filter_length];
     float rightIR[filter_length];
-    float leftDelay;          // unit is samples
-    float rightDelay;         // unit is samples
+    float leftDelay;
+    float rightDelay;
 
     float azim = 0;
     float elev = 0;
@@ -124,7 +130,7 @@ void printGains(int bandId, int step)
             y = cosf(elev)*sinf(azim);
             z = sinf(elev);
 
-            mysofa_getfilter_float(hrtf, x, y, z, leftIR, rightIR, &leftDelay, &rightDelay);
+            mysofa_getfilter_float( sofaEasyStruct, x, y, z, leftIR, rightIR, &leftDelay, &rightDelay );
             
             std::cout << az << " " << el << " " << 1 << " " << leftIR[bandId] << " " << rightIR[bandId] << std::endl;
         }
