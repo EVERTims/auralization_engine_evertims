@@ -145,7 +145,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         if( !crossfadeOver ) // Add old and new tapped delayed buffers with gain crossfade
         {
             // get old delay, tap from delay line, apply gain=f(delay)
-            if( j < current->delays.size() ){
+            if( j < current->delays.size() )
+            {
                 delayInFractionalSamples = current->delays[j] * localSampleRate;
                 workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
                 workingBuffer.applyGain(1.0 - crossfadeGain);
@@ -153,7 +154,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             else{ workingBuffer.clear(); }
             
             // get new delay, tap from delay line, apply gain=f(delay)
-            if( j < future->delays.size() ){
+            if( j < future->delays.size() )
+            {
                 delayInFractionalSamples = future->delays[j] * localSampleRate;
                 workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
                 workingBufferTemp.applyGain(crossfadeGain);
@@ -166,7 +168,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         else // simple update
         {
             // get delay, tap from delay line
-            if( j < current->delays.size() ){
+            if( j < current->delays.size() )
+            {
                 delayInFractionalSamples = (current->delays[j] * localSampleRate);
                 workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
             }
@@ -182,7 +185,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         }
         else
         {
-            if( j < current->pathLengths.size() ){
+            if( j < current->pathLengths.size() )
+            {
                 gainDelayLine = 1.0/current->pathLengths[j];
             }
         }
@@ -205,18 +209,21 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             // apply crossfade
             if( !crossfadeOver )
             {
-                if( j < current->absorptionCoefs.size() ){
+                if( j < current->absorptionCoefs.size() )
+                {
                     absorptionCoef += (1.0 - crossfadeGain) * current->absorptionCoefs[j][k];
                     dirGain += (1.0 - crossfadeGain) * current->directivityGains[j][k];
                 }
-                if( j < future->absorptionCoefs.size() ){
+                if( j < future->absorptionCoefs.size() )
+                {
                     absorptionCoef += crossfadeGain * future->absorptionCoefs[j][k];
                     dirGain += crossfadeGain * future->directivityGains[j][k];
                 }
             }
             else
             {
-                if( j < current->absorptionCoefs.size() ){
+                if( j < current->absorptionCoefs.size() )
+                {
                     absorptionCoef = current->absorptionCoefs[j][k];
                     dirGain = current->directivityGains[j][k]; // only using real part here
                 }
@@ -287,12 +294,14 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
                 workingBufferTemp = clipboardBuffer;
                 
                 // apply ambisonic gain past
-                if( j < current->ambisonicGains.size() ){
+                if( j < current->ambisonicGains.size() )
+                {
                     workingBuffer.applyGain( (1.0 - crossfadeGain) * current->ambisonicGains[j][k] );
                 }
                 
                 // apply ambisonic gain future
-                if( j < future->ambisonicGains.size() ){
+                if( j < future->ambisonicGains.size() )
+                {
                     workingBufferTemp.applyGain( crossfadeGain * future->ambisonicGains[j][k] );
                 }
                 
@@ -302,7 +311,8 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             else
             {
                 // apply ambisonic gain
-                if( j < current->ambisonicGains.size() ){
+                if( j < current->ambisonicGains.size() )
+                {
                     workingBuffer.applyGain( current->ambisonicGains[j][k] );
                 }
             }
