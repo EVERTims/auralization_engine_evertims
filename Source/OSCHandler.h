@@ -87,11 +87,14 @@ std::vector<float> getSourceImagePathsLength()
 // get Direction Of Arrivals (relative to listener orientation)
 std::vector<Eigen::Vector3f> getSourceImageDOAs()
 {
-    Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
-    Eigen::Matrix3f listenerRotationMatrix = listenerMap.begin()->second.rotationMatrix;
+	std::vector<Eigen::Vector3f> doas;
+	doas.resize(sourceImageMap.size());
+
+	// discard if empty listener map
+	if (listenerMap.size() == 0){ return doas; }
     
-    std::vector<Eigen::Vector3f> doas;
-    doas.resize(sourceImageMap.size());
+	Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
+    Eigen::Matrix3f listenerRotationMatrix = listenerMap.begin()->second.rotationMatrix;
     
     int i = 0;
     for(auto const &ent1 : sourceImageMap) {
@@ -105,11 +108,14 @@ std::vector<Eigen::Vector3f> getSourceImageDOAs()
 // get Direction Of Departure (relative to source orientation
 std::vector<Eigen::Vector3f> getSourceImageDODs()
 {
+	std::vector<Eigen::Vector3f> dods;
+	dods.resize(sourceImageMap.size());
+
+	// discard if empty source map
+	if (sourceMap.size() == 0){ return dods; }
+
     Eigen::Vector3f sourcePos = sourceMap.begin()->second.position;
     Eigen::Matrix3f sourceRotationMatrix = sourceMap.begin()->second.rotationMatrix;
-    
-    std::vector<Eigen::Vector3f> dods;
-    dods.resize(sourceImageMap.size());
     
     int i = 0;
     for(auto const &ent1 : sourceImageMap) {
@@ -172,6 +178,8 @@ String getMapContent()
     }
     output += String("\n");
     
+	// discard if empty listener map
+	if (listenerMap.size() == 0){ return output; }
     Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
     std::vector<Eigen::Vector3f> posSph = getSourceImageDOAs();
     int i = 0;
