@@ -4,6 +4,11 @@
 #include <math.h>
 #include <cmath>
 
+// define M_PI for Windows
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 #include "../JuceLibraryCode/JuceHeader.h"
 
 #include <Eigen/Eigen>
@@ -13,6 +18,7 @@
 #define AMBI_ORDER 2 // Ambisonic order
 #define N_AMBI_CH 9 // Associated number of Ambisonic channels [pow(AMBI_ORDER+1,2)]
 #define AMBI2BIN_IR_LENGTH 221 // length of loaded filters (in time samples)
+
 
 //==========================================================================
 // EVERTIMS STRUCTURES
