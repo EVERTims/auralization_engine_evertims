@@ -109,12 +109,15 @@
         <MODULEPATH id="juce_osc" path="../../../../../../Applications/JUCE/modules"/>
       </MODULEPATHS>
     </XCODE_MAC>
-    <VS2013 targetFolder="Builds/VisualStudio2013">
+    <VS2013 targetFolder="Builds/VisualStudio2013" externalLibraries="C:\cygwin64\usr\local\lib\libmysofa.dll.a"
+            smallIcon="S30np0" bigIcon="c3T5di">
       <CONFIGURATIONS>
-        <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
-                       isDebug="1" optimisation="1" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871"/>
-        <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
-                       isDebug="0" optimisation="3" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871"/>
+        <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="x64"
+                       isDebug="1" optimisation="1" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871&#10;C:\cygwin64\usr\local\include"
+                       libraryPath="C:\cygwin64\usr\local\lib\"/>
+        <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="x64"
+                       isDebug="0" optimisation="3" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871&#10;C:\cygwin64\usr\local\include"
+                       libraryPath="C:\cygwin64\usr\local\lib\"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_video" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
