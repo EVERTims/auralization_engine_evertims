@@ -65,7 +65,11 @@ public:
                                                     Colour(PixelARGB(240,30,30,30)),
                                                     DocumentWindow::allButtons)
         {
-            setUsingNativeTitleBar (true);
+			// transparent content (non isOpaque component) crashes native windows title bar
+			if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win")){
+				setUsingNativeTitleBar(false);
+			}
+			else{ setUsingNativeTitleBar(true); }
             setContentOwned (createMainContentComponent(), true);
             setResizable (true, true);
 
