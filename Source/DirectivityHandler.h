@@ -59,6 +59,12 @@ void loadFile( string filenameStr )
     String path = hrirFile.getFullPathName();
     const char *filename = path.getCharPointer();
     
+	// Windows: skip directivity for now (bug at load)
+	if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win")){ 
+		isLoaded = false;
+		return;
+	}
+
     // load
     int err;
     filter_length = 0;
