@@ -21,7 +21,9 @@ private:
     const static int FILTER_LENGTH = 10; // num frequency bands expected
     int filter_length; // num freq bands in file
     float sampleRate = 48000; // dummy, just made it fit .sofa file to avoid resampling
+    
     struct MYSOFA_EASY *sofaEasyStruct;
+	bool isLoaded = false; // to know if need is to free struct at exit
     
     // to comply with libmysofa notations
     float leftIR[FILTER_LENGTH]; // gain real
@@ -45,7 +47,7 @@ DirectivityHandler()
 ~DirectivityHandler()
 {
     // free sofa structure
-    mysofa_close( sofaEasyStruct );
+	if( isLoaded ){ mysofa_close(sofaEasyStruct); }
 }
   
 void loadFile( string filenameStr )
@@ -78,6 +80,15 @@ void loadFile( string filenameStr )
     double azim = 0.3;
     double elev = 0;
     getGains( azim, elev );
+
+    // warn if error
+    if(sofaEasyStruct==NULL)
+    {
+		isLoaded = false;
+        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "failed to file", filenameStr, "OK");
+    }
+	else{ isLoaded = true; }
+
 }
 
 Array<float>  getGains(double azim, double elev)
@@ -107,10 +118,10 @@ Array<float>  getGains(double azim, double elev)
 void printGains(int bandId, int step)
 {
     // query
-    float leftIR[filter_length];
-    float rightIR[filter_length];
-    float leftDelay;
-    float rightDelay;
+	float leftIR[FILTER_LENGTH];
+	float rightIR[FILTER_LENGTH];
+    float leftDelay;          // unit is samples
+    float rightDelay;         // unit is samples
 
     float azim = 0;
     float elev = 0;
