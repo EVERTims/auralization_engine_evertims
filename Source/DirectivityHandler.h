@@ -64,7 +64,7 @@ void loadFile( string filenameStr )
     
     // to remove once libmysofa updated (right now the filter_length value is not updated when passed to mysofa_open
     filter_length = sofaEasyStruct->hrtf->N;
-    DBG(filter_length);
+    
     // check if file loaded correctly
     jassert( sofaEasyStruct != NULL );
     

@@ -17,12 +17,7 @@ class SourceImagesHandler
 public:
     
     // sources images
-    std::vector<int> IDs;
-    std::vector<float> delaysCurrent; // in seconds
-    std::vector<float> delaysFuture; // in seconds
-    std::vector<float> pathLengthsCurrent; // in meters
-    std::vector<float> pathLengthsFuture; // in meters
-    int numSourceImages;
+    int numSourceImages = 0;
     float earlyGain = 1.f;
     
     // octave filter bank
@@ -34,7 +29,7 @@ public:
     float reverbTailGain = 1.0f;
     
     // direct path to binaural
-    int directPathId;
+    int directPathId = -1;
     float directPathGain = 1.0f;
     bool enableDirectToBinaural = true;
     
@@ -47,6 +42,21 @@ public:
     
     // source / listener directivity
     DirectivityHandler directivityHandler;
+    
+    // prepare struct for thread safe update (pointer swap based)
+    struct localVariablesStruct
+    {
+        std::vector<int> ids; // source images indices
+        std::vector<float> delays; // in seconds
+        std::vector<float> pathLengths; // in meters
+        std::vector< Array<float> > absorptionCoefs; // room frequency absorption coefficients
+        std::vector< Array<float> > directivityGains; // source directivity gains
+        std::vector< Array<float> > ambisonicGains; // buffer for input data
+    };
+    
+    localVariablesStruct *current = new localVariablesStruct();
+    localVariablesStruct *future = new localVariablesStruct();
+    localVariablesStruct *currentFutureRelay;
     
 private:
     
@@ -65,19 +75,9 @@ private:
     // crossfade mecanism
     float crossfadeGain = 0.0;
     
-    // octave filter bank
-    std::vector< Array<float> > absorptionCoefsCurrent; // room frequency absorption coefficients
-    std::vector< Array<float> > absorptionCoefsFuture;
-    
     // ambisonic encoding
     AmbixEncoder ambisonicEncoder;
-    std::vector< Array<float> > ambisonicGainsCurrent; // buffer for input data
-    std::vector< Array<float> > ambisonicGainsFuture; // to avoid zipper effect
     AudioBuffer<float> ambisonicBuffer; // output buffer, N (Ambisonic) channels
-    
-    // source / listener directivity
-    std::vector< Array<float> > directivityGainsCurrent; // source directivity gains
-    std::vector< Array<float> > directivityGainsFuture;
     
 //==========================================================================
 // METHODS
@@ -91,10 +91,6 @@ SourceImagesHandler() {}
 // local equivalent of prepareToPlay
 void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 {
-    // set number of valid source image
-    numSourceImages = 0;
-    directPathId = -1;
-    
     // prepare buffers
     workingBuffer.setSize(1, samplesPerBlockExpected);
     workingBuffer.clear();
@@ -112,7 +108,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
     
     // init filter bank
     filterBank.prepareToPlay( samplesPerBlockExpected, sampleRate );
-    filterBank.setNumFilters( NUM_OCTAVE_BANDS, IDs.size() );
+    filterBank.setNumFilters( NUM_OCTAVE_BANDS, current->ids.size() );
     
     // init reverb tail
     reverbTail.prepareToPlay( samplesPerBlockExpected, sampleRate );
@@ -125,7 +121,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 // get max source image delay in seconds
 float getMaxDelayFuture()
 {
-    float maxDelayTap = getMaxValue(delaysFuture);
+    float maxDelayTap = getMaxValue(future->delays);
     return maxDelayTap;
 }
     
@@ -149,14 +145,22 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         if( !crossfadeOver ) // Add old and new tapped delayed buffers with gain crossfade
         {
             // get old delay, tap from delay line, apply gain=f(delay)
-            delayInFractionalSamples = delaysCurrent[j] * localSampleRate;
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
-            workingBuffer.applyGain(1.0 - crossfadeGain);
+            if( j < current->delays.size() )
+            {
+                delayInFractionalSamples = current->delays[j] * localSampleRate;
+                workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+                workingBuffer.applyGain(1.0 - crossfadeGain);
+            }
+            else{ workingBuffer.clear(); }
             
             // get new delay, tap from delay line, apply gain=f(delay)
-            delayInFractionalSamples = delaysFuture[j] * localSampleRate;
-            workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
-            workingBufferTemp.applyGain(crossfadeGain);
+            if( j < future->delays.size() )
+            {
+                delayInFractionalSamples = future->delays[j] * localSampleRate;
+                workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+                workingBufferTemp.applyGain(crossfadeGain);
+            }
+            else{ workingBufferTemp.clear(); }
             
             // add both buffers
             workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
@@ -164,8 +168,11 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         else // simple update
         {
             // get delay, tap from delay line
-            delayInFractionalSamples = (delaysCurrent[j] * localSampleRate);
-            workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            if( j < current->delays.size() )
+            {
+                delayInFractionalSamples = (current->delays[j] * localSampleRate);
+                workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+            }
         }
         
         //==========================================================================
@@ -173,12 +180,15 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         float gainDelayLine = 0.0f;
         if( !crossfadeOver )
         {
-            gainDelayLine = (1.0 - crossfadeGain) * (1.0/pathLengthsCurrent[j])
-                            + crossfadeGain * (1.0/pathLengthsFuture[j]);
+            if( j < current->pathLengths.size() ){ gainDelayLine += (1.0 - crossfadeGain) * (1.0/current->pathLengths[j]); }
+            if( j < future->pathLengths.size() ){ gainDelayLine += crossfadeGain * (1.0/future->pathLengths[j]); }
         }
         else
         {
-            gainDelayLine = 1.0/pathLengthsCurrent[j];
+            if( j < current->pathLengths.size() )
+            {
+                gainDelayLine = 1.0/current->pathLengths[j];
+            }
         }
         workingBuffer.applyGain( fmin( 1.0, fmax( 0.0, gainDelayLine )) );
         
@@ -190,23 +200,33 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
         // apply absorption gains and recompose
         workingBuffer.clear();
-        float absorptionCoef = 0.f;
-        float dirGain = 0.f;
+        float absorptionCoef, dirGain;
         for( int k = 0; k < bandBuffer.getNumChannels(); k++ )
         {
+            absorptionCoef = 0.f;
+            dirGain = 0.f;
+            
             // apply crossfade
             if( !crossfadeOver )
             {
-                absorptionCoef = (1.0 - crossfadeGain) * absorptionCoefsCurrent[j][k]
-                                + crossfadeGain * absorptionCoefsFuture[j][k];
-
-                dirGain = (1.0 - crossfadeGain) * directivityGainsCurrent[j][k]
-                        + crossfadeGain * directivityGainsFuture[j][k];
+                if( j < current->absorptionCoefs.size() )
+                {
+                    absorptionCoef += (1.0 - crossfadeGain) * current->absorptionCoefs[j][k];
+                    dirGain += (1.0 - crossfadeGain) * current->directivityGains[j][k];
+                }
+                if( j < future->absorptionCoefs.size() )
+                {
+                    absorptionCoef += crossfadeGain * future->absorptionCoefs[j][k];
+                    dirGain += crossfadeGain * future->directivityGains[j][k];
+                }
             }
             else
             {
-                absorptionCoef = absorptionCoefsCurrent[j][k];
-                dirGain = directivityGainsCurrent[j][k]; // only using real part here
+                if( j < current->absorptionCoefs.size() )
+                {
+                    absorptionCoef = current->absorptionCoefs[j][k];
+                    dirGain = current->directivityGains[j][k]; // only using real part here
+                }
             }
             
             // bound gains
@@ -221,10 +241,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             
             // recompose (add-up frequency bands)
             workingBuffer.addFrom(0, 0, bandBuffer, k, 0, localSamplesPerBlockExpected);
-            
-            // if( directPathId == IDs[j] ){ std::cout << " " << dirGain; }
         }
-        // if( directPathId == IDs[j] ){ std::cout << endl; }
         
         //==========================================================================
         // FEED REVERB TAIL FDN
@@ -236,7 +253,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
         //==========================================================================
         // APPLY DIRECT PATH / EARLY GAINS
-        if( directPathId == IDs[j] )
+        if( j < current->ids.size() && directPathId == current->ids[j] )
         {
             workingBuffer.applyGain(directPathGain);
         }
@@ -247,7 +264,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
         
         //==========================================================================
         // BINAURAL ENCODING (DIRECT PATH ONLY)
-        if( enableDirectToBinaural && directPathId == IDs[j] )
+        if( enableDirectToBinaural && j < current->ids.size() && directPathId == current->ids[j] )
         {
             // apply filter
             binauralBuffer = binauralEncoder.processBuffer(workingBuffer);
@@ -277,10 +294,16 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
                 workingBufferTemp = clipboardBuffer;
                 
                 // apply ambisonic gain past
-                workingBuffer.applyGain((1.0 - crossfadeGain)*ambisonicGainsCurrent[j][k]);
+                if( j < current->ambisonicGains.size() )
+                {
+                    workingBuffer.applyGain( (1.0 - crossfadeGain) * current->ambisonicGains[j][k] );
+                }
                 
                 // apply ambisonic gain future
-                workingBufferTemp.applyGain(crossfadeGain*ambisonicGainsFuture[j][k]);
+                if( j < future->ambisonicGains.size() )
+                {
+                    workingBufferTemp.applyGain( crossfadeGain * future->ambisonicGains[j][k] );
+                }
                 
                 // add past / future buffers
                 workingBuffer.addFrom(0, 0, workingBufferTemp, 0, 0, localSamplesPerBlockExpected);
@@ -288,7 +311,10 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
             else
             {
                 // apply ambisonic gain
-                workingBuffer.applyGain(ambisonicGainsCurrent[j][k]);
+                if( j < current->ambisonicGains.size() )
+                {
+                    workingBuffer.applyGain( current->ambisonicGains[j][k] );
+                }
             }
             
             // iteratively fill in general ambisonic buffer with source image buffers (cumulative)
@@ -301,7 +327,6 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
     
     if( enableReverbTail )
     {
-        
         // get tail buffer
         tailBuffer = reverbTail.getTailBuffer();
         
@@ -324,41 +349,32 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 // update local attributes based on latest received OSC info
 void updateFromOscHandler(OSCHandler& oscHandler)
 {
-    // make sure not to use non-valid source image ID in audio thread during update
-    // (clumsy, not thread safe, TO CLEAN)
-    auto IDsTemp = oscHandler.getSourceImageIDs();
-    numSourceImages = min(IDs.size(), IDsTemp.size());
-    
-    // save new source image data, ready to be used in next audio loop
-    IDs = oscHandler.getSourceImageIDs();
+    future->ids = oscHandler.getSourceImageIDs();
+    future->delays = oscHandler.getSourceImageDelays();
+    future->pathLengths = oscHandler.getSourceImagePathsLength();
     directPathId = oscHandler.getDirectPathId();
-    delaysFuture = oscHandler.getSourceImageDelays();
-    delaysCurrent.resize(delaysFuture.size(), 0.0f);
-    pathLengthsFuture = oscHandler.getSourceImagePathsLength();
-    pathLengthsCurrent.resize(pathLengthsFuture.size(), 10000.0f);
     
     // update absorption coefficients
-    absorptionCoefsFuture.resize(IDs.size());
-    absorptionCoefsCurrent.resize(IDs.size());
-    for (int j = 0; j < IDs.size(); j++)
+    future->absorptionCoefs.resize(future->ids.size());
+    for (int j = 0; j < future->ids.size(); j++)
     {
-        absorptionCoefsFuture[j] = oscHandler.getSourceImageAbsorption(IDs[j]);
+        future->absorptionCoefs[j] = oscHandler.getSourceImageAbsorption(future->ids[j]);
         if( filterBank.numOctaveBands == 3 )
         {
-            absorptionCoefsFuture[j] = from10to3bands(absorptionCoefsFuture[j]);
+            future->absorptionCoefs[j] = from10to3bands(future->absorptionCoefs[j]);
         }
     }
     
     // update directivity gains
     auto sourceImageDODs = oscHandler.getSourceImageDODs();
-    directivityGainsCurrent.resize(IDs.size());
-    directivityGainsFuture.resize(IDs.size());
-    for (int j = 0; j < IDs.size(); j++)
+    
+    future->directivityGains.resize(future->ids.size());
+    for (int j = 0; j < future->ids.size(); j++)
     {
-        directivityGainsFuture[j] = directivityHandler.getGains(sourceImageDODs[j](0), sourceImageDODs[j](1));
+        future->directivityGains[j] = directivityHandler.getGains(sourceImageDODs[j](0), sourceImageDODs[j](1));
         if( filterBank.numOctaveBands == 3 )
         {
-            directivityGainsFuture[j] = from10to3bands(directivityGainsFuture[j]);
+            future->directivityGains[j] = from10to3bands(future->directivityGains[j]);
         }
     }
     
@@ -367,28 +383,26 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     
     // save (compute) new Ambisonic gains
     auto sourceImageDOAs = oscHandler.getSourceImageDOAs();
-    ambisonicGainsCurrent.resize(IDs.size());
-    ambisonicGainsFuture.resize(IDs.size());
-    for (int i = 0; i < IDs.size(); i++)
+    
+    future->ambisonicGains.resize(future->ids.size());
+    for (int i = 0; i < future->ids.size(); i++)
     {
-        ambisonicGainsFuture[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
+        future->ambisonicGains[i] = ambisonicEncoder.calcParams(sourceImageDOAs[i](0), sourceImageDOAs[i](1));
     }
     
     // update binaural encoder (even if not enabled, not cpu demanding and that way it's ready to use)
-    if( IDs.size() > 0 && directPathId > -1 )
+    if( current->ids.size() > 0 && directPathId > -1 )
     {
         binauralEncoder.setPosition(sourceImageDOAs[directPathId](0), sourceImageDOAs[directPathId](1));
     }
     
     // update filter bank size
-    filterBank.setNumFilters( filterBank.numOctaveBands, IDs.size() );
-    
-    // update number of valid source images
-    numSourceImages = IDs.size();
+    filterBank.setNumFilters( filterBank.numOctaveBands, future->ids.size() );
     
     // trigger crossfade mecanism
-    if( numSourceImages > 0 )
+    if( future->ids.size() > 0 )
     {
+        numSourceImages = max(current->ids.size(), future->ids.size());
         crossfadeGain = 0.0;
         crossfadeOver = false;
     }
@@ -396,7 +410,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     
 void setFilterBankSize(int numFreqBands)
 {
-    filterBank.setNumFilters( numFreqBands, IDs.size() );
+    filterBank.setNumFilters( numFreqBands, current->ids.size() );
     bandBuffer.setSize( numFreqBands, localSamplesPerBlockExpected );
 }
     
@@ -414,11 +428,10 @@ void updateCrossfade()
     else if (!crossfadeOver)
     {
         // set past = future
-        delaysCurrent = delaysFuture;
-        pathLengthsCurrent = pathLengthsFuture;
-        ambisonicGainsCurrent = ambisonicGainsFuture;
-        absorptionCoefsCurrent = absorptionCoefsFuture;
-        directivityGainsCurrent = directivityGainsFuture;
+        // (objective: atomic swap to make sure no value is updated in middle of audio processing loop)
+        currentFutureRelay = current;
+        current = future;
+        future = currentFutureRelay;
         
         // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain

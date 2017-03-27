@@ -474,8 +474,8 @@ void MainContentComponent::resized()
     
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
     
-    crossfadeStepSlider.setBounds(0.2*getWidth(), 255, 80, 50);
-    crossfadeLabel.setBounds(30, 258, crossfadeStepSlider.getX() - 60, 40);
+    crossfadeStepSlider.setBounds(0.17*getWidth(), 255, 80, 50);
+    crossfadeLabel.setBounds(30, 258, crossfadeStepSlider.getX() - 30, 40);
     
     numFrequencyBandsLabel.setBounds(190, 260, getWidth() - 450, 20);
     numFrequencyBandsComboBox.setBounds(saveIrButton.getX()-60, 260, 50, 20);
