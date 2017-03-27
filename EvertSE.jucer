@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="1.0.0"
               bundleIdentifier="com.yourcompany.EvertSE" includeBinaryInAppConfig="1"
-              jucerVersion="4.2.3">
+              jucerVersion="4.3.1">
   <MAINGROUP id="aSpPbd" name="EvertSE">
     <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
       <GROUP id="{E03E531B-FABC-9912-666B-A003EB5B2320}" name="AmbixEncode">
@@ -109,6 +109,31 @@
         <MODULEPATH id="juce_osc" path="../../../../../../Applications/JUCE/modules"/>
       </MODULEPATHS>
     </XCODE_MAC>
+    <VS2013 targetFolder="Builds/VisualStudio2013">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="1" optimisation="1" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871"/>
+        <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="32-bit"
+                       isDebug="0" optimisation="3" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_video" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_osc" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_opengl" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_gui_extra" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_gui_basics" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_graphics" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_events" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_data_structures" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_cryptography" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_core" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_audio_utils" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_audio_processors" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_audio_formats" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_audio_devices" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_audio_basics" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+      </MODULEPATHS>
+    </VS2013>
   </EXPORTFORMATS>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
