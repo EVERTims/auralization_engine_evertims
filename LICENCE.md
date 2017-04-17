@@ -1,4 +1,5 @@
 EvertSE: auralization and spatial rendering unit of the [EVERTims]( https://evertims.github.io/website) framework.
+
 Copyright (C) 2017 EVERTims
 
 This program is free software; you can redistribute it and/or
