@@ -48,6 +48,7 @@ ambi2binContainer()
     // init text buttons
     buttonMap.insert({
         { &saveIrButton, "Save IR to Desktop" },
+        { &saveOscButton, "Save State to Desktop" },
         { &clearSourceImageButton, "Clear" }
     });
     for (auto& pair : buttonMap)
@@ -60,6 +61,7 @@ ambi2binContainer()
         addAndMakeVisible(obj);
     }
     saveIrButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
+    saveOscButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
     clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
     clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler
     
@@ -473,6 +475,7 @@ void MainContentComponent::resized()
     clearSourceImageButton.setBounds(getWidth() - 80, 200, 50, 50);
     
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
+    saveOscButton.setBounds(getWidth() - thirdWidthIoComponent - 15, getHeight() - 55, thirdWidthIoComponent, 30);
     
     crossfadeStepSlider.setBounds(0.17*getWidth(), 255, 80, 50);
     crossfadeLabel.setBounds(30, 258, crossfadeStepSlider.getX() - 30, 40);
@@ -498,7 +501,7 @@ void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaste
     {
         if( enableLog.getToggleState() )
         {
-            logTextBox.setText(oscHandler.getMapContent());
+            logTextBox.setText(oscHandler.getMapContentForGUI());
         }
         updateOnOscReveive();
     }
@@ -517,6 +520,11 @@ void MainContentComponent::buttonClicked (Button* button)
             AlertWindow::showMessageBoxAsync ( AlertWindow::NoIcon, "Impulse Response not saved", "No source images registered from raytracing client \n(Empty IR)", "OK");
         }
     }
+    if (button == &saveOscButton)
+    {
+        String output = oscHandler.getMapContentForLog();
+        saveStringToDesktop("EVERTims_state", output);
+    }
     if( button == &reverbTailToggle )
     {
         sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
@@ -529,14 +537,14 @@ void MainContentComponent::buttonClicked (Button* button)
     }
     if( button == &enableLog )
     {
-        if( button->getToggleState() ){ logTextBox.setText(oscHandler.getMapContent()); }
+        if( button->getToggleState() ){ logTextBox.setText(oscHandler.getMapContentForGUI()); }
         else{ logTextBox.setText( String("") ); };
     }
     if( button == &clearSourceImageButton )
     {
         oscHandler.clear(false);
         updateOnOscReveive();
-        logTextBox.setText(oscHandler.getMapContent());
+        logTextBox.setText(oscHandler.getMapContentForGUI());
     }
 
 }

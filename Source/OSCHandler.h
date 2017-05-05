@@ -147,7 +147,7 @@ int getDirectPathId()
 }
 
 // return string with full content of local attributes for GUI log window
-String getMapContent()
+String getMapContentForGUI()
 {
     String output = String("\n");
     int nDecimals = 2;
@@ -200,6 +200,72 @@ String getMapContent()
     return output;
 }
 
+    // return string with full content of local attributes for export to desktop
+    String getMapContentForLog()
+    {
+        // init
+        String output = String("");
+        
+        // listener(s)
+        for(auto const &ent1 : listenerMap) {
+            // ent1.first is the first key
+            output += String("listener: ") + String(ent1.first);
+            output += String(" pos: ");
+            for( int i = 0; i < 3; i++ ){
+                output += String(ent1.second.position(i)) + String(" ");
+            }
+            output += String("rot: ");
+            for( int i = 0; i < 3; i++ ){
+                for( int j = 0; j < 3; j++ ){
+                output += String(ent1.second.rotationMatrix(i,j)) + String(" ");
+                }
+            }
+            output += String("\n");
+        }
+        
+        // source(s)
+        for(auto const &ent1 : sourceMap) {
+            // ent1.first is the first key
+            output += String("source: ") + String(ent1.first);
+            output += String(" pos: ");
+            for( int i = 0; i < 3; i++ ){
+                output += String(ent1.second.position(i)) + String(" ");
+            }
+            output += String("rot: ");
+            for( int i = 0; i < 3; i++ ){
+                for( int j = 0; j < 3; j++ ){
+                    output += String(ent1.second.rotationMatrix(i,j)) + String(" ");
+                }
+            }
+            output += String("\n");
+        }
+        
+        // response time
+        output += String("rt60: ");
+        for( int i = 0; i < valuesR60.size(); i++ ){ output += String(valuesR60[i]) + String(" "); }
+        output += String("\n");
+        
+        // image source(s)
+        // discard if empty listener map
+        if (listenerMap.size() == 0){ return output; }
+        for(auto const &ent1 : sourceImageMap) {
+            output += String("imgSrc: ") + String(ent1.first);
+            output += String(" order: ") + String(ent1.second.reflectionOrder);
+            output += String(" posFirst: ");
+            for( int i = 0; i < 3; i++ ){
+                output += String(ent1.second.positionRelectionFirst(i)) + String(" ");
+            }
+            output += String("posLast: ");
+            for( int i = 0; i < 3; i++ ){
+                output += String(ent1.second.positionRelectionLast(i)) + String(" ");
+            }
+            output += String("pathLength: ") + String(ent1.second.totalPathDistance);
+            output += String("\n");
+        }
+
+        return output;
+    }
+    
 // reset all internals
 void clear( bool force)
 {

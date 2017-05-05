@@ -64,6 +64,7 @@ private:
     // GUI ELEMENTS
     TextButton saveIrButton;
     TextButton clearSourceImageButton;
+    TextButton saveOscButton;
     TextEditor logTextBox;
     Image logoImage;
     ComboBox numFrequencyBandsComboBox;

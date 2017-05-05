@@ -210,3 +210,13 @@ inline File getFileFromString(String fileName)
     
     return resourceDir.getChildFile(fileName).getFullPathName();
 }
+
+// save content of data to desktop in fileName
+inline void saveStringToDesktop(String fileName, String data)
+{
+    // get file
+    const File file (File::getSpecialLocation (File::userDesktopDirectory)
+                     .getNonexistentChildFile (fileName, ".txt"));
+    // write to file
+    file.replaceWithText ( data );
+}
