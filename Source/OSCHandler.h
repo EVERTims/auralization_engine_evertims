@@ -260,6 +260,11 @@ String getMapContentForGUI()
                 output += String(ent1.second.positionRelectionLast(i)) + String(" ");
             }
             output += String("pathLength: ") + String(ent1.second.totalPathDistance);
+            output += String(" abs: ");
+            for (int i = 0; i < 10; i++)
+            {
+                output += String(ent1.second.absorption[i]) + String(" ");
+            }
             output += String("\n");
         }
 

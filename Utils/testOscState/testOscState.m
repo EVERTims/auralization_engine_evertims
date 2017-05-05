@@ -45,8 +45,8 @@ C = textscan(fid, '%s%f%f%f%f%f%f%f%f%f%f', 1, 'Delimiter', ' ');
 s.rt60 = [ C{2} C{3} C{4} C{5} C{6} C{7} C{8} C{9} C{10} C{11} ];
 
 % image sources
-% imgSrc: 0 order: 0 posFirst: -1.08 -0.61 -0.39 posLast: 0.12 -0.01 -0.76 dist: 1.39173
-C = textscan(fid, '%s%d%s%d%s%f%f%f%s%f%f%f%s%f', 'Delimiter', ' ');
+% imgSrc: 19 order: 2 posFirst: 0.61858 -1.65884 -2 posLast: -1.92906 -5.58955 -0.971463 pathLength: 13.2885 abs: 0.6864 0.6864 0.6864 0.84 0.9471 0.9879 0.9676 0.91 0.9775 0.9775 
+C = textscan(fid, '%s%d%s%d%s%f%f%f%s%f%f%f%s%f%s%f%f%f%f%f%f%f%f%f%f', 'Delimiter', ' ');
 numImgSrc = length(C{1});
 fprintf('num image source(s) detected: %ld\n', numImgSrc);
 for i = 1:numImgSrc;
@@ -55,6 +55,7 @@ for i = 1:numImgSrc;
     s.imgSrc(i).posFirst = [ C{6}(i) C{7}(i) C{8}(i) ];
     s.imgSrc(i).posLast = [ C{10}(i) C{11}(i) C{12}(i) ];
     s.imgSrc(i).pathLength = C{14}(i);
+    s.imgSrc(i).absorption = [ C{16}(i) C{17}(i) C{18}(i) C{19}(i) C{20}(i) C{21}(i) C{22}(i) C{23}(i) C{24}(i) C{25}(i)];
 end
 
 fclose(fid);
