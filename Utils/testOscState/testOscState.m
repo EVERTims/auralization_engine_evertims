@@ -86,4 +86,5 @@ for i = 1:length(s.imgSrc)
     plot3(s.imgSrc(i).posFirst(1), s.imgSrc(i).posFirst(2), s.imgSrc(i).posFirst(3), '.b');
     plot3(s.imgSrc(i).posLast(1), s.imgSrc(i).posLast(2), s.imgSrc(i).posLast(3), '.r');
 end
-hold off
+hold off,
+grid on;
