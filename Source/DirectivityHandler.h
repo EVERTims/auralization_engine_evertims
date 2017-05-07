@@ -70,9 +70,6 @@ void loadFile( string filenameStr )
     filter_length = 0;
     sofaEasyStruct = mysofa_open(filename, sampleRate, &filter_length, &err);
     
-    // to remove once libmysofa updated (right now the filter_length value is not updated when passed to mysofa_open
-    filter_length = sofaEasyStruct->hrtf->N;
-    
     // check if file loaded correctly
     jassert( sofaEasyStruct != NULL );
     
