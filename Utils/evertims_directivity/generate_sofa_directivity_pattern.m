@@ -1,4 +1,5 @@
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% 
 %     This script is part of the EVERTims Sound Engine framework
 % 
 %     Create Source / Listener directivity pattern in the SOFA format

@@ -1,4 +1,5 @@
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% 
 %     This script is part of the EVERTims Sound Engine framework
 % 
 %     Create HOA to Binaural decoding filters based on the 
@@ -67,6 +68,7 @@ for i = 1:length(hrir_filelist);
     [~,filename,~] = fileparts( hrir_filelist(i).name );
     filename_out = fullfile( output_path, [ filename '.bin' ]);
     
+    % if indeed it has
     if exist( filename_out, 'file' ) == 2;
         if ~FORCE_REPROCESSING; 
             % skip processing
@@ -79,12 +81,12 @@ for i = 1:length(hrir_filelist);
         end
     end
     
-    
-    % load hrir
+    % load hrir from file
     filename_in = fullfile( input_path, hrir_filelist(i).name );
     fprintf('loading file: %s \n', filename_in);
     [~, ~, fileExtension] = fileparts( filename_in );
     
+    % load from LISTEN file
     if ( strcmp(fileExtension, '.mat') )
         % load hrir (LISTEN)
         load(filename_in);
@@ -93,7 +95,7 @@ for i = 1:length(hrir_filelist);
             l_hrir_S = l_eq_hrir_S; clear l_eq_hrir_S
             r_hrir_S = r_eq_hrir_S; clear r_eq_hrir_S
         end
-        
+    % load from SOFA file
     else
         % load hrir (SOFA)
         sofa_struct = SOFAload(filename_in);
@@ -136,7 +138,7 @@ for i = 1:length(hrir_filelist);
         ambisonicDecoder_rEweight = 1;
     end
     
-    % Get HOA decoding matrix
+    % Get HOA decoding matrix for defined speaker array
     M_dec = ambiDecoder ( rad2deg(ls_dirs_rad), ambisonicDecoderMethod, ambisonicDecoder_rEweight, ambisonicDecoderOrder );
         
     % Check if decoding matrix size is correct
@@ -228,11 +230,6 @@ for i = 1:length(hrir_filelist);
         
         input('press Enter key to proceed to next HRIR')
     end
-    
-
-    
-    
-    
     
     % write IR as binary files
     [sParent,sFile,~] = fileparts(filename_out);

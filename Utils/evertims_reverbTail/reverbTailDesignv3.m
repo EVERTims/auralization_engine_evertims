@@ -14,7 +14,7 @@ NumFreqBands = 3;
 
 % Define Response Time -60dB (time after which impulse reduced to -60dB of its initial power)
 % RT60vect = 4*[ 0.39, 0.39, 0.39, 0.35, 0.28, 0.27, 0.26, 0.25, 0.25, 0.25 ]; % Response Time -60dB in sec
-RT60vect = 5*[ 1 1 1 ];
+RT60vect = 0.99*[ 1 1 1 ];
 RT60 = mean(RT60vect);
 FsVect = [];
 for i = 1:length(RT60vect); FsVect = [FsVect 31.5 * 2^(i-1)]; end
@@ -28,8 +28,16 @@ c = 343; % sound speed
 % in = in(:,1); % stereo to mono
 % in = 0.2 * in / max(abs(in)); % normalization
 
-in = [1; zeros(9, 1)]; Fs = 44100;
+in = [1; zeros(9, 1)]; Fs = 44100; % impulse response
 
+% fake source images
+numSources = 100; roomLength = 10; % in m
+Fs = 44100; c = 343; % m.s-1
+minDelaySamp = floor(Fs * roomLength / c);
+maxDelaySamp = ceil(Fs * 2*roomLength / c);
+vectOnes = round( 1 + rand(numSources,1) * (maxDelaySamp - minDelaySamp));
+in = zeros(maxDelaySamp, 1);  in(vectOnes) = 1;
+plot(in);
 
 %% Define feedback Matrix
 % generate unitary matrix of gains (see e.g.
@@ -50,7 +58,7 @@ in = [1; zeros(9, 1)]; Fs = 44100;
 % householder matrix as proposed in Jot's thesis, see also 
 % https://ccrma.stanford.edu/~jos/pasp/Householder_Feedback_Matrix.html
 A = 0.5*(diag([2 2 2 2]) - ones(4,4));
-A = 0.5*[A -A -A -A; -A A -A -A; -A -A A -A; -A -A -A A];
+A = 0.0*[A -A -A -A; -A A -A -A; -A -A A -A; -A -A -A A];
 
 % % export matrix
 % for i = 1:size(A,1);
@@ -117,16 +125,16 @@ for i = 1:NumFreqBands % for each frequency band
 end
 kmean = (1 - 6.9078./(Fs * RT60 ) ).^delaysSamp; % for non-freq specific tests
 
-% check that indeed we reach 0.001 after Nth times through these gains
-gainCheck60 = k;
-for i = 1:NumFreqBands;
-    gainCheck60(i,:) = k(i,:).^( RT60vect(i) ./ ( delaysSamp / Fs ) );
-end
-subplot(121),plot(20*log10(gainCheck60(:)), '*'); hold on,
-line([1 length(gainCheck60(:))], [-60 -60]); hold off
-title('resulting attenuation after Nth passage through FDN for each band');
-subplot(122),plot(k), title('gains S.I.');
-leg = cellstr(num2str(delaysSamp', 'del = %.1f')); legend(leg);
+% % check that indeed we reach 0.001 after Nth times through these gains
+% gainCheck60 = k;
+% for i = 1:NumFreqBands;
+%     gainCheck60(i,:) = k(i,:).^( RT60vect(i) ./ ( delaysSamp / Fs ) );
+% end
+% subplot(121),plot(20*log10(gainCheck60(:)), '*'); hold on,
+% line([1 length(gainCheck60(:))], [-60 -60]); hold off
+% title('resulting attenuation after Nth passage through FDN for each band');
+% subplot(122),plot(k), title('gains S.I.');
+% leg = cellstr(num2str(delaysSamp', 'del = %.1f')); legend(leg);
 
 % % export gains
 % for i = 1:NumFeedbackLine;
@@ -162,12 +170,12 @@ for i = 1:length(delayLine)
         
         % add simple input to delay line
         if( i < length(in) );
-            delayLine(i + delaySamp,m) = delayLine(i + delaySamp,m) + in(i);
-            % if(m==1); 
-            %     subplot(211), stem(delayLine(1:i + delaySamp + 20, m));
-            %     fprintf('add (init) %.2f at %ld \n', in(i), i + delaySamp);
-            %     input('');
-            % end
+            delayLine(i + delaySamp,m) = delayLine(i + delaySamp,m) + k(m) * in(i);
+%             if(m==1); 
+%                 subplot(211), stem(delayLine(1:i + delaySamp + 20, m));
+%                 fprintf('add (init) %.2f at %ld \n', in(i), i + delaySamp);
+%                 input('');
+%             end
             
         end
         
@@ -177,10 +185,10 @@ for i = 1:length(delayLine)
             
             % add delayed feedback to delay line
             delayLine(i,m) = delayLine(i,m) + x;
-            % if(m==1); 
-            %     subplot(212), stem(delayLine(1:i + delaySamp + 20, m)); 
-            %     fprintf('add (own) %.2f at %ld \n', x, i);
-            % end
+%             if(m==1); 
+%                 subplot(212), stem(delayLine(1:i + delaySamp + 20, m)); 
+%                 fprintf('add (own) %.2f at %ld \n', x, i);
+%             end
 
             % add delayed from other delay lines to current FDN
             for mm = 1:length(delays)
@@ -191,21 +199,25 @@ for i = 1:length(delayLine)
                     % if(m==1); fprintf('add (others) %.2f at %ld \n', x, i); end
                 end
             end
-            % if(m==1); 
-            %     subplot(212), hold on, stem(delayLine(1:i + delaySamp + 20, m)); hold off, 
-            %     input('');
-            % end
+%             if(m==1); 
+%                 subplot(212), hold on, stem(delayLine(1:i + delaySamp + 20, m)); hold off, 
+%                 input('');
+%             end
         end
         
     end
 end
 
 % reconstruct output
-out = sum(delayLine,2) + [in; zeros(size(delayLine,1)-length(in), 1)];
+out = sum(delayLine,2); % + [in; zeros(size(delayLine,1)-length(in), 1)];
+
+% add direct to now in output
+outStraight = [in; zeros(length(out)-(length(in)), 1) ];
 
 %% Plot output
 time = [0:length(out)-1]/Fs;
-plot(time(1:length(in)), in+2); hold on; plot(time, out); hold off
+stem(time, out, 'Marker', 'none'); hold on
+stem(time, outStraight, 'LineStyle', '--', 'Marker', 'none'), hold off
 legend({'in'}, {'out'}); ylabel('ampl. S.I.'); xlabel('time (sec)');
 
 % add "asked" RT60 value to plot
@@ -226,6 +238,7 @@ hold on, plot(index60/Fs, out(index60), '*k'); hold off
 
 
 %% Render output
+out = out + outStraight;
 if(max(abs(out)) < 3);
     a = audioplayer(in,Fs);
     playblocking(a);

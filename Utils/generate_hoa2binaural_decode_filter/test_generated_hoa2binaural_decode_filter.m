@@ -1,6 +1,11 @@
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% 
 %     This script is part of the EVERTims Sound Engine framework
 % 
 %     Test generated HOA to Binaural decoding filters
+% 
+%     Author: David Poirier-Quinot
+%     IRCAM, 2017
 % 
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 

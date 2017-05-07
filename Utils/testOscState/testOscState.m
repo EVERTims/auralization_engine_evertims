@@ -1,4 +1,13 @@
-% Import EVERTims state, exported from the auralization engine
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
+% 
+%     This script is part of the EVERTims Sound Engine framework
+% 
+%     Import EVERTims state, exported from the auralization engine
+% 
+%     Author: David Poirier-Quinot
+%     IRCAM, 2017
+% 
+% % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 
 fileName = 'Evertims_state.txt';
 s = struct;
@@ -60,17 +69,16 @@ end
 
 fclose(fid);
 
-%% Plot / check data
-
-% check src id
+%% check src id
 if( [s.imgSrc.id] ~= [0:length(s.imgSrc)-1] ); warning('srcImg index error'); end
 
-% plot order distribution
+%% plot order distribution
 histogram([s.imgSrc.order]); title('imgSrc order hist.');
 
-% plot path length distribution
+%% plot path length distribution
 histogram([s.imgSrc.pathLength]); title('path length hist.');
 
+%% plot image sources
 for i = 1:length(s.listeners)
     p = [s.listeners(i).pos(1), s.listeners(i).pos(2), s.listeners(i).pos(3)];
     plot3(p(1), p(2), p(3), 'ob');
@@ -83,9 +91,12 @@ for i = 1:length(s.sources)
     text(p(1), p(2), p(3)-0.7, s.sources(i).name);
     hold on,
 end
-for i = 1:length(s.imgSrc)
-    plot3(s.imgSrc(i).posFirst(1), s.imgSrc(i).posFirst(2), s.imgSrc(i).posFirst(3), '.b');
-    plot3(s.imgSrc(i).posLast(1), s.imgSrc(i).posLast(2), s.imgSrc(i).posLast(3), '.r');
+ms = 2; plotFirst = false; % plot image source first position along with last
+c = [0.1 0.1 0.7]; c1 = [0.7 0.1 0.1];
+for i = 1:length(s.imgSrc);
+    if( plotFirst ); plot3(s.imgSrc(i).posFirst(1), s.imgSrc(i).posFirst(2), s.imgSrc(i).posFirst(3), '.', 'MarkerFaceColor', c1, 'MarkerEdgeColor', c1, 'Markersize', ms );
+    else a = mean(s.imgSrc(i).absorption)^9; c = [a a a]; ms = 15; end
+    plot3(s.imgSrc(i).posLast(1), s.imgSrc(i).posLast(2), s.imgSrc(i).posLast(3), '.', 'MarkerFaceColor', c, 'MarkerEdgeColor', c, 'Markersize', ms );
 end
 hold off,
 grid on;
