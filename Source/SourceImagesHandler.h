@@ -56,7 +56,6 @@ public:
     
     localVariablesStruct *current = new localVariablesStruct();
     localVariablesStruct *future = new localVariablesStruct();
-    localVariablesStruct *currentFutureRelay;
     
 private:
     
@@ -429,9 +428,7 @@ void updateCrossfade()
     {
         // set past = future
         // (objective: atomic swap to make sure no value is updated in middle of audio processing loop)
-        currentFutureRelay = current;
-        current = future;
-        future = currentFutureRelay;
+        std::swap(current, future);
         
         // reset crossfade internals
         crossfadeGain = 1.0; // just to make sure for the last loop using crossfade gain
