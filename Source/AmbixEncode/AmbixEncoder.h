@@ -41,14 +41,12 @@ public:
 std::array<double, N_AMBI_CH> ambiWeightUpTo2ndOrder;
 float size;
 Array<float> ambi_gain;  // actual gain
-Array<float> _ambi_gain; // buffer for gain ramp (last status)
 SphericalHarmonic sph_h;
 
 private:
 
 float _azimuth, _elevation, _size; // buffer to realize changes
-    
-    
+
 //==========================================================================
 // METHODS
     
@@ -57,39 +55,33 @@ public:
 AmbixEncoder() :
 size(0.f),
 _azimuth(0.1f),
-_elevation(0.1f),
-_size(0.1f)
+_elevation(0.1f)
 {
-    sph_h.Init(AMBI_ORDER);
-
-    // NOT PROUD OF THIS, temporary fix until the ongoing normalization study
-    // proposes new normalization gains scheme
-    ambiWeightUpTo2ndOrder = {{ 0.2821, 0.3455, 0.4886, 0.3455, 0.1288, 0.2575, 0.33, 0.2575, 0.1288 }};
+    sph_h.Init(AMBI_ORDER, true, false); // order, norm(true: N3D, false: SN3D), elevConvention
+    ambi_gain.resize(N_AMBI_CH);
 }
 
 ~AmbixEncoder() {}
 
 Array<float> calcParams(double azimuth, double elevation)
 {
-    // save last status
-    _ambi_gain = ambi_gain;
-    
-    if (_azimuth != azimuth || _elevation != elevation || _size != size)
+    if (_azimuth != azimuth || _elevation != elevation )
     {
+        // get spherical harmonics values
         sph_h.Calc(azimuth, elevation);
         
+        // set ambisonic gains
         for( int i=0; i < N_AMBI_CH; ++i ) {
-            ambi_gain.set(i, (float)( sph_h.Ymn(i) * ambiWeightUpTo2ndOrder[i] ));
+            ambi_gain.set(i, (float)sph_h.Ymn(i));
         }
+        
+        // update locals
+        _azimuth = azimuth;
+        _elevation = elevation;
     }
-    
-    _azimuth = azimuth;
-    _elevation = elevation;
-    _size = size;
     
     return ambi_gain;
 }
-
     
 };
 
