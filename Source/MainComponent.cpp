@@ -330,6 +330,7 @@ void MainContentComponent::recordIr()
     recordingBufferOutput.setSize(2, 2*maxDelayInSamp);
     recordingBufferOutput.clear();
     recordingBufferAmbisonicOutput.setSize(N_AMBI_CH, 2*maxDelayInSamp);
+    recordingBufferAmbisonicOutput.clear();
     
     // define remapping order for ambisonic IR exported to follow ACN convention
     // (TODO: clean + procedural way to gerenate remapping, eventually remap original lib)
