@@ -332,10 +332,6 @@ void MainContentComponent::recordIr()
     recordingBufferAmbisonicOutput.setSize(N_AMBI_CH, 2*maxDelayInSamp);
     recordingBufferAmbisonicOutput.clear();
     
-    // define remapping order for ambisonic IR exported to follow ACN convention
-    // (TODO: clean + procedural way to gerenate remapping, eventually remap original lib)
-    int ambiChannelExportRemapping [N_AMBI_CH] = { 0, 3, 2, 1, 8, 7, 6, 5, 4 };
-    
     // prepare impulse response buffer
     recordingBufferInput.getWritePointer(0)[0] = 1.0f;
     
@@ -357,7 +353,7 @@ void MainContentComponent::recordIr()
         // add to output ambisonic buffer
         for( int k = 0; k < N_AMBI_CH; k++ )
         {
-            recordingBufferAmbisonicOutput.addFrom(ambiChannelExportRemapping[k], bufferId*localSamplesPerBlockExpected, ambisonicBuffer, k+2, 0, localSamplesPerBlockExpected);
+            recordingBufferAmbisonicOutput.addFrom(k, bufferId*localSamplesPerBlockExpected, ambisonicBuffer, k+2, 0, localSamplesPerBlockExpected);
         }
         
         // ambisonic to stereo
