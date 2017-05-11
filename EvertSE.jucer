@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="1.0.0"
-              bundleIdentifier="com.yourcompany.EvertSE" includeBinaryInAppConfig="1"
-              jucerVersion="4.3.1">
+              bundleIdentifier="com.evertims.EvertSE" includeBinaryInAppConfig="1"
+              jucerVersion="5.0.1" displaySplashScreen="1" reportAppUsage="1"
+              splashScreenColour="Dark">
   <MAINGROUP id="aSpPbd" name="EvertSE">
     <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
       <GROUP id="{E03E531B-FABC-9912-666B-A003EB5B2320}" name="AmbixEncode">
@@ -70,6 +71,9 @@
               file="data/irs/ClubFritz1_hrir.bin" xcodeResource="1"/>
         <FILE id="ip67ub" name="hoa2bin_order2_IRC_1008_R_HRIR.bin" compile="0"
               resource="0" file="data/irs/hoa2bin_order2_IRC_1008_R_HRIR.bin"
+              xcodeResource="1"/>
+        <FILE id="r84qH4" name="hoa2bin_order3_IRC_1008_R_HRIR.bin" compile="0"
+              resource="0" file="data/irs/hoa2bin_order3_IRC_1008_R_HRIR.bin"
               xcodeResource="1"/>
       </GROUP>
       <GROUP id="{1E781F31-3E12-D5C4-C80A-7DD5FB767D3F}" name="sounds">
