@@ -60,8 +60,8 @@ ambi2binContainer()
         obj->setEnabled (true);
         addAndMakeVisible(obj);
     }
-    saveIrButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
-    saveOscButton.setColour (TextButton::buttonColourId, Colours::whitesmoke);
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
+    saveOscButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
     clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
     clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler
     
@@ -435,9 +435,9 @@ void MainContentComponent::paint (Graphics& g)
     g.fillAll (Colour(PixelARGB(240,30,30,30)));
     
     // parameters box
-    g.setOpacity(1.0f);
-    g.setColour(Colours::whitesmoke);
-    g.drawRoundedRectangle(10.f, 155.f, getWidth()-20.f, 150.f, 0.0f, 1.0f);
+    // g.setOpacity(1.0f);
+    g.setColour(Colours::white);
+    g.drawRect(10.f, 155.f, getWidth()-20.f, 150.f);
     
     // logo image
     g.drawImageAt(logoImage, (int)( (getWidth()/2) - (logoImage.getWidth()/2) ), 380);

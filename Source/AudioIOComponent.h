@@ -57,7 +57,7 @@ AudioIOComponent()
     addAndMakeVisible (&audioFileOpenButton);
     audioFileOpenButton.setButtonText ("OPEN...");
     audioFileOpenButton.addListener (this);
-    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::antiquewhite);
+    audioFileOpenButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
     
     addAndMakeVisible (&audioFilePlayButton);
     audioFilePlayButton.setButtonText ("PLAY");
