@@ -152,6 +152,6 @@
   </MODULES>
   <JUCEOPTIONS/>
   <LIVE_SETTINGS>
-    <OSX/>
+    <OSX headerPath="" systemHeaderPath="./libs/eigen-eigen-7403112d5871&#10;/usr/local/include"/>
   </LIVE_SETTINGS>
 </JUCERPROJECT>

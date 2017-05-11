@@ -68,7 +68,7 @@ AudioIOComponent()
     addAndMakeVisible (&audioFileStopButton);
     audioFileStopButton.setButtonText ("STOP");
     audioFileStopButton.addListener (this);
-    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::firebrick);
+    audioFileStopButton.setColour (TextButton::buttonColourId, Colours::indianred);
     audioFileStopButton.setEnabled (false);
     
     addAndMakeVisible (&gainAudioFileSlider);
@@ -79,6 +79,9 @@ AudioIOComponent()
     gainAudioFileSlider.setColour(Slider::textBoxTextColourId, Colours::white);
     gainAudioFileSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
     gainAudioFileSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    gainAudioFileSlider.setColour(Slider::backgroundColourId, Colours::darkgrey);
+    gainAudioFileSlider.setColour(Slider::trackColourId, Colours::lightgrey);
+    gainAudioFileSlider.setColour(Slider::thumbColourId, Colours::white);
    
     addAndMakeVisible (&gainAdcSlider);
     gainAdcSlider.setRange(0.0, 2.0);
@@ -88,6 +91,9 @@ AudioIOComponent()
     gainAdcSlider.setColour(Slider::textBoxTextColourId, Colours::white);
     gainAdcSlider.setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
     gainAdcSlider.setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
+    gainAdcSlider.setColour(Slider::backgroundColourId, Colours::darkgrey);
+    gainAdcSlider.setColour(Slider::trackColourId, Colours::lightgrey);
+    gainAdcSlider.setColour(Slider::thumbColourId, Colours::white);
     
     addAndMakeVisible (&audioFileLoopToggle);
     audioFileLoopToggle.setButtonText ("Loop");

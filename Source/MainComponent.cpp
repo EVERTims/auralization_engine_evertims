@@ -47,8 +47,8 @@ ambi2binContainer()
     
     // init text buttons
     buttonMap.insert({
-        { &saveIrButton, "Save IR to Desktop" },
-        { &saveOscButton, "Save State to Desktop" },
+        { &saveIrButton, "Save RIRs to Desktop" },
+        { &saveOscButton, "Save OSC state to Desktop" },
         { &clearSourceImageButton, "Clear" }
     });
     for (auto& pair : buttonMap)
@@ -60,9 +60,9 @@ ambi2binContainer()
         obj->setEnabled (true);
         addAndMakeVisible(obj);
     }
-    saveIrButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
-    saveOscButton.setColour (TextButton::buttonColourId, Colours::darkgrey);
-    clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::firebrick);
+    saveIrButton.setColour (TextButton::buttonColourId, Colours::transparentBlack);
+    saveOscButton.setColour (TextButton::buttonColourId, Colours::transparentBlack);
+    clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::indianred);
     clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler
     
     // init combo boxes
@@ -103,6 +103,9 @@ ambi2binContainer()
         obj->setValue( param[2] );
         obj->setSliderStyle(Slider::LinearHorizontal);
         obj->setColour(Slider::textBoxBackgroundColourId, Colours::transparentBlack);
+        obj->setColour(Slider::backgroundColourId, Colours::darkgrey);
+        obj->setColour(Slider::trackColourId, Colours::lightgrey);
+        obj->setColour(Slider::thumbColourId, Colours::white);
         obj->setColour(Slider::textBoxTextColourId, Colours::white);
         obj->setColour(Slider::textBoxOutlineColourId, Colours::transparentBlack);
         obj->setTextBoxStyle(Slider::TextBoxRight, true, 70, 20);
@@ -111,12 +114,13 @@ ambi2binContainer()
     crossfadeStepSlider.setSliderStyle(Slider::RotaryVerticalDrag);
     crossfadeStepSlider.setColour(Slider::rotarySliderFillColourId, Colours::white);
     crossfadeStepSlider.setColour(Slider::rotarySliderOutlineColourId, Colours::darkgrey);
+    crossfadeStepSlider.setTextBoxStyle(Slider::TextBoxRight, true, 50, 20);
     crossfadeStepSlider.setRotaryParameters(10 / 8.f * 3.1416, 22 / 8.f * 3.1416, true);
     crossfadeStepSlider.setSkewFactor(0.7);
     
     // init labels
     labelMap.insert({
-        { &numFrequencyBandsLabel, "Num. absorption freq. bands:" },
+        { &numFrequencyBandsLabel, "Num absorb freq bands:" },
         { &srcDirectivityLabel, "Source directivity:" },
         { &inputLabel, "Inputs" },
         { &parameterLabel, "Parameters" },
@@ -474,14 +478,14 @@ void MainContentComponent::resized()
     saveIrButton.setBounds(getWidth() - thirdWidthIoComponent - 30, 265, thirdWidthIoComponent, 30);
     saveOscButton.setBounds(getWidth() - thirdWidthIoComponent - 15, getHeight() - 55, thirdWidthIoComponent, 30);
     
-    crossfadeStepSlider.setBounds(0.17*getWidth(), 255, 80, 50);
+    crossfadeStepSlider.setBounds(0.16*getWidth(), 255, 90, 50);
     crossfadeLabel.setBounds(30, 258, crossfadeStepSlider.getX() - 30, 40);
     
     numFrequencyBandsLabel.setBounds(190, 260, getWidth() - 450, 20);
-    numFrequencyBandsComboBox.setBounds(saveIrButton.getX()-60, 260, 50, 20);
+    numFrequencyBandsComboBox.setBounds(saveIrButton.getX()- 70, 260, 70, 20);
     
     srcDirectivityLabel.setBounds(190, 280, getWidth() - 450, 20);
-    srcDirectivityComboBox.setBounds(saveIrButton.getX()-110, 280, 100, 20);
+    srcDirectivityComboBox.setBounds(saveIrButton.getX() - 110, 280, 110, 20);
     
     // log box
     logLabel.setBounds(30, 309, 40, 20);
