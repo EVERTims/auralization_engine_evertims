@@ -33,7 +33,7 @@ public:
     float directPathGain = 1.0f;
     bool enableDirectToBinaural = true;
     
-    // crossfade mecanism
+    // crossfade mechanism
     float crossfadeStep = 0.1f;
     bool crossfadeOver = true;
     
@@ -61,7 +61,7 @@ private:
     
     // audio buffers
     AudioBuffer<float> workingBuffer; // working buffer
-    AudioBuffer<float> workingBufferTemp; // 2nd working buffer, e.g. for crossfade mecanism
+    AudioBuffer<float> workingBufferTemp; // 2nd working buffer, e.g. for crossfade mechanism
     AudioBuffer<float> clipboardBuffer; // to be used as local copy of working buffer when working buffer modified in loops
     AudioBuffer<float> bandBuffer; // N band buffer returned by the filterbank for f(freq) absorption
     AudioBuffer<float> tailBuffer; // FDN_ORDER band buffer returned by the FDN reverb tail
@@ -71,7 +71,7 @@ private:
     double localSampleRate;
     int localSamplesPerBlockExpected;
     
-    // crossfade mecanism
+    // crossfade mechanism
     float crossfadeGain = 0.0;
     
     // ambisonic encoding
@@ -128,7 +128,7 @@ float getMaxDelayFuture()
 AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 {
     
-    // update crossfade mecanism
+    // update crossfade mechanism
     updateCrossfade();
     
     // clear output buffer (since used as cumulative buffer, iteratively summing sources images buffers)
@@ -415,7 +415,7 @@ void setFilterBankSize(int numFreqBands)
     
 private:
     
-// update crossfade mecanism (to avoid zipper noise with smooth gains transitions)
+// update crossfade mechanism (to avoid zipper noise with smooth gains transitions)
 void updateCrossfade()
 {
     // either update crossfade
@@ -423,7 +423,7 @@ void updateCrossfade()
     {
         crossfadeGain = fmin( crossfadeGain + crossfadeStep, 1.0 );
     }
-    // or stop crossfade mecanism if not already stopped
+    // or stop crossfade mechanism if not already stopped
     else if (!crossfadeOver)
     {
         // set past = future

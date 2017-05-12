@@ -118,7 +118,7 @@ AudioBuffer<float> processBuffer( AudioBuffer<float> &source )
     return stereoBuffer;
 }
 
-// update crossfade mecanism
+// update crossfade mechanism
 void updateCrossfade()
 {
     // either update crossfade
@@ -126,7 +126,7 @@ void updateCrossfade()
     {
         crossfadeGain = fmin( crossfadeGain + 0.1, 1.0 );
     }
-    // or stop crossfade mecanism if not already stopped
+    // or stop crossfade mechanism if not already stopped
     else if (!crossfadeOver)
     {
         // set past = future
@@ -189,7 +189,7 @@ void setPosition(double azim, double elev)
         hrirFirFuture[earId].setImpulseResponse(hrir[earId].data());
     }
     
-    // trigger crossfade mecanism
+    // trigger crossfade mechanism
     crossfadeGain = 0.0f;
     crossfadeOver = false;
 }
