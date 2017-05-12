@@ -61,9 +61,8 @@ ambi2binContainer()
         addAndMakeVisible(obj);
     }
     saveIrButton.setColour (TextButton::buttonColourId, Colours::transparentBlack);
-    saveOscButton.setColour (TextButton::buttonColourId, Colours::transparentBlack);
+    saveOscButton.setColour (TextButton::buttonColourId, Colour(PixelARGB(160,0,0,0)));
     clearSourceImageButton.setColour (TextButton::buttonColourId, Colours::indianred);
-    clearSourceImageButton.setEnabled (false); // awaiting multi-thread safe std::vector size change (e.g. IDs) in Source Image Handler
     
     // init combo boxes
     comboBoxMap.insert({

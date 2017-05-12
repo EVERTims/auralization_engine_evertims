@@ -348,6 +348,10 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 // update local attributes based on latest received OSC info
 void updateFromOscHandler(OSCHandler& oscHandler)
 {
+    // method should not be called while crossfade active.
+    // called by MainContentComponent::updateOnOscReveive that checks if crossfadeOver == true.
+    // should not need: if( !crossfadeOver ){ return; }
+    
     future->ids = oscHandler.getSourceImageIDs();
     future->delays = oscHandler.getSourceImageDelays();
     future->pathLengths = oscHandler.getSourceImagePathsLength();
@@ -398,13 +402,18 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     // update filter bank size
     filterBank.setNumFilters( filterBank.numOctaveBands, future->ids.size() );
     
-    // trigger crossfade mecanism
-    if( future->ids.size() > 0 )
-    {
-        numSourceImages = max(current->ids.size(), future->ids.size());
-        crossfadeGain = 0.0;
-        crossfadeOver = false;
+    // trigger crossfade mechanism: default
+    crossfadeOver = false;
+    numSourceImages = max(current->ids.size(), future->ids.size());
+    crossfadeGain = 0.0;
+    
+    // crossfade mechanism: zero image source scenario (make sure MainComponent continues to play unprocessed input)
+    if( future->ids.size() == 0 ){
+        crossfadeGain = 1.0;
+        updateCrossfade();
+        numSourceImages = 0;
     }
+    
 }
     
 void setFilterBankSize(int numFreqBands)
