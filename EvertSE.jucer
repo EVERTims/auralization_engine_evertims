@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="1.0.0"
               bundleIdentifier="com.evertims.EvertSE" includeBinaryInAppConfig="1"
-              jucerVersion="5.0.1" displaySplashScreen="1" reportAppUsage="1"
+              jucerVersion="5.0.1" displaySplashScreen="0" reportAppUsage="0"
               splashScreenColour="Dark">
   <MAINGROUP id="aSpPbd" name="EvertSE">
     <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
