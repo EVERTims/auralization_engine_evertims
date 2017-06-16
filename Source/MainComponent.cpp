@@ -307,7 +307,6 @@ void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBu
         audioBufferToFill->copyFrom(1, 0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
     }
     
-    
     //==========================================================================
     // CLIP OUTPUT (DEBUG PRECAUTION)
     auto outL = audioBufferToFill->getWritePointer(0);
@@ -374,8 +373,9 @@ void MainContentComponent::recordIr()
         rms *= 0.5;
     }
     
-    // resize output
+    // resize output IR buffers to max meaningful sample length
     recordingBufferOutput.setSize(2, bufferId*localSamplesPerBlockExpected, true);
+    recordingBufferAmbisonicOutput.setSize(N_AMBI_CH, bufferId*localSamplesPerBlockExpected, true);
     
     // save output
     audioIOComponent.saveIR(recordingBufferAmbisonicOutput, localSampleRate, String("Evertims_IR_Recording_ambi_") + String(AMBI_ORDER) + String("_order"));
