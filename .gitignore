@@ -19,3 +19,6 @@ Utils/evertims_directivity/input/*.sofa
 
 # Utils: testIR
 Utils/testIRs/*.wav
+
+# Utils: test image source export
+Utils/testOscState/*.txt
