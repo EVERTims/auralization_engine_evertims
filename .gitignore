@@ -16,3 +16,6 @@ Utils/generate_hoa2binaural_decode_filter/input/*.mat
 # Utils: generate directivity
 Utils/evertims_directivity/output/*.sofa
 Utils/evertims_directivity/input/*.sofa
+
+# Utils: testIR
+Utils/testIRs/*.wav
