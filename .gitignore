@@ -1,3 +1,14 @@
+# build files
 Builds/*
 
+# OSX archiving 
 .DS_Store
+
+# matlab temp
+*.m~
+
+# Utils
+Utils/generate_hoa2binaural_decode_filter/output/*.bin
+Utils/generate_hoa2binaural_decode_filter/output/*.mat
+Utils/generate_hoa2binaural_decode_filter/input/*.sofa
+Utils/generate_hoa2binaural_decode_filter/input/*.mat
