@@ -168,6 +168,11 @@ for i = 1:length(hrir_filelist);
 %     % reIndexDecodingMatrix = [ 0, 2, 3, 1, 8, 7, 6, 5, 4 ] + 1; % correct but x inversed
 %     M_dec = M_dec(:,reIndexDecodingMatrix);
     
+    % adapt coordinates conv. between Ambisonic lib and HRIR database:
+    % elev: ok
+    % azim: 0? center ok, Ambi: 90 is left, HRIR: 90 is right (SPAT like)
+    M_dec = rotateHOA_N3D(M_dec, 180, 0, 0);
+     
     % Combine Ambisonic decoding with HRIRs to get HOA2Bin IRs
     nHRIR = size(M_dec,2);
     lHRIR = size(l_hrirs_closest,1);
