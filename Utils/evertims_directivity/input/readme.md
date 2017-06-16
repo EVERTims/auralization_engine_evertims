@@ -1,0 +1,1 @@
+# In this directory go a "reference" SOFA file. This reference file is used in the matlab scripts that generate SOFA directivity patterns to define default values. see _wget_default_sofa_dir.sh

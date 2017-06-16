@@ -7,8 +7,12 @@ Builds/*
 # matlab temp
 *.m~
 
-# Utils
+# Utils: generate ambi2bin
 Utils/generate_hoa2binaural_decode_filter/output/*.bin
 Utils/generate_hoa2binaural_decode_filter/output/*.mat
 Utils/generate_hoa2binaural_decode_filter/input/*.sofa
 Utils/generate_hoa2binaural_decode_filter/input/*.mat
+
+# Utils: generate directivity
+Utils/evertims_directivity/output/*.sofa
+Utils/evertims_directivity/input/*.sofa

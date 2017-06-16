@@ -17,22 +17,26 @@
 % set current folder to script's location
 cd( fileparts( mfilename('fullpath') ) ); 
 
+% set desired directivity pattern
+% DIR_PATTERN = 'omni';
+DIR_PATTERN = 'directional';
+
 %% Load reference structure
-% filename_in = 'MIT_KEMAR_large_pinna.sofa';
 filename_in = 'Pulse.sofa';
-% filename_in = 'dtf_nh14.sofa';
-sofa_struct_ref = SOFAload(filename_in);
+sofa_struct_ref = SOFAload(fullfile('input', filename_in));
 
 %% Init SOFA struct
-% create structure
+% create structure (using SimpleFreeFieldHRIR rather than GeneralTF file
+% for compatibility with the mysofa lib used in EVERTims directivity
+% function reader
 sofa_struct = SOFAgetConventions('SimpleFreeFieldHRIR');
 
 % init fields
-filename = 'omni.sofa';
+filename = [DIR_PATTERN '.sofa'];
 sofa_struct.GLOBAL_Comment = 'Directivity Magnitude across frequency bands, not using GeneralTF awaiting libmysofa update';
 sofa_struct.GLOBAL_History = 'Created with the generate_sofa_directivity_pattern.m script for EVERTims';
 sofa_struct.GLOBAL_Organization = 'EVERTims';
-sofa_struct.GLOBAL_Title = 'OmniDirectional';
+sofa_struct.GLOBAL_Title = DIR_PATTERN;
 
 %% Create measurement grid
 gridStep = 15;
@@ -70,14 +74,19 @@ N = 10; % num frequency bands
 
 % define directivity values
 r = ones( size(sofa_struct.SourcePosition,1), N );
-% omni = r(:,1);
-% directional = (1 + cosd( srcPos(:,1) )) .* cosd( srcPos(:,2) );
-% % more and more diretional as freq increases
-% for i = 1:N;
-%     g = (i-1) / (N-1); fprintf('%ld %ld \n', i, g);
-%     r(:,i) =  g * directional + (1-g) * omni;
-% end
-i = 0*r;
+i = 0*r; % imag part
+
+if strcmp(DIR_PATTERN, 'directional')
+    omni = r(:,1);
+    directional = (1 + cosd( srcPos(:,1) )) .* cosd( srcPos(:,2) );
+    % more and more diretional as freq increases
+    for i = 1:N;
+        g = (i-1) / (N-1); 
+        % fprintf('%ld %ld \n', i, g);
+        r(:,i) =  g * directional + (1-g) * omni;
+    end
+end
+
 
 % r(:,2) = r(:,3);
 % r(:,2) = r(:,3);
@@ -93,7 +102,7 @@ sofa_struct.Data.IR = mRn_v;
 sofa_struct.Data.IR(:,1,:) = r; % using left ear to store real
 sofa_struct.Data.IR(:,2,:) = i; % using left ear to store imag
 
-%% Update Dimensions info
+%% Update Dimensions info in SOFA struct
 sofa_struct.API.M = size(sofa_struct.SourcePosition,1);
 sofa_struct.API.N = N;
 
@@ -113,7 +122,7 @@ sofa_struct.API.Dimensions.Data.Delay = {'IR'};
 sofa_struct.ReceiverPosition = [0 -0.09 0; 0 0.09 0]; % to comply with forced coord check in libmysofa
 
 %% save output
-SOFAsave(filename,sofa_struct);
+SOFAsave(fullfile('output', filename),sofa_struct);
 
 %% reload and check data
 % % reload
@@ -127,13 +136,11 @@ SOFAsave(filename,sofa_struct);
 % [X,Y,Z] = sph2cart( deg2rad(srcPos(:,1)), deg2rad(srcPos(:,2)-90), r(:, freqId));
 % plot3( X, Y, Z, '.', 'MarkerSize',15 ); title('real reloaded'); grid;
 
-
-
 %% Check coordinates from EVERTims auralization engine printInfo() method
-% aedir = [ azim1, elev1, dist1, real1, imag1; ... azimN, elevN, distN, realN, imagN]
-[X,Y,Z] = sph2cart( deg2rad(aedir(:,1)), deg2rad(aedir(:,2)), aedir(:,4));
-% [X,Y,Z] = sph2cart( deg2rad(aedir(:,1)), deg2rad(aedir(:,2)), ones(size(aedir,1), 1));
-plot3( X, Y, Z, '.', 'MarkerSize',15 ); title('real reloaded'); grid;
+% % aedir = [ azim1, elev1, dist1, real1, imag1; ... azimN, elevN, distN, realN, imagN]
+% [X,Y,Z] = sph2cart( deg2rad(aedir(:,1)), deg2rad(aedir(:,2)), aedir(:,4));
+% % [X,Y,Z] = sph2cart( deg2rad(aedir(:,1)), deg2rad(aedir(:,2)), ones(size(aedir,1), 1));
+% plot3( X, Y, Z, '.', 'MarkerSize',15 ); title('real reloaded'); grid;
 
 % for i=1:length(sofa_struct.SourcePosition); fprintf('%ld %ld %ld %ld \n', i-1, sofa_struct.SourcePosition(i,1), sofa_struct.SourcePosition(i,2), sofa_struct.SourcePosition(i,3)); end
 
