@@ -18,7 +18,11 @@ private:
 
     double localSampleRate;
     int localSamplesPerBlockExpected;
-        
+
+    int _numOctaveBands = 0;
+    int _numIndptStream = 0;
+    bool updateRequired = false;
+    
     std::vector<std::array<IIRFilter, NUM_OCTAVE_BANDS-1> > octaveFilterBanks;
         
     AudioBuffer<float> bufferFiltered;
@@ -44,17 +48,27 @@ void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
     bufferBands.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
 }
 
+void setNumFilters( int numBands, int numSourceImages )
+{   
+    // skip if nothing has changed
+    if( numOctaveBands == numBands && numIndptStream == numSourceImages ){ return; }
+    
+    // update future values
+    numOctaveBands = numBands;
+    numIndptStream = numSourceImages;
+    
+    // flag update required
+    updateRequired = true;
+}
+    
 // Define number of frequency bands in filter-bank (only choice is betwen 3 or 10)
 // NOTE: a filter is stateful, and needs to be given a continuous stream of audio. Hence, each source
 // image needs its own separate filter bank (see e.g. https://forum.juce.com/t/iirfilter-help/1733/7 ).
-void setNumFilters( int numBands, int numSourceImages )
+void _setNumFilters( int numBands, int numSourceImages )
 {
-    // skip if nothing has changed
-    if( numBands == numOctaveBands && numSourceImages == numIndptStream ){ return; }
-    
     // resize band buffer
-    numOctaveBands = numBands;
-    numIndptStream = numSourceImages;
+    _numOctaveBands = numBands;
+    _numIndptStream = numSourceImages;
     bufferBands.setSize(numBands, localSamplesPerBlockExpected);
     octaveFilterBanks.resize( numSourceImages );
     
@@ -66,10 +80,10 @@ void setNumFilters( int numBands, int numSourceImages )
         if( numBands == 10 ) // 10-filter-bank
         {
             fc = 31.5;
-            for( int i = 0; i < numOctaveBands-1; i++ )
+            for( int i = 0; i < _numOctaveBands-1; i++ )
             {
                 // get lowpass cut-off freq (in between "would be Fc" for bandpass, arbitrary choice)
-                if( i < numOctaveBands - 2 ){ fcMid = fc + ( 2*fc - fc )/2; }
+                if( i < _numOctaveBands - 2 ){ fcMid = fc + ( 2*fc - fc )/2; }
                 // last fcMid is not "mid between next and current" but "between max and current"
                 else{ fcMid = fc + ( 20000 - fc )/2; }
                 
@@ -93,13 +107,20 @@ void setNumFilters( int numBands, int numSourceImages )
 }
 
 // Decompose source buffer into bands, return multi-channel buffer with one band per channel
-AudioBuffer<float> getBandBuffer( AudioBuffer<float> &source, int sourceImageId )
+AudioBuffer<float> getBandBuffer( const AudioBuffer<float> &source, int sourceImageId )
 {
+    if( updateRequired ){
+        // update filters
+        _setNumFilters( numOctaveBands, numIndptStream );
+        // flag update no longer required
+        updateRequired = false;
+    }
+    
     // prepare buffers
     bufferRemains = source;
     
     // recursive filtering for all but last band
-    for( int i = 0; i < numOctaveBands-1; i++ )
+    for( int i = 0; i < _numOctaveBands-1; i++ )
     {
         // filter the remaining spectrum
         bufferFiltered = bufferRemains;
@@ -113,7 +134,7 @@ AudioBuffer<float> getBandBuffer( AudioBuffer<float> &source, int sourceImageId 
         bufferBands.copyFrom( i, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
     }
     
-    bufferBands.copyFrom( numOctaveBands-1, 0, bufferRemains, 0, 0, localSamplesPerBlockExpected );
+    bufferBands.copyFrom( _numOctaveBands-1, 0, bufferRemains, 0, 0, localSamplesPerBlockExpected );
     return bufferBands;
 }
     
