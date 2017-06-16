@@ -39,7 +39,7 @@ FilterBank() {}
 ~FilterBank() {}
 
 // local equivalent of prepareToPlay
-void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
+void prepareToPlay( const unsigned int samplesPerBlockExpected, const double sampleRate )
 {
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
@@ -48,7 +48,7 @@ void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
     bufferBands.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
 }
 
-void setNumFilters( int numBands, int numSourceImages )
+void setNumFilters( const unsigned int numBands, const unsigned int numSourceImages )
 {   
     // skip if nothing has changed
     if( numOctaveBands == numBands && numIndptStream == numSourceImages ){ return; }
@@ -64,7 +64,7 @@ void setNumFilters( int numBands, int numSourceImages )
 // Define number of frequency bands in filter-bank (only choice is betwen 3 or 10)
 // NOTE: a filter is stateful, and needs to be given a continuous stream of audio. Hence, each source
 // image needs its own separate filter bank (see e.g. https://forum.juce.com/t/iirfilter-help/1733/7 ).
-void _setNumFilters( int numBands, int numSourceImages )
+void _setNumFilters( const unsigned int numBands, const unsigned int numSourceImages )
 {
     // resize band buffer
     _numOctaveBands = numBands;
@@ -107,7 +107,7 @@ void _setNumFilters( int numBands, int numSourceImages )
 }
 
 // Decompose source buffer into bands, return multi-channel buffer with one band per channel
-AudioBuffer<float> getBandBuffer( const AudioBuffer<float> &source, int sourceImageId )
+AudioBuffer<float> getBandBuffer( const AudioBuffer<float> &source, const unsigned int sourceImageId )
 {
     if( updateRequired ){
         // update filters

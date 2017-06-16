@@ -54,7 +54,7 @@ ReverbTail() {
 ~ReverbTail() {}
 
 // local equivalent of prepareToPlay
-void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+void prepareToPlay( const unsigned int samplesPerBlockExpected, const double sampleRate )
 {
     // prepare buffers
     reverbBusBuffers.setSize(fdnOrder*numOctaveBands, samplesPerBlockExpected);
@@ -72,7 +72,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 }
 
 // update FDN gains and cie based on new RT60 values
-void updateInternals( std::vector<float> rt60Values )
+void updateInternals( const std::vector<float> & rt60Values )
 {
     // store new RT60 values
     valuesRT60 = from10to3bands( rt60Values );
@@ -86,7 +86,7 @@ void updateInternals( std::vector<float> rt60Values )
 }
 
 // add source image to reverberation bus for latter use
-void addToBus( int busId, AudioBuffer<float> source )
+void addToBus( const unsigned int busId, const AudioBuffer<float> & source )
 {
     // If main thread operates with 3 bands
     if( source.getNumChannels() == 3 )

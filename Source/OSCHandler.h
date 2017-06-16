@@ -126,7 +126,7 @@ std::vector<Eigen::Vector3f> getSourceImageDODs()
     return dods;
 }
     
-Array<float> getSourceImageAbsorption(int sourceID)
+Array<float> getSourceImageAbsorption( const unsigned int sourceID )
 {
     return sourceImageMap.find(sourceID)->second.absorption;
 }
@@ -272,7 +272,7 @@ String getMapContentForLog()
 }
     
 // reset all internals
-void clear( bool force)
+void clear( const bool force )
 {
     sourceImageMap.clear();
     valuesR60.clear();
@@ -287,7 +287,7 @@ void clear( bool force)
     
 private:
 
-void oscMessageReceived (const OSCMessage& msg) override
+void oscMessageReceived (const OSCMessage & msg) override
 {
     OSCAddressPattern pIn("/in");
     OSCAddressPattern pUpd("/upd");
@@ -341,7 +341,7 @@ void oscMessageReceived (const OSCMessage& msg) override
 }
 
 // process received OSC bundle
-void oscBundleReceived (const OSCBundle & bundle) override
+void oscBundleReceived( const OSCBundle & bundle ) override
 {
     OSCAddressPattern pSource("/source");
     OSCAddressPattern pListener("/listener");
@@ -410,7 +410,7 @@ void oscBundleReceived (const OSCBundle & bundle) override
 }
 
 // popup window if OSC connection failed 
-void showConnectionErrorMessage (const String& messageText)
+void showConnectionErrorMessage( const String & messageText )
 {
     AlertWindow::showMessageBoxAsync (
                                       AlertWindow::WarningIcon,

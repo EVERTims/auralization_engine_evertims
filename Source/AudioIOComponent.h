@@ -137,7 +137,7 @@ bool openAudioFile()
 }
 
 // load audio file to transport source
-bool loadAudioFile(File file)
+bool loadAudioFile( const File & file )
 {
     bool fileOpenedSucess = false;
     
@@ -162,7 +162,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 }
     
 // fill in bufferToFill with data from audio file or adc
-void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
+void getNextAudioBlock (const AudioSourceChannelInfo & bufferToFill)
 {
     // clear buffer
     bufferToFill.clearActiveBufferRegion();
@@ -196,7 +196,7 @@ void getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 //==========================================================================
 // AUDIO WRITE METHODS
 
-void saveIR(const AudioBuffer<float> &source, double sampleRate, String fileName)
+void saveIR(const AudioBuffer<float> & source, double sampleRate, String fileName)
 {
     const File file (File::getSpecialLocation (File::userDesktopDirectory)
                      .getNonexistentChildFile (fileName, ".wav"));

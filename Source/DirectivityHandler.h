@@ -50,7 +50,7 @@ DirectivityHandler()
 	if( isLoaded ){ mysofa_close(sofaEasyStruct); }
 }
   
-void loadFile( string filenameStr )
+void loadFile( const string & filenameStr )
 {
     // get file path
     File hrirFile = getFileFromString(filenameStr);
@@ -94,7 +94,7 @@ void loadFile( string filenameStr )
 
 }
 
-Array<float>  getGains(double azim, double elev)
+Array<float> getGains( const double azim, const double elev )
 {
     // make sure values are in expected range
     jassert(azim >= -M_PI && azim <= M_PI);
@@ -118,7 +118,7 @@ Array<float>  getGains(double azim, double elev)
     return dirGains;
 }
     
-void printGains(int bandId, int step)
+void printGains(const unsigned int bandId, const unsigned int step )
 {
     // query
 	float leftIR[FILTER_LENGTH];

@@ -56,12 +56,12 @@ template <typename T>
 using ComplexVector = std::vector<std::complex<T>>;
 
 
-inline bool isPowerOf2(size_t val)
+inline bool isPowerOf2( const size_t val )
 {
     return (val == 1 || (val & (val - 1)) == 0);
 }
 
-inline int nextPowerOf2(int x)
+inline int nextPowerOf2( int x )
 {
     if (x < 0)
         return 0;
@@ -123,7 +123,7 @@ inline float getMaxValue(std::vector<float> vectIn)
 }
 
 // return min value of vector
-inline float getMinValue(std::vector<float> vectIn)
+inline float getMinValue( const std::vector<float> & vectIn )
 {
     if( vectIn.size() == 0 ) { return 0; } // not sure this is wise..
     else{
@@ -133,7 +133,7 @@ inline float getMinValue(std::vector<float> vectIn)
 }
 
 // general function used to convert 10 frequency bands coefficients to 3 bands
-inline std::vector<float> from10to3bands(std::vector<float> vect10bands)
+inline std::vector<float> from10to3bands( const std::vector<float> & vect10bands )
 {
     // init
     std::vector<float> vect3bands;
@@ -156,7 +156,7 @@ inline std::vector<float> from10to3bands(std::vector<float> vect10bands)
 }
 
 // general function used to convert 10 frequency bands coefficients to 3 bands
-inline Array<float> from10to3bands(Array<float> vect10bands)
+inline Array<float> from10to3bands( const Array<float> & vect10bands )
 {
     // init
     Array<float> vect3bands;
@@ -183,7 +183,7 @@ inline Array<float> from10to3bands(Array<float> vect10bands)
 }
 
 // return full file path (in resources dir, depends on OS)
-inline File getFileFromString(String fileName)
+inline File getFileFromString( const String & fileName )
 {
     auto thisDir = File::getSpecialLocation(File::currentExecutableFile).getParentDirectory();
     
@@ -212,7 +212,7 @@ inline File getFileFromString(String fileName)
 }
 
 // save content of data to desktop in fileName
-inline void saveStringToDesktop(String fileName, String data)
+inline void saveStringToDesktop( const String & fileName, const String & data)
 {
     // get file
     const File file (File::getSpecialLocation (File::userDesktopDirectory)

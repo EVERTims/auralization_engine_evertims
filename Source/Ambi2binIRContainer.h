@@ -29,7 +29,7 @@ Ambi2binIRContainer()
 ~Ambi2binIRContainer(){}
 
 // load Ambisonic to binaural room impulse response from file
-void loadIR(File filename)
+void loadIR( const File & filename)
 {
     FileInputStream istream(filename);
     if (istream.openedOk())

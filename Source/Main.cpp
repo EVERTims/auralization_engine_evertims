@@ -24,7 +24,7 @@ public:
     bool moreThanOneInstanceAllowed() override       { return true; }
 
     //==============================================================================
-    void initialise (const String& commandLine) override
+    void initialise (const String & commandLine) override
     {
         // This method is where you should put your application's initialisation code..
 
@@ -46,7 +46,7 @@ public:
         quit();
     }
 
-    void anotherInstanceStarted (const String& commandLine) override
+    void anotherInstanceStarted (const String & commandLine) override
     {
         // When another instance of the app is launched while this one is running,
         // this method is invoked, and the commandLine parameter tells you what
@@ -58,10 +58,10 @@ public:
         This class implements the desktop window that contains an instance of
         our MainContentComponent class.
     */
-    class MainWindow    : public DocumentWindow
+    class MainWindow : public DocumentWindow
     {
     public:
-        MainWindow (String name)  : DocumentWindow (name,
+        MainWindow (String name) : DocumentWindow (name,
                                                     Colour(PixelARGB(240,30,30,30)),
                                                     DocumentWindow::allButtons)
         {

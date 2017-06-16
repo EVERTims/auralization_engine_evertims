@@ -65,7 +65,7 @@ BinauralEncoder()
 ~BinauralEncoder() {}
 
 // local equivalent of prepareToPlay
-void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
 {
     // resize FIR
     for( int i = 0; i < 2; i++)
@@ -84,7 +84,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 }
 
 // binaural encoding of source 1st channel (mono)
-AudioBuffer<float> processBuffer( AudioBuffer<float> &source )
+AudioBuffer<float> processBuffer( const AudioBuffer<float> & source )
 {
     // update crossfade
     updateCrossfade();
@@ -142,7 +142,7 @@ void updateCrossfade()
 }
 
 // set current HRIR filters
-void setPosition(double azim, double elev)
+void setPosition( double azim, double elev)
 {
     // get azim / elev indices in hrir array along with associated gains for panning across HRIR
     // (panning across 4 nearest neighbors (in azim/elev) of current position
@@ -197,7 +197,7 @@ void setPosition(double azim, double elev)
 private:
 
 // load a given HRIR set
-void loadHrir(File hrirFile)
+void loadHrir(const File & hrirFile)
 {
     // open file
     FileInputStream istream_hrir(hrirFile);

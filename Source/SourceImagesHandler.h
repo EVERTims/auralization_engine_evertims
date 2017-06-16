@@ -88,7 +88,7 @@ SourceImagesHandler() {}
 ~SourceImagesHandler() {}
 
 // local equivalent of prepareToPlay
-void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+void prepareToPlay( const unsigned int samplesPerBlockExpected, const double sampleRate )
 {
     // prepare buffers
     workingBuffer.setSize(1, samplesPerBlockExpected);
@@ -125,7 +125,7 @@ float getMaxDelayFuture()
 }
     
 // main: loop over sources images, apply delay + room coloration + spatialization
-AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
+AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
 {
     
     // update crossfade mechanism
@@ -346,7 +346,7 @@ AudioBuffer<float> getNextAudioBlock (DelayLine* delayLine)
 }
     
 // update local attributes based on latest received OSC info
-void updateFromOscHandler(OSCHandler& oscHandler)
+void updateFromOscHandler( OSCHandler & oscHandler )
 {
     // method should not be called while crossfade active.
     // called by MainContentComponent::updateOnOscReveive that checks if crossfadeOver == true.
@@ -416,7 +416,7 @@ void updateFromOscHandler(OSCHandler& oscHandler)
     
 }
     
-void setFilterBankSize(int numFreqBands)
+void setFilterBankSize( const unsigned int numFreqBands )
 {
     filterBank.setNumFilters( numFreqBands, current->ids.size() );
     bandBuffer.setSize( numFreqBands, localSamplesPerBlockExpected );

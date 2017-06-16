@@ -36,7 +36,7 @@ DelayLine()
 ~DelayLine() {}
 
 // local equivalent of prepareToPlay
-void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+void prepareToPlay (const unsigned int samplesPerBlockExpected, const double sampleRate)
 {
     buffer.setSize(buffer.getNumChannels(), 2*samplesPerBlockExpected);
     buffer.clear();
@@ -48,7 +48,7 @@ void prepareToPlay (int samplesPerBlockExpected, double sampleRate)
 }
 
 // increase delay line size if need be (no shrinking delay line size for now)
-void setSize(int newNumChannels, int newNumSamples)
+void setSize(const unsigned int newNumChannels, unsigned int newNumSamples)
 {
     newNumSamples = fmax(buffer.getNumSamples(), newNumSamples);
     
@@ -59,7 +59,7 @@ void setSize(int newNumChannels, int newNumSamples)
 }
 
 // add samples from buffer to delay line (replace)
-void copyFrom(int destChannel, const juce::AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+void copyFrom(const unsigned int destChannel, const juce::AudioBuffer<float> & source, const unsigned int sourceChannel, const unsigned int sourceStartSample, const unsigned int numSamples)
 {
     // either simple copy
     if ( writeIndex + numSamples <= buffer.getNumSamples() )
@@ -77,7 +77,7 @@ void copyFrom(int destChannel, const juce::AudioBuffer<float> &source, int sourc
 }
 
 // add samples from buffer to delay line (add)
-void addFrom(int destChannel, const AudioBuffer<float> &source, int sourceChannel, int sourceStartSample, int numSamples)
+void addFrom(const unsigned int destChannel, const AudioBuffer<float> & source, const unsigned int sourceChannel, const unsigned int sourceStartSample, const unsigned int numSamples)
 {
     // either simple copy
     if ( writeIndex + numSamples <= buffer.getNumSamples() )
@@ -95,14 +95,14 @@ void addFrom(int destChannel, const AudioBuffer<float> &source, int sourceChanne
 }
 
 // increment write position, apply circular shift if need be
-void incrementWritePosition(int numSamples)
+void incrementWritePosition(const unsigned int numSamples)
 {
     writeIndex += numSamples;
     writeIndex %= buffer.getNumSamples();
 }
 
 // get delayed buffer out of delay line
-AudioBuffer<float> getChunk(int sourceChannel, int numSamples, int delayInSamples)
+AudioBuffer<float> getChunk(const unsigned int sourceChannel, const unsigned int numSamples, const unsigned int delayInSamples)
 {
     
     int writePos = writeIndex - delayInSamples;
@@ -131,7 +131,7 @@ AudioBuffer<float> getChunk(int sourceChannel, int numSamples, int delayInSample
 }
 
 // get interpolated delayed buffer out of delay line (linear interpolation between previous and next)
-AudioBuffer<float> getInterpolatedChunk(int sourceChannel, int numSamples, float delayInSamples)
+AudioBuffer<float> getInterpolatedChunk(const unsigned int sourceChannel, const unsigned int numSamples, const float delayInSamples)
 {
     // get previous and next positions in delay line
     chunkBufferPrev = getChunk(sourceChannel, numSamples, ceil(delayInSamples));
