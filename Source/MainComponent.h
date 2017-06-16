@@ -115,6 +115,10 @@ private:
     AudioBuffer<float> ambisonicBuffer2ndEar;
     Ambi2binIRContainer ambi2binContainer;
     FIRFilter ambi2binFilters[2*N_AMBI_CH]; // holds current ABIR (room reverb) filters
+    
+    // frequency band
+    int numFreqBands = 0;
+    bool updateNumFreqBandrequired = false;
    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainContentComponent)
 };

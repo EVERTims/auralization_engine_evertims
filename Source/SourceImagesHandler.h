@@ -195,7 +195,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
         // APPLY FREQUENCY SPECIFIC GAINS (ABSORPTION, DIRECTIVITY)
         
         // decompose in frequency bands
-        bandBuffer = filterBank.getBandBuffer( workingBuffer, j);
+        filterBank.decomposeBuffer( workingBuffer, bandBuffer, j);
         
         // apply absorption gains and recompose
         workingBuffer.clear();

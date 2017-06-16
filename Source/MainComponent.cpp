@@ -205,6 +205,14 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
 // IR recording: using the same methods as the main thread)
 void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& bufferToFill)
 {
+    // check if update required
+    if( updateNumFreqBandrequired ){
+        sourceImagesHandler.setFilterBankSize(numFreqBands);
+        updateNumFreqBandrequired = false;
+        // trigger general update: must re-dimension abs.coeffs and trigger update future->current, see in function
+        sourceImagesHandler.updateFromOscHandler(oscHandler);
+    }
+    
     // fill buffer with audiofile data
     audioIOComponent.getNextAudioBlock(bufferToFill);
     
@@ -553,14 +561,12 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
 {
     if (comboBox == &numFrequencyBandsComboBox)
     {
-        int numFreqBands;
+        // update locals
         if( numFrequencyBandsComboBox.getSelectedId() == 1 ) numFreqBands = 3;
         else numFreqBands = 10;
         
-        sourceImagesHandler.setFilterBankSize(numFreqBands);
-        
-        // update
-        updateOnOscReveive();
+        // flag update required in audio loop (to avoid multi-thread access issues)
+        updateNumFreqBandrequired = true;
     }
     if (comboBox == &srcDirectivityComboBox)
     {

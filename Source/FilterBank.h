@@ -27,7 +27,6 @@ private:
         
     AudioBuffer<float> bufferFiltered;
     AudioBuffer<float> bufferRemains;
-    AudioBuffer<float> bufferBands;
     
 //==========================================================================
 // METHODS
@@ -45,7 +44,6 @@ void prepareToPlay( const unsigned int samplesPerBlockExpected, const double sam
     localSamplesPerBlockExpected = samplesPerBlockExpected;
     bufferFiltered.setSize(1, samplesPerBlockExpected);
     bufferRemains = bufferFiltered;
-    bufferBands.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
 }
 
 void setNumFilters( const unsigned int numBands, const unsigned int numSourceImages )
@@ -69,7 +67,6 @@ void _setNumFilters( const unsigned int numBands, const unsigned int numSourceIm
     // resize band buffer
     _numOctaveBands = numBands;
     _numIndptStream = numSourceImages;
-    bufferBands.setSize(numBands, localSamplesPerBlockExpected);
     octaveFilterBanks.resize( numSourceImages );
     
     // loop over bands of each filterbank
@@ -107,7 +104,7 @@ void _setNumFilters( const unsigned int numBands, const unsigned int numSourceIm
 }
 
 // Decompose source buffer into bands, return multi-channel buffer with one band per channel
-AudioBuffer<float> getBandBuffer( const AudioBuffer<float> &source, const unsigned int sourceImageId )
+void decomposeBuffer( const AudioBuffer<float> & source, AudioBuffer<float> & destination, const unsigned int sourceImageId )
 {
     if( updateRequired ){
         // update filters
@@ -131,11 +128,10 @@ AudioBuffer<float> getBandBuffer( const AudioBuffer<float> &source, const unsign
         bufferRemains.addFrom( 0, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
         
         // add filtered band to output
-        bufferBands.copyFrom( i, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
+        destination.copyFrom( i, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
     }
     
-    bufferBands.copyFrom( _numOctaveBands-1, 0, bufferRemains, 0, 0, localSamplesPerBlockExpected );
-    return bufferBands;
+    destination.copyFrom( _numOctaveBands-1, 0, bufferRemains, 0, 0, localSamplesPerBlockExpected );
 }
     
 JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (FilterBank)
