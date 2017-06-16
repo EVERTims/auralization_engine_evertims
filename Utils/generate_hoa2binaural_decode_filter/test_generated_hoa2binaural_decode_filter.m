@@ -19,45 +19,26 @@ root_path = pwd;
 addpath(genpath(root_path));
 
 % define paths
-input_path = fullfile(root_path,'output','hoa2binIRs');
+input_path = fullfile(root_path,'output');
 % filename = 'hoa2bin_order2_ClubFritz1.bin'; nSample_bin = 1024;
 % filename = 'Set1_without_direct_sound_abir.bin'; nSample_bin = 11140;
-filename = 'hoa2bin_order2_IRC_1008_R_HRIR.bin'; nSample_bin = 161;
+filename = 'hoa2bin_order2_IRC_1008_R_HRIR.bin'; nSample_bin = 221;
+filepath = fullfile(input_path, filename);
 
 %% Load HOA2bin filters
-
-% define filter parameters
 ambisonicOrder = 2;
-
-% Load data
-fileID = fopen(fullfile(input_path, filename));
-A = fread(fileID,'float32');
-fclose(fileID);
-
-% check data
-nAmbiChannels = (ambisonicOrder+1)^2;
-nChannels = 2; % L / R
-nSample_bin_real = size(A,1) / ( nAmbiChannels * nChannels );
-if (nSample_bin_real ~= nSample_bin);
-    error('announced and real number of samples differ \n announced: %ld \n real: %ld \n', nSample_bin, nSample_bin_real );
-end
-
-% shape data 
-AA = reshape(A,nSample_bin,[]).';
-A_L = []; A_R = [];
-for i = 1:size(AA,1)/2;
-    A_L = [A_L; AA(2*(i-1)+1,:)];
-    A_R = [A_R; AA(2*i,:)];
-end
+numSamplesExpected = 221;
+ambi2binIr = loadBinAmbi2Bin(filepath, ambisonicOrder, numSamplesExpected);
 
 % plot data
-y_max = max(abs(A));
-nSample_toplot = nSample_bin;
+y_max = max(max(abs([ ambi2binIr.l_m ; ambi2binIr.r_m ])));
+nSample_toplot = numSamplesExpected;
+nAmbiChannels = size(ambi2binIr.l_m,1);
 for i = 1:nAmbiChannels
     index_ir = i;
-    subplot(nAmbiChannels,2,1 + 2*(i-1)),plot(A_L(index_ir,1:nSample_toplot)), title(sprintf('Left, Ambi channel: %ld, RMS=%0.5f', i, rms(A_L(index_ir,:)))); xlabel('time'), ylabel('amp');
+    subplot(nAmbiChannels,2,1 + 2*(i-1)),plot(ambi2binIr.l_m(index_ir,1:nSample_toplot)), title(sprintf('Left, Ambi channel: %ld, RMS=%0.5f', i, rms(ambi2binIr.l_m(index_ir,:)))); xlabel('time'), ylabel('amp');
     axis([1 nSample_toplot -y_max y_max]);
-    subplot(nAmbiChannels,2, 2*i),plot(A_R(index_ir,1:nSample_toplot)), title(sprintf('Right, Ambi channel: %ld, RMS=%0.5f', i, rms(A_R(index_ir,:)))); xlabel('time'), ylabel('amp');
+    subplot(nAmbiChannels,2, 2*i),plot(ambi2binIr.r_m(index_ir,1:nSample_toplot)), title(sprintf('Right, Ambi channel: %ld, RMS=%0.5f', i, rms(ambi2binIr.r_m(index_ir,:)))); xlabel('time'), ylabel('amp');
     axis([1 nSample_toplot -y_max y_max]);
 %     if i < nAmbiChannels; input(''); end;
 end;
@@ -68,7 +49,7 @@ end;
 load handel; audioIn = y; clear y;
 
 % Ambisonic encode
-src_dir = [-90 0]; % [azim elev]
+src_dir = [90 0]; % [azim elev]
 hoasig = encodeHOA_N3D(ambisonicOrder, audioIn, src_dir); % WYZX
 
 %% Check: decode with loaded HOA2BIN filters
@@ -79,8 +60,8 @@ decoder = 'allrad'; % ALL-ROUND AMBISONIC DECODING
 
 clear left, clear right,
 for i = 1: size(hoasig,2)
-    left(:,i) = conv(A_L(i, :), hoasig(:, i)');
-    right(:,i) = conv(A_R(i, :), hoasig(:, i)');
+    left(:,i) = conv(ambi2binIr.l_m(i, :), hoasig(:, i)');
+    right(:,i) = conv(ambi2binIr.r_m(i, :), hoasig(:, i)');
 end
 
 % sum outputs
@@ -95,11 +76,3 @@ audioOut = audioOut / max(max(abs(audioOut)));
 
 player = audioplayer(audioOut, Fs);
 play(player)
-
-
-
-
-
-
-
-

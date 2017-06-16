@@ -42,8 +42,8 @@ root_path = pwd;
 addpath( genpath( root_path ) );
 
 % define input/ouptut file names
-output_path = fullfile(root_path,'output','hoa2binIRs');
-input_path = fullfile(root_path,'input','hrirs');
+output_path = fullfile(root_path,'output');
+input_path = fullfile(root_path,'input');
 
 %% INIT: Set conversion parameters
 
@@ -238,8 +238,9 @@ for i = 1:length(hrir_filelist);
     
     % write IR as binary files
     [sParent,sFile,~] = fileparts(filename_out);
-    filename_hrir = fullfile(sParent,['hoa2bin_order' int2str(ambisonicDecoderOrder) '_' sFile '.bin']);
-    file_hrir = fopen(filename_hrir,'w');
+    filename_hrir_radical = fullfile(sParent,['hoa2bin_order' int2str(ambisonicDecoderOrder) '_' sFile]);
+    filename_hrir_bin = [ filename_hrir_radical '.bin'];
+    file_hrir = fopen(filename_hrir_bin,'w');
 
     for ind_channel = 1:size(l_hoa2bin,2)
         fwrite(file_hrir,l_hoa2bin(:,ind_channel),'float32');
@@ -247,5 +248,13 @@ for i = 1:length(hrir_filelist);
     end
 
     fclose(file_hrir);
-    fprintf('created: %s \n', filename_hrir);
+    fprintf('created: %s \n', filename_hrir_bin);
+    
+    % write IR as mat files
+    filename_hrir_mat = [ filename_hrir_radical '.mat'];
+    ambi2binIr.l_m = l_hoa2bin;
+    ambi2binIr.r_m = r_hoa2bin;
+    ambi2binIr.sampling_hz = l_hrir_S.sampling_hz;
+    save(filename_hrir_mat, 'ambi2binIr');
+    fprintf('created: %s \n', filename_hrir_bin);
 end
