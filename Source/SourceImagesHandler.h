@@ -147,7 +147,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
             if( j < current->delays.size() )
             {
                 delayInFractionalSamples = current->delays[j] * localSampleRate;
-                workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+                delayLine->fillBufferWithDelayedChunk( workingBuffer, 0, 0, 0, delayInFractionalSamples, localSamplesPerBlockExpected );
                 workingBuffer.applyGain(1.0 - crossfadeGain);
             }
             else{ workingBuffer.clear(); }
@@ -156,7 +156,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
             if( j < future->delays.size() )
             {
                 delayInFractionalSamples = future->delays[j] * localSampleRate;
-                workingBufferTemp.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+                delayLine->fillBufferWithDelayedChunk( workingBufferTemp, 0, 0, 0, delayInFractionalSamples, localSamplesPerBlockExpected );
                 workingBufferTemp.applyGain(crossfadeGain);
             }
             else{ workingBufferTemp.clear(); }
@@ -170,7 +170,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
             if( j < current->delays.size() )
             {
                 delayInFractionalSamples = (current->delays[j] * localSampleRate);
-                workingBuffer.copyFrom(0, 0, delayLine->getInterpolatedChunk(0, localSamplesPerBlockExpected, delayInFractionalSamples), 0, 0, localSamplesPerBlockExpected);
+                delayLine->fillBufferWithDelayedChunk( workingBuffer, 0, 0, 0, delayInFractionalSamples, localSamplesPerBlockExpected );
             }
         }
         

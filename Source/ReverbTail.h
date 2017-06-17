@@ -137,9 +137,7 @@ AudioBuffer<float> getTailBuffer()
             delayLine.addFrom( bufferIndex, reverbBusBuffers, bufferIndex, 0, localSamplesPerBlockExpected );
         
             // read output from delay line (erase current content of reverbBuffers)
-            reverbBusBuffers.copyFrom(bufferIndex, 0,
-                                      delayLine.getInterpolatedChunk(bufferIndex, localSamplesPerBlockExpected, delayInFractionalSamples),
-                                      0, 0, localSamplesPerBlockExpected);
+            delayLine.fillBufferWithDelayedChunk( reverbBusBuffers, bufferIndex, 0, bufferIndex, delayInFractionalSamples, localSamplesPerBlockExpected );
             
             // sum FDN to output
             tailBuffer.addFrom(fdnId, 0, reverbBusBuffers, bufferIndex, 0, localSamplesPerBlockExpected);

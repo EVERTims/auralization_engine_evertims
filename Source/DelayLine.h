@@ -17,11 +17,10 @@ private:
     int chunkReadIndex;
     
     AudioBuffer<float> buffer;
-    AudioBuffer<float> chunkBuffer;
     
     AudioBuffer<float> chunkBufferPrev;
     AudioBuffer<float> chunkBufferNext;
-
+    
 //==========================================================================
 // METHODS
     
@@ -36,15 +35,13 @@ DelayLine()
 ~DelayLine() {}
 
 // local equivalent of prepareToPlay
-void prepareToPlay (const unsigned int samplesPerBlockExpected, const double sampleRate)
+void prepareToPlay(const unsigned int samplesPerBlockExpected, const double sampleRate)
 {
     buffer.setSize(buffer.getNumChannels(), 2*samplesPerBlockExpected);
     buffer.clear();
     
-    chunkBuffer.setSize(1, samplesPerBlockExpected);
-    chunkBuffer.clear();
-    chunkBufferPrev = chunkBuffer;
-    chunkBufferNext = chunkBuffer;
+    chunkBufferPrev.setSize(1, samplesPerBlockExpected);
+    chunkBufferNext.setSize(1, samplesPerBlockExpected);
 }
 
 // increase delay line size if need be (no shrinking delay line size for now)
@@ -102,7 +99,7 @@ void incrementWritePosition(const unsigned int numSamples)
 }
 
 // get delayed buffer out of delay line
-AudioBuffer<float> getChunk(const unsigned int sourceChannel, const unsigned int numSamples, const unsigned int delayInSamples)
+void _fillBufferWithDelayedChunk( AudioBuffer<float> & destination, const unsigned int destChannel, const unsigned int destStartSample, const unsigned int sourceChannel, const unsigned int delayInSamples, const unsigned int numSamples )
 {
     
     int writePos = writeIndex - delayInSamples;
@@ -117,25 +114,24 @@ AudioBuffer<float> getChunk(const unsigned int sourceChannel, const unsigned int
     if ( ( writePos + numSamples ) < buffer.getNumSamples() )
     {
         // simple copy
-        chunkBuffer.copyFrom(0, 0, buffer, sourceChannel, writePos, numSamples);
+        destination.copyFrom(destChannel, destStartSample, buffer, sourceChannel, writePos, numSamples);
     }
     else
     {
         // circular loop
         int numSamplesTail = buffer.getNumSamples() - writePos;
-        chunkBuffer.copyFrom(0, 0, buffer, sourceChannel, writePos, numSamplesTail );
-        chunkBuffer.copyFrom(0, numSamplesTail, buffer, sourceChannel, 0, numSamples - numSamplesTail);
+        destination.copyFrom(destChannel, destStartSample, buffer, sourceChannel, writePos, numSamplesTail );
+        destination.copyFrom(destChannel, destStartSample + numSamplesTail, buffer, sourceChannel, 0, numSamples - numSamplesTail);
     }
     
-    return chunkBuffer;
 }
 
 // get interpolated delayed buffer out of delay line (linear interpolation between previous and next)
-AudioBuffer<float> getInterpolatedChunk(const unsigned int sourceChannel, const unsigned int numSamples, const float delayInSamples)
+void fillBufferWithDelayedChunk( AudioBuffer<float> & destination, const unsigned int destChannel, const unsigned int destStartSample, const unsigned int sourceChannel, const float delayInSamples, const float numSamples )
 {
     // get previous and next positions in delay line
-    chunkBufferPrev = getChunk(sourceChannel, numSamples, ceil(delayInSamples));
-    chunkBufferNext = getChunk(sourceChannel, numSamples, floor(delayInSamples));
+    _fillBufferWithDelayedChunk(chunkBufferPrev, 0, 0, sourceChannel, ceil(delayInSamples), numSamples);
+    _fillBufferWithDelayedChunk(chunkBufferNext, 0, 0, sourceChannel, floor(delayInSamples), numSamples);
     
     // apply linear interpolation gains
     float gainPrev = (float)(delayInSamples-floor(delayInSamples));
@@ -143,10 +139,8 @@ AudioBuffer<float> getInterpolatedChunk(const unsigned int sourceChannel, const 
     chunkBufferNext.applyGain( 1.f - gainPrev );
     
     // sum buffer in output
-    chunkBuffer = chunkBufferPrev;
-    chunkBuffer.addFrom(0, 0, chunkBufferNext, 0, 0, numSamples);
-    
-    return chunkBuffer;
+    destination.copyFrom(destChannel, destStartSample, chunkBufferPrev, 0, 0, numSamples);
+    destination.addFrom(destChannel, destStartSample, chunkBufferNext, 0, 0, numSamples);
 }
 
 // remove all content from delay line main buffer
