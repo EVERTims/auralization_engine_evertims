@@ -113,12 +113,12 @@ void addToBus( const unsigned int busId, const AudioBuffer<float> & source )
     }
 }
     
-// process reverb tail from bus tail, return reverb tail buffer
-AudioBuffer<float> getTailBuffer()
+// process reverb tail from bus tail, copy obtained reverb buffer to destination
+void extractBusToBuffer( AudioBuffer<float> & destination )
 {
     // loop over FDN bus to write direct input to / read output from delay line
     float delayInFractionalSamples;
-    tailBuffer.clear();
+    destination.clear();
     workingBuffer.clear();
     
     int bufferIndex = 0;
@@ -140,7 +140,7 @@ AudioBuffer<float> getTailBuffer()
             delayLine.fillBufferWithDelayedChunk( reverbBusBuffers, bufferIndex, 0, bufferIndex, delayInFractionalSamples, localSamplesPerBlockExpected );
             
             // sum FDN to output
-            tailBuffer.addFrom(fdnId, 0, reverbBusBuffers, bufferIndex, 0, localSamplesPerBlockExpected);
+            destination.addFrom(fdnId, 0, reverbBusBuffers, bufferIndex, 0, localSamplesPerBlockExpected);
             
             // apply FDN gains
             reverbBusBuffers.applyGain(bufferIndex, 0, localSamplesPerBlockExpected, fdnGains[bandId][fdnId]);
@@ -171,8 +171,6 @@ AudioBuffer<float> getTailBuffer()
     
     // clear reverb bus
     reverbBusBuffers.clear();
-    
-    return tailBuffer;
 }
 
 // clear content from FDN buffer

@@ -327,7 +327,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
     if( enableReverbTail )
     {
         // get tail buffer
-        tailBuffer = reverbTail.getTailBuffer();
+        reverbTail.extractBusToBuffer( tailBuffer );
         
         // apply gain
         tailBuffer.applyGain( reverbTailGain );
