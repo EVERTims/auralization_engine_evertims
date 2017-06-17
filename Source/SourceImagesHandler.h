@@ -266,7 +266,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
         if( enableDirectToBinaural && j < current->ids.size() && directPathId == current->ids[j] )
         {
             // apply filter
-            binauralBuffer = binauralEncoder.processBuffer(workingBuffer);
+            binauralEncoder.encodeBuffer(workingBuffer, binauralBuffer);
             
             // add to output
             ambisonicBuffer.copyFrom(0, 0, binauralBuffer, 0, 0, localSamplesPerBlockExpected);

@@ -41,8 +41,7 @@ private:
     std::array<int, 2> elevId;
 
     // stereo output buffer
-    AudioBuffer<float> stereoBuffer;
-    AudioBuffer<float> stereoBufferCopy;
+    AudioBuffer<float> workingBuffer;
 
     // misc.
     double localSampleRate;
@@ -75,47 +74,44 @@ void prepareToPlay( int samplesPerBlockExpected, double sampleRate )
     }
     
     // resize buffers
-    stereoBuffer.setSize(2, samplesPerBlockExpected);
-    stereoBufferCopy = stereoBuffer;
+    workingBuffer.setSize(1, samplesPerBlockExpected);
     
     // keep local copies
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
 }
 
-// binaural encoding of source 1st channel (mono)
-AudioBuffer<float> processBuffer( const AudioBuffer<float> & source )
+// binaural encoding of source 1st channel (mono) to destination (stereo)
+void encodeBuffer( const AudioBuffer<float> & source, AudioBuffer<float> & destination )
 {
     // update crossfade
     updateCrossfade();
     
     for( int i = 0; i < 2; i++)
     {
-        // mono to stereo
-        stereoBuffer.copyFrom(i, 0, source, 0, 0, localSamplesPerBlockExpected);
+        // copy 1st channel of mono source to ith channel of destination
+        destination.copyFrom(i, 0, source, 0, 0, localSamplesPerBlockExpected);
         
         if( crossfadeOver )
         {
             // simply apply FIR
-            hrirFir[i].process(stereoBuffer.getWritePointer(i));
+            hrirFir[i].process(destination.getWritePointer(i));
         }
         else
         {
             // duplicate input buffer
-            stereoBufferCopy = stereoBuffer;
+            workingBuffer.copyFrom(0, 0, destination, i, 0, localSamplesPerBlockExpected);
             
             // apply past and future FIRs
-            hrirFir[i].process(stereoBuffer.getWritePointer(i));
-            hrirFirFuture[i].process(stereoBufferCopy.getWritePointer(i));
+            hrirFir[i].process(destination.getWritePointer(i));
+            hrirFirFuture[i].process(workingBuffer.getWritePointer(0));
             
             // crossfade mix
-            stereoBuffer.applyGain( i, 0, localSamplesPerBlockExpected, 1.0f - crossfadeGain );
-            stereoBufferCopy.applyGain( i, 0, localSamplesPerBlockExpected, crossfadeGain );
-            stereoBuffer.addFrom(i, 0, stereoBufferCopy, i, 0, localSamplesPerBlockExpected);
+            destination.applyGain( i, 0, localSamplesPerBlockExpected, 1.0f - crossfadeGain );
+            workingBuffer.applyGain( crossfadeGain );
+            destination.addFrom(i, 0, workingBuffer, 0, 0, localSamplesPerBlockExpected);
         }
     }
-    
-    return stereoBuffer;
 }
 
 // update crossfade mechanism
