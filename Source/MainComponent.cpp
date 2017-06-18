@@ -182,6 +182,8 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     
     // working buffer
     workingBuffer.setSize(1, samplesPerBlockExpected);
+    // ambisonic buffer holds 2 stereo channels (first) + ambisonic channels
+    ambisonicBuffer.setSize(2 + N_AMBI_CH, samplesPerBlockExpected);
     
     // keep track of sample rate
     localSampleRate = sampleRate;
@@ -272,7 +274,7 @@ void MainContentComponent::processAmbisonicBuffer( AudioBuffer<float> *const aud
         delayLine.copyFrom(0, workingBuffer, 0, 0, workingBuffer.getNumSamples());
         
         // loop over sources images, apply delay + room coloration + spatialization
-        ambisonicBuffer = sourceImagesHandler.getNextAudioBlock (&delayLine);
+        sourceImagesHandler.getNextAudioBlock( & delayLine, ambisonicBuffer );
         
         // increment delay line write position
         delayLine.incrementWritePosition(workingBuffer.getNumSamples());

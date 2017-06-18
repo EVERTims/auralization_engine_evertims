@@ -98,9 +98,6 @@ void prepareToPlay( const unsigned int samplesPerBlockExpected, const double sam
     bandBuffer.setSize(NUM_OCTAVE_BANDS, samplesPerBlockExpected);
     binauralBuffer.setSize(2, samplesPerBlockExpected);
     
-    // ambisonic buffer holds 2 stereo channels (first) + ambisonic channels
-    ambisonicBuffer.setSize(2 + N_AMBI_CH, samplesPerBlockExpected);
-    
     // keep local copies
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
@@ -125,7 +122,7 @@ float getMaxDelayFuture()
 }
     
 // main: loop over sources images, apply delay + room coloration + spatialization
-AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
+void getNextAudioBlock( DelayLine* delayLine, AudioBuffer<float> & ambisonicBuffer )
 {
     
     // update crossfade mechanism
@@ -341,8 +338,7 @@ AudioBuffer<float> getNextAudioBlock( DelayLine* delayLine )
             ambisonicBuffer.addFrom(2+ambiId, 0, tailBuffer, fdnId, 0, localSamplesPerBlockExpected);
         }
     }
-    
-    return ambisonicBuffer;
+
 }
     
 // update local attributes based on latest received OSC info
