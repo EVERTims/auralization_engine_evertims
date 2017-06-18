@@ -159,6 +159,10 @@ ambi2binContainer()
         obj->setToggleState(true, juce::sendNotification);
     }
     
+    // disable direct to binaural until fixed
+    enableDirectToBinaural.setEnabled(false);
+    enableDirectToBinaural.setToggleState(false, juce::sendNotification);
+    
 }
 
 MainContentComponent::~MainContentComponent()
