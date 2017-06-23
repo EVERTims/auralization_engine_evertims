@@ -335,10 +335,14 @@ void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBu
 // record current Room impulse Response to disk
 void MainContentComponent::recordIr()
 {
-    // estimate output buffer size
+    // estimate output buffer size (based on max delay time)
+    auto maxDelaySourceImages = getMaxValue( oscHandler.getSourceImageDelays() );
     auto rt60 = oscHandler.getRT60Values();
-    float maxDelay = getMaxValue(rt60);
+    float maxDelayRt60 = getMaxValue(rt60);
+    float maxDelay = fmax( maxDelaySourceImages, maxDelayRt60 );
     int maxDelayInSamp = ceil(maxDelay * localSampleRate);
+    // output buffer at least 1 localSamplesPerBlockExpected long
+    maxDelayInSamp = fmax( maxDelayInSamp, localSamplesPerBlockExpected);
     
     // init
     recordingBufferInput.setSize(2, localSamplesPerBlockExpected);
@@ -358,7 +362,7 @@ void MainContentComponent::recordIr()
     // pass impulse imput into processing loop until IR faded below threshold
     float rms = 1.0f;
     int bufferId = 0;
-    while( rms >= 0.0001f || bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
+    while( ( rms >= 0.0001f || bufferId < 2 ) && bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
     {
         // clear impulse after first round
         if( bufferId >= 1 ){ recordingBufferInput.clear(); }
