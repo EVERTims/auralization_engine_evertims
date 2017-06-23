@@ -21,10 +21,17 @@ private:
     
     int port = 3860;
 
-    std::map<int,EL_ImageSource> sourceImageMap;
-    std::map<String,EL_Source> sourceMap;
-    std::map<String,EL_Listener> listenerMap;
-    std::vector<float> valuesR60;
+    // prepare struct for thread safe update (pointer swap based)
+    struct localVariablesStruct
+    {
+        std::map<int,EL_ImageSource> sourceImageMap;
+        std::map<String,EL_Source> sourceMap;
+        std::map<String,EL_Listener> listenerMap;
+        std::vector<float> valuesR60;
+    };
+    
+    localVariablesStruct *current = new localVariablesStruct();
+    localVariablesStruct *future = new localVariablesStruct();
 
 //==========================================================================
 // METHODS
@@ -40,7 +47,8 @@ OSCHandler()
     }
     
     addListener (this);
-    valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
+    current->valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
+    future->valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
 }
 
 ~OSCHandler() {}
@@ -48,10 +56,9 @@ OSCHandler()
 std::vector<int> getSourceImageIDs()
 {
     std::vector<int> IDs;
-    IDs.resize(sourceImageMap.size());
+    IDs.resize(current->sourceImageMap.size());
     int i = 0;
-    for(auto const &ent1 : sourceImageMap) {
-        
+    for( auto const &ent1 : current->sourceImageMap ){
         IDs[i] = ent1.first;
         i ++;
     }
@@ -61,10 +68,9 @@ std::vector<int> getSourceImageIDs()
 std::vector<float> getSourceImageDelays()
 {
     std::vector<float> delays;
-    delays.resize(sourceImageMap.size());
+    delays.resize( current->sourceImageMap.size() );
     int i = 0;
-    for(auto const &ent1 : sourceImageMap) {
-        
+    for( auto const &ent1 : current->sourceImageMap ) {
         delays[i] = ent1.second.totalPathDistance / SOUND_SPEED;
         i ++;
     }
@@ -74,10 +80,9 @@ std::vector<float> getSourceImageDelays()
 std::vector<float> getSourceImagePathsLength()
 {
     std::vector<float> pathLength;
-    pathLength.resize(sourceImageMap.size());
+    pathLength.resize( current->sourceImageMap.size() );
     int i = 0;
-    for(auto const &ent1 : sourceImageMap) {
-        
+    for( auto const &ent1 : current->sourceImageMap ){
         pathLength[i] = ent1.second.totalPathDistance;
         i ++;
     }
@@ -88,16 +93,16 @@ std::vector<float> getSourceImagePathsLength()
 std::vector<Eigen::Vector3f> getSourceImageDOAs()
 {
 	std::vector<Eigen::Vector3f> doas;
-	doas.resize(sourceImageMap.size());
+	doas.resize( current->sourceImageMap.size() );
 
 	// discard if empty listener map
-	if (listenerMap.size() == 0){ return doas; }
+	if( current->listenerMap.size() == 0 ){ return doas; }
     
-	Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
-    Eigen::Matrix3f listenerRotationMatrix = listenerMap.begin()->second.rotationMatrix;
+	Eigen::Vector3f listenerPos = current->listenerMap.begin()->second.position;
+    Eigen::Matrix3f listenerRotationMatrix = current->listenerMap.begin()->second.rotationMatrix;
     
     int i = 0;
-    for(auto const &ent1 : sourceImageMap) {
+    for( auto const &ent1 : current->sourceImageMap ){
         Eigen::Vector3f posSph = cartesianToSpherical( listenerRotationMatrix * ( ent1.second.positionRelectionLast - listenerPos ) );
         doas[i] = posSph;
         i ++;
@@ -109,16 +114,16 @@ std::vector<Eigen::Vector3f> getSourceImageDOAs()
 std::vector<Eigen::Vector3f> getSourceImageDODs()
 {
 	std::vector<Eigen::Vector3f> dods;
-	dods.resize(sourceImageMap.size());
+	dods.resize( current->sourceImageMap.size() );
 
 	// discard if empty source map
-	if (sourceMap.size() == 0){ return dods; }
+	if( current->sourceMap.size() == 0 ){ return dods; }
 
-    Eigen::Vector3f sourcePos = sourceMap.begin()->second.position;
-    Eigen::Matrix3f sourceRotationMatrix = sourceMap.begin()->second.rotationMatrix;
+    Eigen::Vector3f sourcePos = current->sourceMap.begin()->second.position;
+    Eigen::Matrix3f sourceRotationMatrix = current->sourceMap.begin()->second.rotationMatrix;
     
     int i = 0;
-    for(auto const &ent1 : sourceImageMap) {
+    for( auto const &ent1 : current->sourceImageMap ) {
         Eigen::Vector3f posSph = cartesianToSpherical( sourceRotationMatrix * ( ent1.second.positionRelectionFirst - sourcePos ) );
         dods[i] = posSph;
         i ++;
@@ -128,18 +133,18 @@ std::vector<Eigen::Vector3f> getSourceImageDODs()
     
 Array<float> getSourceImageAbsorption( const unsigned int sourceID )
 {
-    return sourceImageMap.find(sourceID)->second.absorption;
+    return current->sourceImageMap.find(sourceID)->second.absorption;
 }
 
 std::vector<float> getRT60Values()
 {
-    return valuesR60;
+    return current->valuesR60;
 }
 
 int getDirectPathId()
 {
-    for(auto const &ent1 : sourceImageMap) {
-        if( ent1.second.reflectionOrder == 0) {
+    for( auto const &ent1 : current->sourceImageMap ){
+        if( ent1.second.reflectionOrder == 0 ){
             return ent1.first;
         }
     }
@@ -152,7 +157,7 @@ String getMapContentForGUI()
     String output = String("\n");
     int nDecimals = 2;
     
-    for(auto const &ent1 : listenerMap) {
+    for( auto const &ent1 : current->listenerMap ) {
         // ent1.first is the first key
         output += String("Listener: \t") + String(ent1.first) + String(", pos: \t[ ") +
         String(round2(ent1.second.position(0), nDecimals)) + String(", ") +
@@ -161,7 +166,7 @@ String getMapContentForGUI()
     }
     output += String("\n");
     
-    for(auto const &ent1 : sourceMap) {
+    for( auto const &ent1 : current->sourceMap ){
         // ent1.first is the first key
         output += String("Source:  \t") + String(ent1.first) + String(", pos: \t [ ") +
         String(round2(ent1.second.position(0), nDecimals)) + String(", ") +
@@ -171,19 +176,19 @@ String getMapContentForGUI()
     output += String("\n");
     
     output += String("RT60: \t[ ");
-    for( int i = 0; i < valuesR60.size(); i++ ){
-        output += String(round2(valuesR60[i], nDecimals));
-        if( i < valuesR60.size() - 1 ) output += String(", ");
+    for( int i = 0; i < current->valuesR60.size(); i++ ){
+        output += String(round2( current->valuesR60[i], nDecimals ));
+        if( i < current->valuesR60.size() - 1 ) output += String(", ");
         else output += String(" ] (sec) \n");
     }
     output += String("\n");
     
 	// discard if empty listener map
-	if (listenerMap.size() == 0){ return output; }
-    Eigen::Vector3f listenerPos = listenerMap.begin()->second.position;
+	if( current->listenerMap.size() == 0 ){ return output; }
+    Eigen::Vector3f listenerPos = current->listenerMap.begin()->second.position;
     std::vector<Eigen::Vector3f> posSph = getSourceImageDOAs();
     int i = 0;
-    for(auto const &ent1 : sourceImageMap) {
+    for( auto const &ent1 : current->sourceImageMap ){
         output += String("Source Image: ") + String(ent1.first) + String(", \t posLast:  [ ") +
         String(round2(ent1.second.positionRelectionLast(0), nDecimals)) + String(", ") +
         String(round2(ent1.second.positionRelectionLast(1), nDecimals)) + String(", ") +
@@ -207,7 +212,7 @@ String getMapContentForLog()
     String output = String("");
     
     // listener(s)
-    for(auto const &ent1 : listenerMap) {
+    for( auto const &ent1 : current->listenerMap ){
         // ent1.first is the first key
         output += String("listener: ") + String(ent1.first);
         output += String(" pos: ");
@@ -224,7 +229,7 @@ String getMapContentForLog()
     }
     
     // source(s)
-    for(auto const &ent1 : sourceMap) {
+    for( auto const &ent1 : current->sourceMap ){
         // ent1.first is the first key
         output += String("source: ") + String(ent1.first);
         output += String(" pos: ");
@@ -242,13 +247,15 @@ String getMapContentForLog()
     
     // response time
     output += String("rt60: ");
-    for( int i = 0; i < valuesR60.size(); i++ ){ output += String(valuesR60[i]) + String(" "); }
+    for( int i = 0; i < current->valuesR60.size(); i++ ){
+        output += String( current->valuesR60[i] ) + String(" ");
+    }
     output += String("\n");
     
     // image source(s)
     // discard if empty listener map
-    if (listenerMap.size() == 0){ return output; }
-    for(auto const &ent1 : sourceImageMap) {
+    if( current->listenerMap.size() == 0 ){ return output; }
+    for( auto const &ent1 : current->sourceImageMap ){
         output += String("imgSrc: ") + String(ent1.first);
         output += String(" order: ") + String(ent1.second.reflectionOrder);
         output += String(" posFirst: ");
@@ -274,17 +281,23 @@ String getMapContentForLog()
 // reset all internals
 void clear( const bool force )
 {
-    sourceImageMap.clear();
-    valuesR60.clear();
-    valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
+    future->sourceImageMap.clear();
+    future->valuesR60.clear();
+    future->valuesR60.resize(NUM_OCTAVE_BANDS, 0.f);
     
     if( force )
     {
-        sourceMap.clear();
-        listenerMap.clear();
+        future->sourceMap.clear();
+        future->listenerMap.clear();
     }
 }
-    
+
+// swap future with current state
+void updateInternals()
+{
+    std::swap(current, future);
+}
+
 private:
 
 void oscMessageReceived (const OSCMessage & msg) override
@@ -318,12 +331,12 @@ void oscMessageReceived (const OSCMessage & msg) override
         }
         
         // insert or update
-        sourceImageMap[source.ID] = source;
+        future->sourceImageMap[source.ID] = source;
     }
     
     else if( pR60.matches(msgAdress) )
     {
-        for( int i = 0; i < msg.size(); i++ ){ valuesR60[i] = msg[i].getFloat32(); }
+        for( int i = 0; i < msg.size(); i++ ){ future->valuesR60[i] = msg[i].getFloat32(); }
     }
     
     //    else {
@@ -379,7 +392,7 @@ void oscBundleReceived( const OSCBundle & bundle ) override
             }
             
             // insert or update
-            sourceMap[source.name] = source;
+            future->sourceMap[source.name] = source;
         }
         else if ( pListener.matches(msgAdress) )
         {
@@ -398,17 +411,17 @@ void oscBundleReceived( const OSCBundle & bundle ) override
             }
             
             // insert or update
-            listenerMap[listener.name] = listener;
+            future->listenerMap[listener.name] = listener;
         }
         else if ( pOut.matches(msgAdress) )
         {
-            sourceImageMap.erase(msg[0].getInt32());
+            future->sourceImageMap.erase(msg[0].getInt32());
         }
     }
     
     sendChangeMessage ();
 }
-
+    
 // popup window if OSC connection failed 
 void showConnectionErrorMessage( const String & messageText )
 {

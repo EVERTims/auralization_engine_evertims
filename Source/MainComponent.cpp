@@ -430,6 +430,10 @@ float MainContentComponent::clipOutput(float input)
 // method called when new OSC messages are available
 void MainContentComponent::updateOnOscReceive()
 {
+    // update OSC handler internals (has to happend here, to ensure that they won't be updated while
+    // running the sourceImagesHandler.updateFromOscHandler method that reads them OSC internals.
+    oscHandler.updateInternals();
+    
     // if sourceImagesHandler not in the midst of an update
     if( sourceImagesHandler.crossfadeOver )
     {
