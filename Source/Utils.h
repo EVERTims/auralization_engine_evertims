@@ -82,8 +82,11 @@ inline int nextPowerOf2( int x )
 inline Eigen::Vector3f cartesianToSpherical(const Eigen::Vector3f& p)
 {
     float radius = std::sqrt(p(0) * p(0) + p(1) * p(1) + p(2) * p(2));
-    float elevation = std::asin(p(2) / radius);
     float azimuth = std::atan2(p(0), p(1));
+    float elevation;
+    // handle zero-radius scenarios
+    if( radius == 0 ){ elevation = 0; }
+    else{ elevation = std::asin(p(2) / radius); }
     // if( p(0) < 0 && p(2) < 0 ){ elevation += 2 * M_PI; }
     
     return Eigen::Vector3f (azimuth, elevation, radius);
