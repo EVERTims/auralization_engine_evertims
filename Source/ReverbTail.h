@@ -138,12 +138,12 @@ void extractBusToBuffer( AudioBuffer<float> & destination )
         
             // read output from delay line (erase current content of reverbBuffers)
             delayLine.fillBufferWithDelayedChunk( reverbBusBuffers, bufferIndex, 0, bufferIndex, delayInFractionalSamples, localSamplesPerBlockExpected );
+
+            // apply FDN gains
+            reverbBusBuffers.applyGain(bufferIndex, 0, localSamplesPerBlockExpected, fdnGains[bandId][fdnId]);
             
             // sum FDN to output
             destination.addFrom(fdnId, 0, reverbBusBuffers, bufferIndex, 0, localSamplesPerBlockExpected);
-            
-            // apply FDN gains
-            reverbBusBuffers.applyGain(bufferIndex, 0, localSamplesPerBlockExpected, fdnGains[bandId][fdnId]);
         }
         
     }
