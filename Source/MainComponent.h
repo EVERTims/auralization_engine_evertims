@@ -50,7 +50,7 @@ public:
 private:
     
     void changeListenerCallback (ChangeBroadcaster* source) override;
-    void updateOnOscReveive();
+    void updateOnOscReceive();
     float clipOutput(float input);
     
     //==========================================================================

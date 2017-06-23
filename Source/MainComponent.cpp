@@ -428,7 +428,7 @@ float MainContentComponent::clipOutput(float input)
 }
 
 // method called when new OSC messages are available
-void MainContentComponent::updateOnOscReveive()
+void MainContentComponent::updateOnOscReceive()
 {
     // if sourceImagesHandler not in the midst of an update
     if( sourceImagesHandler.crossfadeOver )
@@ -517,7 +517,7 @@ void MainContentComponent::changeListenerCallback (ChangeBroadcaster* broadcaste
         {
             logTextBox.setText(oscHandler.getMapContentForGUI());
         }
-        updateOnOscReveive();
+        updateOnOscReceive();
     }
 }
 
@@ -542,7 +542,7 @@ void MainContentComponent::buttonClicked (Button* button)
     if( button == &reverbTailToggle )
     {
         sourceImagesHandler.enableReverbTail = reverbTailToggle.getToggleState();
-        updateOnOscReveive(); // require delay line size update
+        updateOnOscReceive(); // require delay line size update
         gainReverbTailSlider.setEnabled(reverbTailToggle.getToggleState());
     }
     if( button == &enableDirectToBinaural )
@@ -557,7 +557,7 @@ void MainContentComponent::buttonClicked (Button* button)
     if( button == &clearSourceImageButton )
     {
         oscHandler.clear(false);
-        updateOnOscReveive();
+        updateOnOscReceive();
         logTextBox.setText(oscHandler.getMapContentForGUI());
     }
 
@@ -584,7 +584,7 @@ void MainContentComponent::comboBoxChanged(ComboBox* comboBox)
         sourceImagesHandler.directivityHandler.loadFile( fileChar );
         
         // update 
-        updateOnOscReveive();
+        updateOnOscReceive();
     }
 }
 
