@@ -160,7 +160,7 @@ ambi2binContainer()
     }
     
     // disable direct to binaural until fixed
-    enableDirectToBinaural.setEnabled(false);
+    // enableDirectToBinaural.setEnabled(false);
     enableDirectToBinaural.setToggleState(false, juce::sendNotification);
     
 }

@@ -265,6 +265,9 @@ void getNextAudioBlock( DelayLine* delayLine, AudioBuffer<float> & ambisonicBuff
             // apply filter
             binauralEncoder.encodeBuffer(workingBuffer, binauralBuffer);
             
+            // manual loudness normalization (todo: handle this during hrir filter creation)
+            binauralBuffer.applyGain(3.7f);
+            
             // add to output
             ambisonicBuffer.copyFrom(0, 0, binauralBuffer, 0, 0, localSamplesPerBlockExpected);
             ambisonicBuffer.copyFrom(1, 0, binauralBuffer, 1, 0, localSamplesPerBlockExpected);
