@@ -53,12 +53,12 @@ plot(in);
 % A = AA; % DEBUG
 
 % % hadamard feedback matrix
-% A = (1/(2^(sqrt(NumFeedbackLine)/2))) * hadamard(NumFeedbackLine);
+A = (1/(2^(sqrt(NumFeedbackLine)/2))) * hadamard(NumFeedbackLine);
 
 % householder matrix as proposed in Jot's thesis, see also 
 % https://ccrma.stanford.edu/~jos/pasp/Householder_Feedback_Matrix.html
-A = 0.5*(diag([2 2 2 2]) - ones(4,4));
-A = 0.0*[A -A -A -A; -A A -A -A; -A -A A -A; -A -A -A A];
+% A = 0.5*(diag([2 2 2 2]) - ones(4,4));
+% A = 0.0*[A -A -A -A; -A A -A -A; -A -A A -A; -A -A -A A];
 
 % % export matrix
 % for i = 1:size(A,1);
