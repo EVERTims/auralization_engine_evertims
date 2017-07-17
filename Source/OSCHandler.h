@@ -309,7 +309,7 @@ void oscMessageReceived (const OSCMessage & msg) override
 {
     OSCAddressPattern pIn("/in");
     OSCAddressPattern pUpd("/upd");
-    OSCAddressPattern pR60("/r60");
+    OSCAddressPattern pR60("/rt60");
     
     OSCAddress msgAdress(msg.getAddressPattern().toString());
     
