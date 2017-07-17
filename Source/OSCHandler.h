@@ -296,6 +296,11 @@ void clear( const bool force )
 void updateInternals()
 {
     std::swap(current, future);
+    // udpate new future (old current) to make sure next swap won't give me deprecated values
+    future->sourceImageMap = current->sourceImageMap;
+    future->sourceMap = current->sourceMap;
+    future->listenerMap = current->listenerMap;
+    future->valuesR60 = current->valuesR60;
 }
 
 private:
