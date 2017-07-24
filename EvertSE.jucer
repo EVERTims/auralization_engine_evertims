@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="1.0.0"
+<JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="0.3.2"
               bundleIdentifier="com.evertims.EvertSE" includeBinaryInAppConfig="1"
               jucerVersion="5.0.1" displaySplashScreen="0" reportAppUsage="0"
               splashScreenColour="Dark">
