@@ -367,7 +367,7 @@ void MainContentComponent::recordIr()
     int bufferId = 0;
     // record until rms below threshold or reached max delay. minDelay used here to make sure recording doesn't stop on first buffers for large
     // source-listener distances, where RMS is zero for the first few buffers until LOS image source reaches listener.
-    while( ( rms >= 0.0001f || bufferId*localSamplesPerBlockExpected < minDelayInSamp ) && bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
+    while( ( rms >= 0.00001f || bufferId*localSamplesPerBlockExpected < minDelayInSamp ) && bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
     {
         // clear impulse after first round
         if( bufferId >= 1 ){ recordingBufferInput.clear(); }
