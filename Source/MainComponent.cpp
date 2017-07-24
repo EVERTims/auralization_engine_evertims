@@ -344,6 +344,9 @@ void MainContentComponent::recordIr()
     // output buffer at least 1 localSamplesPerBlockExpected long
     maxDelayInSamp = fmax( maxDelayInSamp, localSamplesPerBlockExpected);
     
+    // get min delay
+    int minDelayInSamp = ceil( localSampleRate * getMinValue( oscHandler.getSourceImageDelays() ) );
+    
     // init
     recordingBufferInput.setSize(2, localSamplesPerBlockExpected);
     recordingBufferInput.clear();
@@ -362,7 +365,9 @@ void MainContentComponent::recordIr()
     // pass impulse imput into processing loop until IR faded below threshold
     float rms = 1.0f;
     int bufferId = 0;
-    while( ( rms >= 0.0001f || bufferId < 2 ) && bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
+    // record until rms below threshold or reached max delay. minDelay used here to make sure recording doesn't stop on first buffers for large
+    // source-listener distances, where RMS is zero for the first few buffers until LOS image source reaches listener.
+    while( ( rms >= 0.0001f || bufferId*localSamplesPerBlockExpected < minDelayInSamp ) && bufferId*localSamplesPerBlockExpected < maxDelayInSamp )
     {
         // clear impulse after first round
         if( bufferId >= 1 ){ recordingBufferInput.clear(); }
