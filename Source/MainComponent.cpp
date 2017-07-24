@@ -475,7 +475,7 @@ void MainContentComponent::paint (Graphics& g)
     // signature
     g.setColour(Colours::white);
     g.setFont(11.f);
-    g.drawFittedText("designed by D. Poirier-Quinot, M. Noisternig, and Brian F.G. Katz (2017)", getWidth() - 335, getHeight()-15, 325, 15, Justification::right, 2);
+    g.drawFittedText("designed by D. Poirier-Quinot, M. Noisternig, and B. F.G. Katz (2017)", getWidth() - 335, getHeight()-15, 325, 15, Justification::right, 2);
 }
 
 void MainContentComponent::resized()
