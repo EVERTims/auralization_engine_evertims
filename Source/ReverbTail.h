@@ -187,22 +187,22 @@ void updateFdnParameters(){
     // Define FDN delays (put here even if static define to be ready for TODO)
     // TODO: delay values should be based on dist min / max (Sabine formula).
     // would require estimation of room volume / surface in EVERTims
-    fdnDelays[0] = 0.011995;
-    fdnDelays[1] = 0.019070;
-    fdnDelays[2] = 0.021791;
-    fdnDelays[3] = 0.031043;
-    fdnDelays[4] = 0.038118;
-    fdnDelays[5] = 0.041927;
-    fdnDelays[6] = 0.050091;
-    fdnDelays[7] = 0.063696;
-    fdnDelays[8] = 0.078934;
-    fdnDelays[9] = 0.084376;
-    fdnDelays[10] = 0.101791;
-    fdnDelays[11] = 0.114308;
-    fdnDelays[12] = 0.120839;
-    fdnDelays[13] = 0.141519;
-    fdnDelays[14] = 0.156213;
-    fdnDelays[15] = 0.179615;
+    fdnDelays[0] = 0.01199546485260770921;
+    fdnDelays[1] = 0.01907029478458049931;
+    fdnDelays[2] = 0.02179138321995464922;
+    fdnDelays[3] = 0.03104308390022675682;
+    fdnDelays[4] = 0.03811791383219954865;
+    fdnDelays[5] = 0.04192743764172335297;
+    fdnDelays[6] = 0.05009070294784580268;
+    fdnDelays[7] = 0.06369614512471655221;
+    fdnDelays[8] = 0.07893424036281179723;
+    fdnDelays[9] = 0.08437641723356009704;
+    fdnDelays[10] = 0.10179138321995465088;
+    fdnDelays[11] = 0.11430839002267573212;
+    fdnDelays[12] = 0.12083900226757370022;
+    fdnDelays[13] = 0.14151927437641723118;
+    fdnDelays[14] = 0.15621315192743764899;
+    fdnDelays[15] = 0.17961451247165532985;
     
     // Define FDN gains based on new delays
     for (int bandId = 0; bandId < numOctaveBands; bandId++)
