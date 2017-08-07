@@ -23,7 +23,7 @@ private:
     DelayLine delayLine;
     
     // setup FDN (static FDN order of 16 is max for now)
-    std::array<float, MAX_FDN_ORDER> fdnDelays; // in sec
+    std::array<unsigned int, MAX_FDN_ORDER> fdnDelays; // in samples
     std::array< std::array < float, MAX_FDN_ORDER>, numOctaveBands > fdnGains; // S.I.
     std::array< std::array < float, MAX_FDN_ORDER>, MAX_FDN_ORDER > fdnFeedbackMatrix; // S.I.
     
@@ -48,7 +48,6 @@ ReverbTail() {
     
     // define FDN parameters
     defineFdnFeedbackMatrix();
-    updateFdnParameters();
 }
 
 ~ReverbTail() {}
@@ -69,6 +68,9 @@ void prepareToPlay( const unsigned int samplesPerBlockExpected, const double sam
     // keep local copies
     localSampleRate = sampleRate;
     localSamplesPerBlockExpected = samplesPerBlockExpected;
+    
+    // update FDN parameters
+    updateFdnParameters();
 }
 
 // update FDN gains and cie based on new RT60 values
@@ -117,15 +119,12 @@ void addToBus( const unsigned int busId, const AudioBuffer<float> & source )
 void extractBusToBuffer( AudioBuffer<float> & destination )
 {
     // loop over FDN bus to write direct input to / read output from delay line
-    float delayInFractionalSamples;
     destination.clear();
     workingBuffer.clear();
     
     int bufferIndex = 0;
     for (int fdnId = 0; fdnId < fdnOrder; fdnId++)
     {
-        delayInFractionalSamples = fdnDelays[fdnId] * localSampleRate;
-        
         for (int bandId = 0; bandId < numOctaveBands; bandId++)
         {
             bufferIndex = bandId*fdnOrder + fdnId;
@@ -137,7 +136,7 @@ void extractBusToBuffer( AudioBuffer<float> & destination )
             delayLine.addFrom( bufferIndex, reverbBusBuffers, bufferIndex, 0, localSamplesPerBlockExpected );
         
             // read output from delay line (erase current content of reverbBuffers)
-            delayLine.fillBufferWithDelayedChunk( reverbBusBuffers, bufferIndex, 0, bufferIndex, delayInFractionalSamples, localSamplesPerBlockExpected );
+            delayLine.fillBufferWithDelayedChunk( reverbBusBuffers, bufferIndex, 0, bufferIndex, fdnDelays[fdnId], localSamplesPerBlockExpected );
 
             // apply FDN gains
             reverbBusBuffers.applyGain(bufferIndex, 0, localSamplesPerBlockExpected, fdnGains[bandId][fdnId]);
@@ -187,29 +186,29 @@ void updateFdnParameters(){
     // Define FDN delays (put here even if static define to be ready for TODO)
     // TODO: delay values should be based on dist min / max (Sabine formula).
     // would require estimation of room volume / surface in EVERTims
-    fdnDelays[0] = 0.011995;
-    fdnDelays[1] = 0.019070;
-    fdnDelays[2] = 0.021791;
-    fdnDelays[3] = 0.031043;
-    fdnDelays[4] = 0.038118;
-    fdnDelays[5] = 0.041927;
-    fdnDelays[6] = 0.050091;
-    fdnDelays[7] = 0.063696;
-    fdnDelays[8] = 0.078934;
-    fdnDelays[9] = 0.084376;
-    fdnDelays[10] = 0.101791;
-    fdnDelays[11] = 0.114308;
-    fdnDelays[12] = 0.120839;
-    fdnDelays[13] = 0.141519;
-    fdnDelays[14] = 0.156213;
-    fdnDelays[15] = 0.179615;
+    fdnDelays[0] = 529;
+    fdnDelays[1] = 841;
+    fdnDelays[2] = 961;
+    fdnDelays[3] = 1369;
+    fdnDelays[4] = 1681;
+    fdnDelays[5] = 1849;
+    fdnDelays[6] = 2209;
+    fdnDelays[7] = 2809;
+    fdnDelays[8] = 3481;
+    fdnDelays[9] = 3721;
+    fdnDelays[10] = 4489;
+    fdnDelays[11] = 5041;
+    fdnDelays[12] = 5329;
+    fdnDelays[13] = 6241;
+    fdnDelays[14] = 6889;
+    fdnDelays[15] = 7921;
     
     // Define FDN gains based on new delays
     for (int bandId = 0; bandId < numOctaveBands; bandId++)
     {
         for (int fdnId = 0; fdnId < fdnOrder; fdnId++)
         {
-            fdnGains[bandId][fdnId] = pow( 10, -3*fdnDelays[fdnId] / valuesRT60[bandId] );
+            fdnGains[bandId][fdnId] = pow( 10, -3*( fdnDelays[fdnId] / localSampleRate ) / valuesRT60[bandId] );
         }
     }
 }
