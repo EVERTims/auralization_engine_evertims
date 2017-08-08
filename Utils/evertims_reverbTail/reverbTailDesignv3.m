@@ -7,6 +7,9 @@
 % [1]: https://www.dsprelated.com/freebooks/pasp/FDN_Reverberation.html
 % David Poirier-Quinot, IRCAM 2016
 
+% add misc src path
+addpath(genpath(fullfile(fileparts(pwd),'src_common')));
+
 %% Init
 % Define FDN parameters
 NumFeedbackLine = 16;
@@ -14,7 +17,7 @@ NumFreqBands = 3;
 
 % Define Response Time -60dB (time after which impulse reduced to -60dB of its initial power)
 % RT60vect = 4*[ 0.39, 0.39, 0.39, 0.35, 0.28, 0.27, 0.26, 0.25, 0.25, 0.25 ]; % Response Time -60dB in sec
-RT60vect = 0.99*[ 1 1 1 ];
+RT60vect = 16.66*[ 1 1 1 ];
 RT60 = mean(RT60vect);
 FsVect = [];
 for i = 1:length(RT60vect); FsVect = [FsVect 31.5 * 2^(i-1)]; end
@@ -54,18 +57,19 @@ plot(in);
 
 % % hadamard feedback matrix
 A = (1/(2^(sqrt(NumFeedbackLine)/2))) * hadamard(NumFeedbackLine);
+% A = 1*diag(ones(1,NumFeedbackLine));
 
 % householder matrix as proposed in Jot's thesis, see also 
 % https://ccrma.stanford.edu/~jos/pasp/Householder_Feedback_Matrix.html
 % A = 0.5*(diag([2 2 2 2]) - ones(4,4));
 % A = 0.0*[A -A -A -A; -A A -A -A; -A -A A -A; -A -A -A A];
 
-% % export matrix
-% for i = 1:size(A,1);
-%     for j = 1:size(A,2)
-%         fprintf('fdnFeedbackMatrix[%ld][%ld] = %.3f;\n', i-1,j-1,A(i,j));
-%     end
-% end
+% export matrix
+for i = 1:size(A,1);
+    for j = 1:size(A,2)
+        fprintf('fdnFeedbackMatrix[%ld][%ld] = %.10f;\n', i-1,j-1,A(i,j));
+    end
+end
 
 %% Define feedback delays
 % approach based on [1], based on power of prime numbers to avoid
@@ -82,7 +86,7 @@ delays = delaysSamp / Fs;
 
 % export delays
 for i = 1:length(delays);
-    fprintf('fdnDelays[%ld] = %.6f;\n', i-1,delays(i));
+    fprintf('fdnDelays[%ld] = %ld;\n', i-1,delaysSamp(i));
 end
 
 %% Define feedback delays
@@ -140,13 +144,14 @@ kmean = (1 - 6.9078./(Fs * RT60 ) ).^delaysSamp; % for non-freq specific tests
 % for i = 1:NumFeedbackLine;
 %     fprintf('fdnGains[%ld] = %.3f;\n', i-1,kmean(i));
 % end
-% 
+
 % % export gains (freq specific)
 % for i = 1:NumFreqBands;
 %     for j = 1:NumFeedbackLine;
 %         fprintf('fdnGains[%ld][%ld] = %.5f;\n', i-1,j-1,k(i,j));
 %     end
 % end
+
 %% design freq. specific filters
 % % see [1], part: DELAY-LINE DAMPING FILTER DESIGN
 % w = FsVect * pi / Fs;
@@ -235,13 +240,32 @@ for i = 1:length(out);
 end
 hold on, plot(index60/Fs, out(index60), '*k'); hold off
 
-
-
 %% Render output
 out = out + outStraight;
-if(max(abs(out)) < 3);
+if(max(abs(out)) >= 1); 
+    warning('saturated output');
+    out = out ./ max(abs(out));
+end
+if(max(abs(out)) <= 1); % safety (useless)
     a = audioplayer(in,Fs);
     playblocking(a);
     a = audioplayer(out,Fs);
     play(a);
 end
+
+%% estimate reverberation time
+
+% filter bank decomposition
+Nbands = 10;
+[filterCoefs, Fc_vect] = filterBank(Nbands, Fs);
+irBands = zeros(size(out,1), Nbands);
+for i = 1:Nbands;
+    irBands(:,i) = filter(filterCoefs(i, 1:3),filterCoefs(i, 4:6), out);
+end
+
+rt60 = zeros(Nbands,1);
+for i = 1:Nbands;
+    % rt60(:,i) = t60(irBands(:,i),Fs,1); input(''); close % debug plot
+    rt60(i) = t60(irBands(:,i),Fs,0);
+end
+plot(rt60/1000,'o'); title('rt60 (in sec) across freq bands');

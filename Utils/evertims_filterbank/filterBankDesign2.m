@@ -5,6 +5,9 @@
 %
 % David Poirier-Quinot, IRCAM 2016
 
+% add path
+addpath(genpath(fullfile(fileparts(pwd),'src_common')));
+
 %% Init
 Fs = 44100;
 Q = sqrt(2)/2; %sqrt(2)/(2-1);
