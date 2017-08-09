@@ -1,8 +1,6 @@
 #ifndef FILTERBANK_H_INCLUDED
 #define FILTERBANK_H_INCLUDED
 
-#include "../JuceLibraryCode/JuceHeader.h"
-
 class FilterBank
 {
 
@@ -126,11 +124,13 @@ void decomposeBuffer( const AudioBuffer<float> & source, AudioBuffer<float> & de
         // substract just processed band from remaining spectrum
         bufferFiltered.applyGain( -1.f );
         bufferRemains.addFrom( 0, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
+        bufferFiltered.applyGain( -1.f );
         
         // add filtered band to output
         destination.copyFrom( i, 0, bufferFiltered, 0, 0, localSamplesPerBlockExpected );
     }
     
+    // last band
     destination.copyFrom( _numOctaveBands-1, 0, bufferRemains, 0, 0, localSamplesPerBlockExpected );
 }
     
