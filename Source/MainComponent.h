@@ -9,6 +9,7 @@
 #include "Utils.h" // used to define constants
 #include "DelayLine.h"
 #include "SourceImagesHandler.h"
+#include "LedComponent.h"
 
 #include <vector>
 #include <array>
@@ -28,6 +29,9 @@ class MainContentComponent:
 {
     
 public:
+    
+    // output clipping
+    bool isClipped = false;
     
     MainContentComponent();
     ~MainContentComponent();
@@ -84,6 +88,8 @@ private:
     Label earlyLabel;
     Label logLabel;
     Label crossfadeLabel;
+    ScopedPointer<LedComponent> clippingLed;
+    Label clippingLedLabel;
     
     std::unordered_map<Button*, std::string> buttonMap;
     std::unordered_map<ComboBox*, Array< std::string > > comboBoxMap;

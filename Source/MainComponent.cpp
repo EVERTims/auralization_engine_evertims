@@ -5,6 +5,7 @@
 
 MainContentComponent::MainContentComponent():
 oscHandler(),
+clippingLed( new LedComponent(*this) ),
 audioIOComponent(),
 delayLine(),
 sourceImagesHandler(),
@@ -27,6 +28,8 @@ ambi2binContainer()
     
     // add GUI sub-components
     addAndMakeVisible(audioIOComponent);
+    addAndMakeVisible(clippingLed);
+    clippingLed->setAlwaysOnTop(true);
     
     // setup logo image
     logoImage = ImageCache::getFromMemory(BinaryData::evertims_logo_512_png, BinaryData::evertims_logo_512_pngSize);
@@ -126,7 +129,8 @@ ambi2binContainer()
         { &logLabel, "Logs" },
         { &directPathLabel, "Direct path" },
         { &earlyLabel, "Early reflections" },
-        { &crossfadeLabel, "Crossfade factor" }
+        { &crossfadeLabel, "Crossfade factor" },
+        { &clippingLedLabel, "clip" }
     });
     for (auto& pair : labelMap)
     {
@@ -362,7 +366,7 @@ void MainContentComponent::recordIr()
     delayLine.clear();
     sourceImagesHandler.reverbTail.clear();
     
-    // pass impulse imput into processing loop until IR faded below threshold
+    // pass impulse input into processing loop until IR faded below threshold
     float rms = 1.0f;
     int bufferId = 0;
     // record until rms below threshold or reached max delay. minDelay used here to make sure recording doesn't stop on first buffers for large
@@ -429,8 +433,8 @@ float MainContentComponent::clipOutput(float input)
 {
     if (std::abs(input) > 1.0f)
     {
+        clippingLed->isClipped = true;
         return sign(input)*fmin(std::abs(input), 1.0f);
-        DBG(String("clip: ") + String(input));
     }
     else
         return input;
@@ -517,6 +521,10 @@ void MainContentComponent::resized()
     logLabel.setBounds(30, 309, 40, 20);
     logTextBox.setBounds (8, 320, getWidth() - 16, getHeight() - 336);
     enableLog.setBounds(getWidth() - 120, 320, 100, 30);
+    
+    // clipping led
+    clippingLedLabel.setBounds(enableLog.getX() - 50, enableLog.getY()+7, 34, 14);
+    clippingLed->setBounds(clippingLedLabel.getX() - 12, enableLog.getY()+4, 16, 16);
 }
 
 //==============================================================================

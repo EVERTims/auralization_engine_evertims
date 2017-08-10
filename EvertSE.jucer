@@ -43,6 +43,7 @@
       <FILE id="gIGgnk" name="DirectivityHandler.h" compile="0" resource="0"
             file="Source/DirectivityHandler.h"/>
       <FILE id="Gci68m" name="FilterBank.h" compile="0" resource="0" file="Source/FilterBank.h"/>
+      <FILE id="DSg4yr" name="LedComponent.h" compile="0" resource="0" file="Source/LedComponent.h"/>
       <FILE id="WOmEyi" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
       <FILE id="l9hY4R" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
