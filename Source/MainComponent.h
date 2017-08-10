@@ -88,7 +88,7 @@ private:
     Label earlyLabel;
     Label logLabel;
     Label crossfadeLabel;
-    ScopedPointer<LedComponent> clippingLed;
+    LedComponent clippingLed;
     Label clippingLedLabel;
     
     std::unordered_map<Button*, std::string> buttonMap;

@@ -5,7 +5,7 @@
 
 MainContentComponent::MainContentComponent():
 oscHandler(),
-clippingLed( new LedComponent(*this) ),
+clippingLed( *this ),
 audioIOComponent(),
 delayLine(),
 sourceImagesHandler(),
@@ -29,7 +29,7 @@ ambi2binContainer()
     // add GUI sub-components
     addAndMakeVisible(audioIOComponent);
     addAndMakeVisible(clippingLed);
-    clippingLed->setAlwaysOnTop(true);
+    clippingLed.setAlwaysOnTop(true);
     
     // setup logo image
     logoImage = ImageCache::getFromMemory(BinaryData::evertims_logo_512_png, BinaryData::evertims_logo_512_pngSize);
@@ -433,7 +433,7 @@ float MainContentComponent::clipOutput(float input)
 {
     if (std::abs(input) > 1.0f)
     {
-        clippingLed->isClipped = true;
+        clippingLed.isClipped = true;
         return sign(input)*fmin(std::abs(input), 1.0f);
     }
     else
@@ -524,7 +524,7 @@ void MainContentComponent::resized()
     
     // clipping led
     clippingLedLabel.setBounds(enableLog.getX() - 50, enableLog.getY()+7, 34, 14);
-    clippingLed->setBounds(clippingLedLabel.getX() - 12, enableLog.getY()+4, 16, 16);
+    clippingLed.setBounds(clippingLedLabel.getX() - 12, enableLog.getY()+4, 16, 16);
 }
 
 //==============================================================================
