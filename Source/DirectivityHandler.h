@@ -40,8 +40,6 @@ public:
     
 DirectivityHandler()
 {
-    // print info
-    // printGains( 2, 15 );
 }
         
 ~DirectivityHandler()
@@ -68,7 +66,7 @@ void loadFile( const string & filenameStr )
     // load
     int err;
     filter_length = 0;
-    sofaEasyStruct = mysofa_open(filename, sampleRate, &filter_length, &err);
+    sofaEasyStruct = mysofa_open_noNorm(filename, sampleRate, &filter_length, &err);
     
     // check if file loaded correctly
     jassert( sofaEasyStruct != NULL );
@@ -78,11 +76,6 @@ void loadFile( const string & filenameStr )
     
     // resize locals
     dirGains.resize( 2 * filter_length );
-    
-    // DEBUG
-    double azim = 0.3;
-    double elev = 0;
-    getGains( azim, elev );
 
     // warn if error
     if(sofaEasyStruct==NULL)
@@ -92,6 +85,8 @@ void loadFile( const string & filenameStr )
     }
 	else{ isLoaded = true; }
 
+    // print info
+    // printGains( 8, 15 );
 }
 
 Array<float> getGains( const double azim, const double elev )
@@ -149,6 +144,65 @@ void printGains(const unsigned int bandId, const unsigned int step )
             std::cout << az << " " << el << " " << 1 << " " << leftIR[bandId] << " " << rightIR[bandId] << std::endl;
         }
     }
+}
+    
+// method directly copied from libmysofa/src/hrtf/easy.c, removing loudness normalization from default mysofa_open
+struct MYSOFA_EASY* mysofa_open_noNorm(const char *filename, float samplerate, int *filterlength, int *err)
+{
+    // modif. from C to C++: need to explicitly cast pointer
+    // struct MYSOFA_EASY *easy = malloc(sizeof(struct MYSOFA_EASY));
+    struct MYSOFA_EASY *easy = (struct MYSOFA_EASY*) malloc(sizeof(struct MYSOFA_EASY));
+    
+    if(!easy) {
+        *err = MYSOFA_NO_MEMORY;
+        return NULL;
+    }
+    
+    easy->lookup = NULL;
+    easy->neighborhood = NULL;
+    
+    easy->hrtf = mysofa_load(filename, err);
+    if (!easy->hrtf) {
+        mysofa_close(easy);
+        return NULL;
+    }
+    
+    *err = mysofa_check(easy->hrtf);
+    if (*err != MYSOFA_OK) {
+        mysofa_close(easy);
+        return NULL;
+    }
+    
+    *err = mysofa_resample(easy->hrtf, samplerate);
+    if (*err != MYSOFA_OK) {
+        mysofa_close(easy);
+        return NULL;
+    }
+    
+    // discard loudness normalization, does not make sense the way we import directivity pattern here
+    // (using SOFA N field of Data.IR (time) to store directivity for different freq. bands, we don't
+    // want energy normalization across freq. band of the directivity pattern)
+    // mysofa_loudness(easy->hrtf);
+    
+    /* does not sound well:
+     mysofa_minphase(easy->hrtf,0.01);
+     */
+    
+    mysofa_tocartesian(easy->hrtf);
+    
+    easy->lookup = mysofa_lookup_init(easy->hrtf);
+    if (easy->lookup == NULL) {
+        *err = MYSOFA_INTERNAL_ERROR;
+        mysofa_close(easy);
+        return NULL;
+    }
+    
+    easy->neighborhood = mysofa_neighborhood_init(easy->hrtf,
+                                                  easy->lookup);
+    
+    *filterlength = easy->hrtf->N;
+    
+    return easy;
 }
     
 private:
