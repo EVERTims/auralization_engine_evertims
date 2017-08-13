@@ -29,7 +29,7 @@
 
 clear all;
 FORCE_REPROCESSING = true; % will re-create IRs for HRIRs already processed
-DEBUG_PLOT = true;
+DEBUG_PLOT = false;
 
 
 %% INIT: Set paths
@@ -180,8 +180,8 @@ for i = 1:length(hrir_filelist);
     l_hoa2bin = zeros(lHRIR, nHRIR);
     r_hoa2bin = zeros(lHRIR, nHRIR);
 
-    l_hoa2bin(:,:) = l_hrirs_closest * M_dec;
-    r_hoa2bin(:,:) = r_hrirs_closest * M_dec;
+    l_hoa2bin(:,:) = l_hrirs_closest * M_dec / (4*pi); % 4pi to match Ambix lib decoding norm.
+    r_hoa2bin(:,:) = r_hrirs_closest * M_dec / (4*pi);
     
     Fs = l_hrir_S.sampling_hz;
     time_v = 0: 1/Fs : (size(l_hoa2bin,1)-1)/Fs;    
@@ -190,7 +190,7 @@ for i = 1:length(hrir_filelist);
     warning('Ugly (i.e. manual) HRIR truncating is happening there');
     
     firstOnset_index = 1e4; % arbitrary big
-    ONSET_THRESHOLD = 1e-1;
+    ONSET_THRESHOLD = 1.5e-1;
     for j = 1:size(l_hoa2bin,2);
         normedDifferential = abs(diff(l_hoa2bin(:,j))) / max(abs(diff(l_hoa2bin(:,j))));
         firstOnset_index = min(firstOnset_index, min( find( normedDifferential > ONSET_THRESHOLD ) ));
