@@ -27,7 +27,7 @@
 #include <array>
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "SphericalHarmonic/SphericalHarmonic.h"
-#include "Utils.h"
+#include "../Utils.h"
 #include "ambi_weight_lookup.h"
 #include <Eigen/Eigen>
 
