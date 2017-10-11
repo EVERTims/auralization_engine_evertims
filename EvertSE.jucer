@@ -2,8 +2,8 @@
 
 <JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="0.3.2"
               bundleIdentifier="com.evertims.EvertSE" includeBinaryInAppConfig="1"
-              jucerVersion="5.0.1" displaySplashScreen="0" reportAppUsage="0"
-              splashScreenColour="Dark">
+              jucerVersion="5.1.2" displaySplashScreen="1" reportAppUsage="1"
+              splashScreenColour="Dark" cppLanguageStandard="11">
   <MAINGROUP id="aSpPbd" name="EvertSE">
     <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
       <GROUP id="{E03E531B-FABC-9912-666B-A003EB5B2320}" name="AmbixEncode">
@@ -131,13 +131,38 @@
         <MODULEPATH id="juce_audio_formats" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
         <MODULEPATH id="juce_audio_devices" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
         <MODULEPATH id="juce_audio_basics" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
-        <MODULEPATH id="juce_audio_utils" path="../../../../../../Applications/JUCE/modules"/>
-        <MODULEPATH id="juce_audio_processors" path="../../../../../../Applications/JUCE/modules"/>
-        <MODULEPATH id="juce_gui_extra" path="../../../../../../Applications/JUCE/modules"/>
-        <MODULEPATH id="juce_data_structures" path="../../../../../../Applications/JUCE/modules"/>
-        <MODULEPATH id="juce_events" path="../../../../../../Applications/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_audio_processors" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_gui_extra" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_data_structures" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
+        <MODULEPATH id="juce_events" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
       </MODULEPATHS>
     </VS2013>
+    <LINUX_MAKE targetFolder="Builds/LinuxMakefile" extraLinkerFlags="" externalLibraries="z&#10;resample&#10;mysofa"
+                extraCompilerFlags="">
+      <CONFIGURATIONS>
+        <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="EvertSE"
+                       headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/include&#10;/usr/local/include"
+                       libraryPath="/usr/lib&#10;/usr/lib/x86_64-linux-gnu/&#10;/usr/local/lib"/>
+        <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="EvertSE"
+                       headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/include"
+                       libraryPath="/usr/lib&#10;/usr/lib/x86_64-linux-gnu/"/>
+      </CONFIGURATIONS>
+      <MODULEPATHS>
+        <MODULEPATH id="juce_osc" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_extra" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_gui_basics" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_graphics" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_events" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_data_structures" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_core" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_utils" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_processors" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_formats" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_devices" path="../../../../../opt/JUCE/modules"/>
+        <MODULEPATH id="juce_audio_basics" path="../../../../../opt/JUCE/modules"/>
+      </MODULEPATHS>
+    </LINUX_MAKE>
   </EXPORTFORMATS>
   <MODULES>
     <MODULE id="juce_audio_basics" showAllCode="1" useLocalCopy="0"/>
