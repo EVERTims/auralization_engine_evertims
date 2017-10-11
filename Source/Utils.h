@@ -196,14 +196,15 @@ inline File getFileFromString( const String & fileName )
         resourceDir = thisDir.getParentDirectory().getChildFile("Resources");
         resourceDirDefined = true;
     }
-    else if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win"))
+    else if (SystemStats::getOperatingSystemName().startsWithIgnoreCase("Win") || SystemStats::getOperatingSystemName().startsWithIgnoreCase("Linux"))
     {
         resourceDir = thisDir.getChildFile("data");
         resourceDirDefined = true;
     }
     else
     {
-        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "Cannot locate file (OS non supported)", fileName, "OK");
+        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "Cannot locate file (OS not supported)", fileName, "OK");
+        DBG(String("Cannot locate file (OS not supported): ") + fileName);
     }
     
     if (!resourceDirDefined) // skip loading
