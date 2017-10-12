@@ -27,16 +27,16 @@ fi
 # ----------------
 
 # install deps if need be
-for pkg in libresample; do
+for pkg in libresample cunit; do
     if brew list -1 | grep -q "^${pkg}\$"; then
         echo "Package '$pkg' already installed"
     else
         echo "Installing Package '$pkg'"
-        brew install libresample
+        brew install ${pkg}
     fi
 done
 
-# compile 
+# compile
 cd libmysofa/build/
 cmake ..
 make && make install
