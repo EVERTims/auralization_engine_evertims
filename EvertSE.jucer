@@ -2,8 +2,8 @@
 
 <JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="0.3.2"
               bundleIdentifier="com.evertims.EvertSE" includeBinaryInAppConfig="1"
-              jucerVersion="5.1.2" displaySplashScreen="1" reportAppUsage="1"
-              splashScreenColour="Dark" cppLanguageStandard="11">
+              jucerVersion="5.2.0" displaySplashScreen="1" reportAppUsage="1"
+              splashScreenColour="Dark" cppLanguageStandard="11" companyCopyright="">
   <MAINGROUP id="aSpPbd" name="EvertSE">
     <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
       <GROUP id="{E03E531B-FABC-9912-666B-A003EB5B2320}" name="AmbixEncode">
@@ -92,11 +92,11 @@
         <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="EvertSE"
                        headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/local/include"
                        libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
-                       osxCompatibility="default"/>
+                       osxCompatibility="default" enablePluginBinaryCopyStep="1"/>
         <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="EvertSE"
                        headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/local/include"
                        libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
-                       osxCompatibility="default"/>
+                       osxCompatibility="default" enablePluginBinaryCopyStep="1"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../../../Applications/JUCE/modules"/>
@@ -118,10 +118,12 @@
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" winWarningLevel="4" generateManifest="1" winArchitecture="x64"
                        isDebug="1" optimisation="1" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871&#10;C:\cygwin64\usr\local\include"
-                       libraryPath="C:\cygwin64\usr\local\lib\"/>
+                       libraryPath="C:\cygwin64\usr\local\lib\" debugInformationFormat="ProgramDatabase"
+                       enablePluginBinaryCopyStep="0"/>
         <CONFIGURATION name="Release" winWarningLevel="4" generateManifest="1" winArchitecture="x64"
                        isDebug="0" optimisation="3" targetName="EvertSE" headerPath="../../libs/eigen-eigen-7403112d5871&#10;C:\cygwin64\usr\local\include"
-                       libraryPath="C:\cygwin64\usr\local\lib\"/>
+                       libraryPath="C:\cygwin64\usr\local\lib\" debugInformationFormat="ProgramDatabase"
+                       enablePluginBinaryCopyStep="0" linkTimeOptimisation="1"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_osc" path="..\..\JUCE_Workspace\juce-grapefruit-windows\modules"/>
