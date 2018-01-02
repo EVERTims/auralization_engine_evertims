@@ -1,26 +1,24 @@
-#ifndef DELAYLINE_H_INCLUDED
-#define DELAYLINE_H_INCLUDED
-
-#include "../JuceLibraryCode/JuceHeader.h"
+#pragma once
 
 class DelayLine
 {
-
+    
 //==========================================================================
 // ATTRIBUTES
     
 public:
-
+    
 private:
 
-    int writeIndex;
-    int chunkReadIndex;
+int writeIndex;
+int futureLineSize;
+unsigned int localSamplesPerBlockExpected = 0;
     
-    AudioBuffer<float> buffer;
-    
-    AudioBuffer<float> chunkBufferPrev;
-    AudioBuffer<float> chunkBufferNext;
-    
+AudioBuffer<float> buffer;
+
+AudioBuffer<float> chunkBufferPrev;
+AudioBuffer<float> chunkBufferNext;
+
 //==========================================================================
 // METHODS
     
@@ -29,7 +27,7 @@ public:
 DelayLine()
 {
     writeIndex = 0;
-    chunkReadIndex = 0;
+    futureLineSize = 0;
 }
 
 ~DelayLine() {}
@@ -37,27 +35,41 @@ DelayLine()
 // local equivalent of prepareToPlay
 void prepareToPlay(const unsigned int samplesPerBlockExpected, const double sampleRate)
 {
-    buffer.setSize(buffer.getNumChannels(), 2*samplesPerBlockExpected);
+    localSamplesPerBlockExpected = samplesPerBlockExpected;
     buffer.clear();
     
     chunkBufferPrev.setSize(1, samplesPerBlockExpected);
     chunkBufferNext.setSize(1, samplesPerBlockExpected);
 }
 
-// increase delay line size if need be (no shrinking delay line size for now)
+// set delay line size
 void setSize(const unsigned int newNumChannels, unsigned int newNumSamples)
 {
-    newNumSamples = fmax(buffer.getNumSamples(), newNumSamples);
+    // update number of channels (split to simplify code reading)
+    if( newNumChannels != buffer.getNumChannels() )
+    {
+        buffer.setSize(newNumChannels, buffer.getNumSamples(), true, true);
+    }
     
-    if( newNumSamples > buffer.getNumSamples() || newNumChannels != buffer.getNumChannels() )
+    // update num samples: increased size -> zero pad at end
+    if( newNumSamples > buffer.getNumSamples() )
     {
         buffer.setSize(newNumChannels, newNumSamples, true, true);
+    }
+    
+    // update num samples: decreased size -> flag reduction, will happen next time writeIndex is reset
+    else if( newNumSamples < buffer.getNumSamples() && newNumSamples >= localSamplesPerBlockExpected )
+    {
+        futureLineSize = newNumSamples;
     }
 }
 
 // add samples from buffer to delay line (replace)
 void copyFrom(const unsigned int destChannel, const juce::AudioBuffer<float> & source, const unsigned int sourceChannel, const unsigned int sourceStartSample, const unsigned int numSamples)
 {
+    // make sure delay line is long enough
+    jassert( numSamples <= buffer.getNumSamples() );
+    
     // either simple copy
     if ( writeIndex + numSamples <= buffer.getNumSamples() )
     {
@@ -76,6 +88,9 @@ void copyFrom(const unsigned int destChannel, const juce::AudioBuffer<float> & s
 // add samples from buffer to delay line (add)
 void addFrom(const unsigned int destChannel, const AudioBuffer<float> & source, const unsigned int sourceChannel, const unsigned int sourceStartSample, const unsigned int numSamples)
 {
+    // make sure delay line is long enough
+    jassert( numSamples <= buffer.getNumSamples() );
+    
     // either simple copy
     if ( writeIndex + numSamples <= buffer.getNumSamples() )
     {
@@ -94,6 +109,17 @@ void addFrom(const unsigned int destChannel, const AudioBuffer<float> & source, 
 // increment write position, apply circular shift if need be
 void incrementWritePosition(const unsigned int numSamples)
 {
+    // delay line size reduction flagged earlier: reduce size now
+    if( futureLineSize > 0 && writeIndex >= futureLineSize )
+    {
+        // update size
+        buffer.setSize(buffer.getNumChannels(), futureLineSize, true, true);
+        
+        // reset flag
+        futureLineSize = 0;
+    }
+    
+    // increment (modulo) write position
     writeIndex += numSamples;
     writeIndex %= buffer.getNumSamples();
 }
@@ -153,4 +179,3 @@ JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (DelayLine)
     
 };
 
-#endif // DELAYLINE_H_INCLUDED
