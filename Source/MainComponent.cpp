@@ -208,6 +208,7 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     
     // init delay line
     delayLine.prepareToPlay(samplesPerBlockExpected, sampleRate);
+    delayLine.setSize(1, sampleRate); // arbitrary length of 1 sec
     sourceImagesHandler.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
     // init ambi 2 bin decoding: fill in data in ABIR filtered and ABIR filter themselves
@@ -296,6 +297,7 @@ void MainContentComponent::processAmbisonicBuffer( AudioBuffer<float> *const aud
         
         // increment delay line write position
         delayLine.incrementWritePosition(workingBuffer.getNumSamples());
+        
     }
     
 }
@@ -479,7 +481,7 @@ void MainContentComponent::updateOnOscReceive()
     oscHandler.updateInternals();
     
     // if sourceImagesHandler not in the midst of an update
-    if( sourceImagesHandler.crossfadeOver )
+    if( sourceImagesHandler.crossfadeOver && !sourceImageHandlerNeedsUpdate )
     {
         // update source images attributes based on latest received OSC info
         sourceImagesHandler.updateFromOscHandler(oscHandler);
