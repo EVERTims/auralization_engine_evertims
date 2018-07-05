@@ -81,7 +81,7 @@ void loadFile( const string & filenameStr )
     if(sofaEasyStruct==NULL)
     {
 		isLoaded = false;
-        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "failed to file", filenameStr, "OK");
+        AlertWindow::showMessageBoxAsync ( AlertWindow::WarningIcon, "failed to load file", filenameStr, "OK");
     }
 	else{ isLoaded = true; }
 
