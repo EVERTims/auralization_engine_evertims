@@ -4,6 +4,7 @@
 #include "../JuceLibraryCode/JuceHeader.h"
 #include "OSCHandler.h"
 #include "AudioIOComponent.h"
+#include "AudioRecorder.h"
 #include "Ambi2binIRContainer.h"
 #include "FIRFilter/FIRFilter.h"
 #include "Utils.h" // used to define constants
@@ -42,6 +43,7 @@ public:
     
     void processAmbisonicBuffer( AudioBuffer<float> *const audioBufferToFill );
     void fillNextAudioBlock( AudioBuffer<float> *const audioBufferToFill );
+    void recordAmbisonicBuffer();
     void recordIr();
     
     void paint (Graphics& g) override;
@@ -78,6 +80,7 @@ private:
     ToggleButton reverbTailToggle;
     ToggleButton enableDirectToBinaural;
     ToggleButton enableLog;
+    ToggleButton enableRecord;
     Slider gainReverbTailSlider;
     Slider gainDirectPathSlider;
     Slider gainEarlySlider;
@@ -108,6 +111,9 @@ private:
     // audio player (GUI + audio reader + adc input)
     AudioIOComponent audioIOComponent;
     
+    // audio stream recorder
+    AudioRecorder audioRecorder;
+    
     // delay line
     DelayLine delayLine;
     bool requireDelayLineSizeUpdate = false;
@@ -118,6 +124,7 @@ private:
     
     // Ambisonic to binaural decoding
     AudioBuffer<float> ambisonicBuffer;
+    AudioBuffer<float> ambisonicRecordBuffer;
     AudioBuffer<float> ambisonicBuffer2ndEar;
     Ambi2binIRContainer ambi2binContainer;
     FIRFilter ambi2binFilters[2*N_AMBI_CH]; // holds current ABIR (room reverb) filters

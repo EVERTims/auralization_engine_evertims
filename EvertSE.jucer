@@ -2,7 +2,7 @@
 
 <JUCERPROJECT id="zqWlzC" name="EvertSE" projectType="guiapp" version="0.3.2"
               bundleIdentifier="com.evertims.EvertSE" includeBinaryInAppConfig="1"
-              jucerVersion="5.2.0" displaySplashScreen="1" reportAppUsage="1"
+              jucerVersion="5.3.2" displaySplashScreen="1" reportAppUsage="1"
               splashScreenColour="Dark" cppLanguageStandard="11" companyCopyright="">
   <MAINGROUP id="aSpPbd" name="EvertSE">
     <GROUP id="{99079257-FF9C-9921-68FD-21814C837F7B}" name="Source">
@@ -37,6 +37,7 @@
             file="Source/Ambi2binIRContainer.h"/>
       <FILE id="VFZ1PG" name="AudioIOComponent.h" compile="0" resource="0"
             file="Source/AudioIOComponent.h"/>
+      <FILE id="SEAemP" name="AudioRecorder.h" compile="0" resource="0" file="Source/AudioRecorder.h"/>
       <FILE id="vXP376" name="BinauralEncoder.h" compile="0" resource="0"
             file="Source/BinauralEncoder.h"/>
       <FILE id="BUA01r" name="DelayLine.h" compile="0" resource="0" file="Source/DelayLine.h"/>
@@ -91,12 +92,10 @@
       <CONFIGURATIONS>
         <CONFIGURATION name="Debug" isDebug="1" optimisation="1" targetName="EvertSE"
                        headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/local/include"
-                       libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
-                       osxCompatibility="default" enablePluginBinaryCopyStep="1"/>
+                       libraryPath="/usr/local/lib" enablePluginBinaryCopyStep="1"/>
         <CONFIGURATION name="Release" isDebug="0" optimisation="3" targetName="EvertSE"
                        headerPath="../../libs/eigen-eigen-7403112d5871&#10;/usr/local/include"
-                       libraryPath="/usr/local/lib" osxArchitecture="default" osxSDK="default"
-                       osxCompatibility="default" enablePluginBinaryCopyStep="1"/>
+                       libraryPath="/usr/local/lib" enablePluginBinaryCopyStep="1"/>
       </CONFIGURATIONS>
       <MODULEPATHS>
         <MODULEPATH id="juce_core" path="../../../../../../Applications/JUCE/modules"/>

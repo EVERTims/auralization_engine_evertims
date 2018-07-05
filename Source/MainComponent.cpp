@@ -7,6 +7,7 @@ MainContentComponent::MainContentComponent():
 oscHandler(),
 clippingLed( *this ),
 audioIOComponent(),
+audioRecorder(),
 delayLine(),
 sourceImagesHandler(),
 ambi2binContainer()
@@ -149,7 +150,8 @@ ambi2binContainer()
     toggleMap.insert({
         { &reverbTailToggle, "Reverb tail" },
         { &enableDirectToBinaural, "Direct to binaural" },
-        { &enableLog, "Enable logs" }
+        { &enableLog, "Enable logs" },
+        { &enableRecord, "Record Ambisonic to disk" }
     });
     for (auto& pair : toggleMap)
     {
@@ -160,13 +162,15 @@ ambi2binContainer()
         obj->setColour(ToggleButton::textColourId, Colours::whitesmoke);
         obj->setEnabled(true);
         obj->addListener(this);
-        obj->setToggleState(true, juce::sendNotification);
+        if( obj != &enableRecord ){
+            obj->setToggleState(true, juce::sendNotification);
+        }
     }
     
     // disable direct to binaural until fixed
     // enableDirectToBinaural.setEnabled(false);
     enableDirectToBinaural.setToggleState(false, juce::sendNotification);
-    
+    enableRecord.setToggleState(false, juce::sendNotification);
 }
 
 MainContentComponent::~MainContentComponent()
@@ -188,10 +192,15 @@ void MainContentComponent::prepareToPlay (int samplesPerBlockExpected, double sa
     // audio file reader & adc input
     audioIOComponent.prepareToPlay (samplesPerBlockExpected, sampleRate);
     
+    // recorder
+    audioRecorder.prepareToPlay (samplesPerBlockExpected, sampleRate);
+    
     // working buffer
     workingBuffer.setSize(1, samplesPerBlockExpected);
     // ambisonic buffer holds 2 stereo channels (first) + ambisonic channels
     ambisonicBuffer.setSize(2 + N_AMBI_CH, samplesPerBlockExpected);
+    // because of stupid design choice of ambisonicBuffer, require this additional ambisonicRecordBuffer. to clean..
+    ambisonicRecordBuffer.setSize(N_AMBI_CH, samplesPerBlockExpected);
     
     // keep track of sample rate
     localSampleRate = sampleRate;
@@ -230,6 +239,7 @@ void MainContentComponent::getNextAudioBlock (const AudioSourceChannelInfo& buff
     if( !isRecordingIr )
     {
         processAmbisonicBuffer( bufferToFill.buffer );
+        if( audioRecorder.isRecording() ){ recordAmbisonicBuffer(); }
         fillNextAudioBlock( bufferToFill.buffer );
     }
     // simply clear output buffer
@@ -334,6 +344,27 @@ void MainContentComponent::fillNextAudioBlock( AudioBuffer<float> *const audioBu
         outL[i] = clipOutput(outL[i]);
         outR[i] = clipOutput(outR[i]);
     }
+}
+
+// record Ambisonic buffer to disk
+void MainContentComponent::recordAmbisonicBuffer()
+{
+    if ( sourceImagesHandler.numSourceImages > 0 )
+    {
+        // loop over Ambisonic channels to extract only ambisonic channels. I know, stupid. Needs cleaning
+        for (int k = 0; k < N_AMBI_CH; k++)
+        {
+            ambisonicRecordBuffer.copyFrom(k, 0, ambisonicBuffer, k+2, 0, ambisonicBuffer.getNumSamples());
+        }
+    }
+    // if no source image, data in ambisonicBuffer is meaningless: copy content of workingbuffer (raw input) rather
+    else{
+        ambisonicRecordBuffer.clear();
+        ambisonicRecordBuffer.copyFrom(0, 0, workingBuffer, 0, 0, ambisonicBuffer.getNumSamples());
+    }
+    
+    // write to disk
+    audioRecorder.recordBuffer((const float **) ambisonicRecordBuffer.getArrayOfWritePointers(), ambisonicRecordBuffer.getNumChannels(), ambisonicRecordBuffer.getNumSamples());
 }
 
 // record current Room impulse Response to disk
@@ -521,6 +552,7 @@ void MainContentComponent::resized()
     logLabel.setBounds(30, 309, 40, 20);
     logTextBox.setBounds (8, 320, getWidth() - 16, getHeight() - 336);
     enableLog.setBounds(getWidth() - 120, 320, 100, 30);
+    enableRecord.setBounds(getWidth() - 200, 350, 180, 30);
     
     // clipping led
     clippingLedLabel.setBounds(enableLog.getX() - 50, enableLog.getY()+7, 34, 14);
@@ -574,6 +606,11 @@ void MainContentComponent::buttonClicked (Button* button)
     {
         if( button->getToggleState() ){ logTextBox.setText(oscHandler.getMapContentForGUI()); }
         else{ logTextBox.setText( String("") ); };
+    }
+    if( button == &enableRecord )
+    {
+        if( button->getToggleState() ){ audioRecorder.startRecording(); }
+        else{ audioRecorder.stopRecording(); };
     }
     if( button == &clearSourceImageButton )
     {
