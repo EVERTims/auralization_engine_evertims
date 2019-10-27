@@ -21,8 +21,11 @@ public:
 private:
     
     int timerUpdateIntervalInMs = 30;
-    
     MainContentComponent& owner;
+    
+    // led inertia mechanism
+    uint32 ledFadeDuration = 1000; // time led stays on after clip, in ms
+    uint32 nextUnclipTime = 0;
     
 //==========================================================================
 // METHODS
@@ -47,7 +50,17 @@ void paint(Graphics& g)
     if( isClipped )
     {
         g.setColour(Colours::red);
-        isClipped = false;
+        // update next unclip time
+        nextUnclipTime = Time::getMillisecondCounter() + ledFadeDuration;
+    }
+    else
+    {
+        // check if time to switch off led reached
+        if( Time::getMillisecondCounter() >= nextUnclipTime )
+        {
+            // reset clip state
+            isClipped = false;
+        }
     }
     
     g.fillEllipse(3.7, 7.6, 7.0, 7.0);
